@@ -31,3 +31,32 @@ header{
 .article-card:hover {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
+
+/*Article status */
+.article-status {
+    display: inline-block;
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    margin-bottom: 20px;
+
+}
+/* Pending article */
+.pending {
+    border-color: aqua;
+    border-style: dashed;
+    background-color: aquamarine;
+}
+/* Published article */
+.published {
+    background-color: #0cb009;
+    border-style: dashed;
+    border-color: rgb(9, 146, 16);
+    color: rgb(255, 255, 255);
+    
+}
+.Needs-changes{
+    background-color: #d9f56a;
+    border-style: dashed;
+    border-color: rgb(166, 111, 0);
+}
