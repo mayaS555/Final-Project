@@ -16,7 +16,7 @@ document.getElementById("article-reporter").textContent =
 document.getElementById("article-date").textContent =
     article.date;
 
-//status
+//status//
 const statusElement =
     document.getElementById("article-status");
 
@@ -39,3 +39,15 @@ document.getElementById("article-content").innerHTML =
     article.content;
 
 
+
+//return section area//
+const returnButton =
+    document.querySelector(".return-btn");
+
+const returnSection =
+    document.getElementById("return-section");
+
+returnButton.addEventListener("click", function() {
+    returnSection.classList.toggle("show");
+});
+//
