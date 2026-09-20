@@ -1,0 +1,30 @@
+header{
+    background-color: #111;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+/* articles sections */
+.articles-list{
+    padding-top: 5%;
+
+}
+.article-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.article-card {
+    background-color: white;
+    padding: 25px;
+    border-radius: 12px;
+    cursor: pointer;
+    border-style: solid;
+    border-color: #06431b;
+}
+
+.article-card:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
