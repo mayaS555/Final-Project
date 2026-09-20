@@ -1,0 +1,155 @@
+header{
+    background-color: #111;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    color: #222;
+}
+
+.article-page {
+    width: 90%;
+    max-width: 1000px;
+    margin: 40px auto;
+}
+
+
+/* Back link */
+.back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+
+    color: #444;
+    text-decoration: none;
+    font-weight: bold;
+}
+.back-link:hover {
+    text-decoration: underline;
+}
+
+
+/* Article */
+.full-article {
+    background-color: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+
+/*Article status */
+.article-status {
+    display: inline-block;
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    margin-bottom: 20px;
+
+}
+/* Pending article */
+.pending {
+    border-color: aqua;
+    border-style: dashed;
+    background-color: aquamarine;
+}
+/* Published article */
+.published {
+    background-color: #0cb009;
+    border-style: dashed;
+    border-color: rgb(2, 103, 7);
+}
+.Needs-changes{
+    background-color: #d9f56a;
+    border-style: dashed;
+    border-color: rgb(166, 111, 0);
+}
+
+
+/* Article title */
+.full-article h2 {
+    font-size: 30px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+}
+
+
+/* Reporter + Date Details */
+.article-details {
+    display: flex;
+    gap: 30px;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 20px;
+}
+.article-details p {
+    margin: 0;
+}
+
+/* Article content */
+.article-content {
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+/* Editor actions */
+.editor-actions {
+    background-color: white;
+    margin-top: 20px;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+.editor-actions h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+/* Buttons container */
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+/* All buttons */
+.action-buttons button {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    cursor: pointer;
+}
+/* Edit button */
+.edit-btn {
+    background-color: #2a6caf;
+    color: white;
+}
+/* Publish button */
+.publish-btn {
+    background-color: #198754;
+    color: white;
+}
+/* Return button */
+.return-btn {
+    background-color: #ffc107;
+    color: black;
+}
+/* Delete button*/
+.delete-btn {
+    background-color: #dc3545;
+    color: white;
+}
+/* Hover */
+.action-buttons button:hover {
+    opacity: 0.85;
+}
+

@@ -1,83 +1,95 @@
-<main class="article-page">
+<!DOCTYPE html>
+<html lang="en">
 
-    <a href="editor.html" class="back-link">
-        ← Back to Articles
-    </a>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor-article Dashboard | The Daily Web</title>
+    <link rel="stylesheet" href="editor-article.css">
+</head>
 
-    <!-- article section -->
-    <section> 
+<body>
 
-        <article class="full-article">
+    <header>
+        <h1>The Daily Web</h1>
+    </header>
 
-            <div class="article-status pending">
-                Pending Approval
+    <main class="article-page">
+
+        <a href="editor.html" class="back-link">
+            ← Back to Articles
+        </a>
+
+        <!-- article section -->
+        <section> 
+
+            <article class="full-article">
+
+                <div  id="article-status" class="article-status">
+
+                </div>
+
+                <h2 id="article-title"></h2>
+
+                <div class="article-details">
+                    <p>Reporter:
+                        <span id="article-reporter"></span>
+                    </p>
+                    <p>Date:
+                        <span id="article-date"></span>
+                    </p>
+                </div>
+
+                <div id="article-content" class="article-content">
+
+                </div>
+
+            </article>
+
+        <!-- editor actions section -->    
+        </section>
+
+        <section class="editor-actions">
+
+            <h3>Editor Actions</h3>
+
+            <div class="action-buttons">
+
+                <button class="edit-btn">Edit Article</button>
+                <button class="publish-btn">Approve & Publish</button>
+                <button class="return-btn">Return for Changes</button>
+                <button class="delete-btn">Delete Article</button>
+
             </div>
 
-            <h2>New Technology Changes Education</h2>
+        </section>
 
-            <div class="article-details">
-                <p>Reporter: Maya Cohen</p>
-                <p>Submitted: September 20, 2026</p>
-            </div>
+        <!-- return correcting article section- open by Return for Changes -->
+        <section class="return-section">
 
-            <div class="article-content">
+            <h3>Return Article for Changes</h3>
 
-                <p>
-                    Schools around the world are introducing new
-                    technologies into classrooms.
-                </p>
+            <label for="editor-comment">
+                Comments for the reporter
+            </label>
 
-                <p>
-                    These technologies allow students to access
-                    information quickly and communicate in new ways.
-                </p>
+            <textarea
+                id="editor-comment"
+                name="editor-comment"
+                rows="6"
+                placeholder="Explain what changes are required..."
+            ></textarea>
 
-                <p>
-                    Teachers are also learning how to use digital tools
-                    to improve lessons and student participation.
-                </p>
+            <button>
+                Return Article
+            </button>
 
-            </div>
+        </section>
 
-        </article>
-
-    <!-- editor actions section -->    
-    </section>
-
-    <section class="editor-actions">
-
-        <h3>Editor Actions</h3>
-
-        <button>Edit Article</button>
-
-        <button>Approve & Publish</button>
+    </main>
     
-        <button>Return for Changes</button>
+    <script src="editor-article.js"></script>
 
-        <button>Delete Article</button>
+</body>
 
-    </section>
-
-    <!-- return correcting article section- open by Return for Changes -->
-    <section class="return-section">
-
-        <h3>Return Article for Changes</h3>
-
-        <label for="editor-comment">
-            Comments for the reporter
-        </label>
-
-        <textarea
-            id="editor-comment"
-            name="editor-comment"
-            rows="6"
-            placeholder="Explain what changes are required..."
-        ></textarea>
-
-        <button>
-            Return Article
-        </button>
-
-    </section>
-
-</main>
+</html>
