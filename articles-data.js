@@ -3,7 +3,8 @@ const articles = [
         id: 1,
         title: "New Technology Changes Education",
         reporter: "Maya Cohen",
-        date: "September 20, 2026",
+        submittedDate: "September 18, 2026",
+        updatedDate: "September 20, 2026",
         status: "Pending Approval",
         summary: "Schools are introducing new technologies that change the way students learn.",
         content: `
@@ -28,7 +29,8 @@ const articles = [
         id: 2,
         title: "Artificial Intelligence in Schools",
         reporter: "Noa Cohen",
-        date: "September 19, 2026",
+        submittedDate: "September 18, 2026",
+        updatedDate: "September 20, 2026",
         status: "Published",
         summary: "Artificial intelligence is changing the way students learn and receive feedback.",
         content: `
@@ -53,7 +55,8 @@ const articles = [
         id: 3,
         title: "The Future of Electric Cars",
         reporter: "Daniel Levi",
-        date: "September 18, 2026",
+        submittedDate: "September 18, 2026",
+        updatedDate: "September 20, 2026",
         status: "Needs Changes",
         summary: "Electric cars are becoming more popular as battery technology continues to improve.",
         content: `

@@ -13,8 +13,11 @@ document.getElementById("article-title").textContent =
 document.getElementById("article-reporter").textContent =
     article.reporter;
 
-document.getElementById("article-date").textContent =
-    article.date;
+document.getElementById("submitted-date").textContent =
+    article.submittedDate;
+
+document.getElementById("updated-date").textContent =
+    article.updatedDate;
 
 //status//
 const statusElement =
@@ -49,5 +52,121 @@ const returnSection =
 
 returnButton.addEventListener("click", function() {
     returnSection.classList.toggle("show");
+});
+//
+
+//edit article area//
+const editButton =
+    document.querySelector(".edit-btn");
+
+const actionButtons =
+    document.querySelector(".action-buttons");
+
+const editButtons =
+    document.getElementById("edit-buttons");
+
+const saveButton =
+    document.getElementById("save-btn");
+
+const cancelButton =
+    document.getElementById("cancel-btn");
+
+const articleTitle =
+    document.getElementById("article-title");
+
+const articleContent =
+    document.getElementById("article-content");
+
+let originalTitle = "";
+let originalContent = "";
+
+editButton.addEventListener("click", function() {
+
+    originalTitle = articleTitle.textContent;
+    originalContent = articleContent.innerText;
+
+    articleTitle.innerHTML = `
+        <input
+            type="text"
+            id="edit-title"
+            class="edit-title"
+        >
+    `;
+
+    articleContent.innerHTML = `
+        <textarea
+            id="edit-content"
+            class="edit-content"
+        ></textarea>
+    `;
+
+    document.getElementById("edit-title").value =
+        originalTitle;
+
+    document.getElementById("edit-content").value =
+        originalContent;
+
+    actionButtons.style.display = "none";
+
+    editButtons.classList.add("show");
+});
+
+
+saveButton.addEventListener("click", function() {
+
+    const newTitle =
+        document.getElementById("edit-title").value;
+
+    const newContent =
+        document.getElementById("edit-content").value;
+
+    article.title = newTitle;
+    article.content = newContent;
+
+
+     const today = new Date();
+
+    const formattedDate =
+        today.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+        });
+
+    article.date = formattedDate;
+    
+    
+    articleTitle.textContent =
+        newTitle;
+
+    articleContent.textContent =
+        newContent;
+
+    document.getElementById("article-date").textContent =
+        formattedDate;
+
+
+    articleTitle.style.display = "block";
+    articleContent.style.display = "block";
+
+    document.getElementById("edit-title").style.display = "none";
+    document.getElementById("edit-content").style.display = "none";
+    
+
+    editButtons.classList.remove("show");
+
+    actionButtons.style.display = "flex";
+});
+
+
+cancelButton.addEventListener("click", function() {
+
+    articleTitle.textContent = originalTitle;
+
+    articleContent.textContent = originalContent;
+
+    editButtons.classList.remove("show");
+
+    actionButtons.style.display = "flex";
 });
 //

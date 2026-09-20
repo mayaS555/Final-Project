@@ -61,13 +61,22 @@ function displayArticles(articlesToDisplay) {
             "Reporter: " + article.reporter;
 
 
-        const date =
+        const submittedDate =
             document.createElement("p");
 
-        date.classList.add("article-info");
+        submittedDate.classList.add("article-info");
 
-        date.textContent =
-            "Date: " + article.date;
+        submittedDate.textContent =
+            "Submitted: " + article.submittedDate;
+
+
+        const updatedDate =
+            document.createElement("p");
+
+        updatedDate.classList.add("article-info");
+
+        updatedDate.textContent =
+            "Last Updated: " + article.updatedDate;
 
 
         const summary =
