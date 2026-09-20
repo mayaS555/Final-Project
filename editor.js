@@ -2,91 +2,214 @@ const articlesList =
     document.getElementById("articles-list");
 
 
-articles.forEach(function(article) {
+function displayArticles(articlesToDisplay) {
 
-    const articleLink =
-        document.createElement("a");
+    articlesList.innerHTML = "";
 
-    articleLink.href =
-        `editor-article.html?id=${article.id}`;
+    articlesToDisplay.forEach(function(article) {
 
-    articleLink.classList.add("article-card-link");
+        const articleLink =
+            document.createElement("a");
 
+        articleLink.href =
+            `editor-article.html?id=${article.id}`;
 
-    const articleCard =
-        document.createElement("article");
-
-    articleCard.classList.add("article-card");
+        articleLink.classList.add("article-card-link");
 
 
-    const status =
-        document.createElement("div");
+        const articleCard =
+            document.createElement("article");
 
-    status.classList.add("article-status");
-
-    status.textContent =
-        article.status;
+        articleCard.classList.add("article-card");
 
 
-    if (article.status === "Pending Approval") {
-        status.classList.add("pending");
-    }
+        const status =
+            document.createElement("div");
 
-    if (article.status === "Published") {
-        status.classList.add("published");
-    }
+        status.classList.add("article-status");
 
-    if (article.status === "Needs Changes") {
-        status.classList.add("Needs-changes");
-    }
+        status.textContent =
+            article.status;
 
 
-    const title =
-        document.createElement("h3");
+        if (article.status === "Pending Approval") {
+            status.classList.add("pending");
+        }
 
-    title.textContent =
-        article.title;
+        if (article.status === "Published") {
+            status.classList.add("published");
+        }
 
-
-    const reporter =
-        document.createElement("p");
-
-    reporter.classList.add("article-info");
-
-    reporter.textContent =
-        "Reporter: " + article.reporter;
+        if (article.status === "Needs Changes") {
+            status.classList.add("needs-changes");
+        }
 
 
-    const date =
-        document.createElement("p");
+        const title =
+            document.createElement("h3");
 
-    date.classList.add("article-info");
-
-    date.textContent =
-        "Date: " + article.date;
+        title.textContent =
+            article.title;
 
 
-    const summary =
-        document.createElement("p");
+        const reporter =
+            document.createElement("p");
 
-    summary.classList.add("article-summary");
+        reporter.classList.add("article-info");
 
-    summary.textContent =
-        article.summary;
+        reporter.textContent =
+            "Reporter: " + article.reporter;
 
 
-    articleCard.appendChild(status);
+        const date =
+            document.createElement("p");
 
-    articleCard.appendChild(title);
+        date.classList.add("article-info");
 
-    articleCard.appendChild(reporter);
+        date.textContent =
+            "Date: " + article.date;
 
-    articleCard.appendChild(date);
 
-    articleCard.appendChild(summary);
+        const summary =
+            document.createElement("p");
 
-    articleLink.appendChild(articleCard);
+        summary.classList.add("article-summary");
 
-    articlesList.appendChild(articleLink);
+        summary.textContent =
+            article.summary;
+
+
+        articleCard.appendChild(status);
+        articleCard.appendChild(title);
+        articleCard.appendChild(reporter);
+        articleCard.appendChild(date);
+        articleCard.appendChild(summary);
+        articleLink.appendChild(articleCard);
+        articlesList.appendChild(articleLink);
+
+    });
+
+}
+
+const allButton =
+    document.getElementById("filter-all");
+
+const pendingButton =
+    document.getElementById("filter-pending");
+
+const publishedButton =
+    document.getElementById("filter-published");
+
+const needsChangesButton =
+    document.getElementById("filter-needs-changes");
+
+
+allButton.addEventListener("click", function() {
+    displayArticles(articles);
+});
+
+pendingButton.addEventListener("click", function() {
+
+    const pendingArticles =
+        articles.filter(function(article) {
+            return article.status === "Pending Approval";
+        });
+
+    displayArticles(pendingArticles);
 
 });
+
+publishedButton.addEventListener("click", function() {
+
+    const publishedArticles =
+        articles.filter(function(article) {
+            return article.status === "Published";
+        });
+
+    displayArticles(publishedArticles);
+
+});
+
+needsChangesButton.addEventListener("click", function() {
+
+    const needsChangesArticles =
+        articles.filter(function(article) {
+            return article.status === "Needs Changes";
+        });
+
+    displayArticles(needsChangesArticles);
+
+});
+
+displayArticles(articles);
+
+function setActiveButton(selectedButton) {
+
+    const buttons =
+        document.querySelectorAll(".filters button");
+
+    buttons.forEach(function(button) {
+        button.classList.remove("active");
+    });
+
+    selectedButton.classList.add("active");
+}
+
+function setActiveButton(selectedButton) {
+
+    const buttons =
+        document.querySelectorAll(".filters button");
+
+    buttons.forEach(function(button) {
+        button.classList.remove("active");
+    });
+
+    selectedButton.classList.add("active");
+}
+
+allButton.addEventListener("click", function() {
+
+    displayArticles(articles);
+
+    setActiveButton(allButton);
+});
+
+pendingButton.addEventListener("click", function() {
+
+    const pendingArticles =
+        articles.filter(function(article) {
+            return article.status === "Pending Approval";
+        });
+
+    displayArticles(pendingArticles);
+
+    setActiveButton(pendingButton);
+});
+
+publishedButton.addEventListener("click", function() {
+
+    const publishedArticles =
+        articles.filter(function(article) {
+            return article.status === "Published";
+        });
+
+    displayArticles(publishedArticles);
+
+    setActiveButton(publishedButton);
+});
+
+needsChangesButton.addEventListener("click", function() {
+
+    const needsChangesArticles =
+        articles.filter(function(article) {
+            return article.status === "Needs Changes";
+        });
+
+    displayArticles(needsChangesArticles);
+
+    setActiveButton(needsChangesButton);
+});
+
+displayArticles(articles);
+setActiveButton(allButton);
+

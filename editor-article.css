@@ -65,9 +65,10 @@ body {
 .published {
     background-color: #0cb009;
     border-style: dashed;
-    border-color: rgb(2, 103, 7);
+    border-color: rgb(9, 146, 16);
+    color: rgb(255, 255, 255);
 }
-.Needs-changes{
+.needs-changes{
     background-color: #ffd498;
     border-style: dashed;
     border-color: rgb(166, 111, 0);

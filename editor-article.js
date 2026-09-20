@@ -30,8 +30,8 @@ if (article.status === "Published") {
     statusElement.classList.add("published");
 }
 
-if (article.status === "Needs changes") {
-    statusElement.classList.add("Needs-changes");
+if (article.status === "needs Changes") {
+    statusElement.classList.add("needs-changes");
 }
 //
 

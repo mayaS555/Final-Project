@@ -29,7 +29,7 @@ const articles = [
         title: "Artificial Intelligence in Schools",
         reporter: "Noa Cohen",
         date: "September 19, 2026",
-        status: "published",
+        status: "Published",
         summary: "Artificial intelligence is changing the way students learn and receive feedback.",
         content: `
             <p>
@@ -54,7 +54,7 @@ const articles = [
         title: "The Future of Electric Cars",
         reporter: "Daniel Levi",
         date: "September 18, 2026",
-        status: "Needs changes",
+        status: "Needs Changes",
         summary: "Electric cars are becoming more popular as battery technology continues to improve.",
         content: `
             <p>
