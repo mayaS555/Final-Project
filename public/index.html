@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Daily Web</title>
+    <link rel="stylesheet" href="css/index.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>The Daily Web</h1>
+        <nav>
+            <a href="login.html">Staff Login</a>
+        </nav>
+    </header>
+
+    <section class="toolbar">
+        <input type="search" id="search" placeholder="Search articles...">
+
+        <select id="category-filter">
+            <option value="">All categories</option>
+        </select>
+
+        <select id="viewed-filter">
+            <option value="">All</option>
+            <option value="viewed">Viewed</option>
+            <option value="not-viewed">Not viewed</option>
+        </select>
+
+        <select id="sort">
+            <option value="date">Newest</option>
+            <option value="popular">Most popular</option>
+        </select>
+    </section>
+
+    <div class="page">
+
+        <main class="feed" id="feed">
+
+        </main>
+
+        <aside class="sidebar">
+            <section class="weather">
+                <h2>Weather</h2>
+                <p>Coming soon</p>
+            </section>
+        </aside>
+
+    </div>
+
+    <script src="js/articles-data.js"></script>
+    <script src="js/index.js"></script>
+
+</body>
+
+</html>

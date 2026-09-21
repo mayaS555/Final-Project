@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor Dashboard | The Daily Web</title>
+    <link rel="stylesheet" href="css/editor.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>The Daily Web</h1>
+    </header>
+
+    <main class="editor-container">
+
+        <section class="filters">
+            <h2>Editor Dashboard</h2>
+            <p>Manage and review submitted articles</p>
+
+            <div class="buttons">
+                <button id="filter-all">All Articles</button>
+                <button id="filter-pending">Pending Approval</button>
+                <button id="filter-published">Published</button>
+                <button id="filter-needs-changes">Need Changes</button>
+            </div>
+        </section>
+
+        <section class="articles-list" id="articles-list">
+
+        </section>
+
+    </main>
+    <script src="js/articles-data.js"></script>
+    <script src="js/editor.js"></script>
+
+</body>
+
+</html>
