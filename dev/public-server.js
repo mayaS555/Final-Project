@@ -5,6 +5,7 @@ require("dotenv").config({ quiet: true });
 
 const { useArticleModel } = require("../services/publicArticleService");
 const DevArticle = require("./devArticleModel");
+const ArticleRead = require("../models/ArticleRead");
 const { connectDevDb, DEV_DATABASE_NAME } = require("./connectDevDb");
 const createDevApp = require("./createDevApp");
 
@@ -14,6 +15,7 @@ async function start() {
   await connectDevDb();
   // Title search fails without its text index, so wait until the indexes exist.
   await DevArticle.init();
+  await ArticleRead.init();
   useArticleModel(DevArticle);
 
   createDevApp().listen(DEV_PORT, () => {

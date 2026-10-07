@@ -96,7 +96,10 @@ function toFullArticle(document) {
 // The filter is built field by field. q and category must already be validated strings;
 // an empty string means "no filter".
 // q uses MongoDB text search on the approved title only (needs a text index on that field).
-function buildFeedFilter({ q, category }) {
+// viewed is "all", "viewed" or "unviewed". For the last two, readArticleIds is the list of
+// article ids that the current device has opened (read by the caller from ArticleRead).
+// It is combined with the approved-only filter, so an id of a nonpublic article never matches.
+function buildFeedFilter({ q, category, viewed, readArticleIds }) {
   const filter = { ...approvedOnlyFilter };
 
   if (q) {
@@ -105,15 +108,25 @@ function buildFeedFilter({ q, category }) {
   if (category) {
     filter["approved.category"] = category;
   }
+
+  if (viewed === "viewed" || viewed === "unviewed") {
+    if (!Array.isArray(readArticleIds)) {
+      // Never fall back to an unfiltered feed when the history is missing.
+      throw new Error("A viewed filter needs the list of read article ids.");
+    }
+    filter._id = viewed === "viewed" ? { $in: readArticleIds } : { $nin: readArticleIds };
+  } else if (viewed !== "all") {
+    throw new Error("Unknown viewed filter.");
+  }
   return filter;
 }
 
 // page must already be a validated integer >= 1.
 // Filters are applied by MongoDB before skip and limit.
 // One extra row is requested only to learn whether another page exists.
-async function getPublishedArticles({ page, q = "", category = "" }) {
+async function getPublishedArticles({ page, q = "", category = "", viewed = "all", readArticleIds }) {
   const documents = await getArticleModel()
-    .find(buildFeedFilter({ q, category }), feedProjection)
+    .find(buildFeedFilter({ q, category, viewed, readArticleIds }), feedProjection)
     .sort(feedSort)
     .skip((page - 1) * FEED_PAGE_SIZE)
     .limit(FEED_PAGE_SIZE + 1)

@@ -1,16 +1,19 @@
 // DEVELOPMENT ONLY. Run with: node dev/seed-public.js
-// Deletes every document in the collection of the dev article model and inserts fixtures.
-// Before deleting, seedDevArticles() verifies that the model is on an open connection to
-// the database DEV_DATABASE_NAME and uses the collection "dev_public_articles"; otherwise
-// it throws and deletes nothing. It only ever calls the dev model, never another collection.
+// Deletes every document in the collection of the dev article model and in the read-history
+// collection "article_reads", then inserts fixtures (new article ids make old read records useless).
+// Before deleting, seedDevArticles() verifies that each model is on an open connection to
+// the database DEV_DATABASE_NAME and uses its expected collection; otherwise
+// it throws and deletes nothing. It only ever calls those two models, never another collection.
 
 require("dotenv").config({ quiet: true });
 
 const mongoose = require("mongoose");
 const DevArticle = require("./devArticleModel");
+const ArticleRead = require("../models/ArticleRead");
 const { connectDevDb, DEV_DATABASE_NAME } = require("./connectDevDb");
 
 const DEV_COLLECTION_NAME = "dev_public_articles";
+const DEV_READ_COLLECTION_NAME = "article_reads";
 
 // Text that must never reach public output. Tests search for these markers.
 // The words and categories below exist only in pending or draft revisions, so no public
@@ -168,8 +171,8 @@ function buildSpecialArticles(now) {
 
 // Checks the connection that the model itself is bound to, not the URI or the environment.
 // Throws before any write if the model is not on an open connection to the dev database
-// and the dev collection.
-function assertModelTargetsDevCollection(model) {
+// and the expected dev collection.
+function assertModelTargetsDevCollection(model, expectedCollectionName = DEV_COLLECTION_NAME) {
   const connection = model.db;
 
   if (!connection || connection.readyState !== 1) {
@@ -178,21 +181,31 @@ function assertModelTargetsDevCollection(model) {
   if (connection.name !== DEV_DATABASE_NAME) {
     throw new Error(`Refusing to seed: the model is connected to database "${connection.name}", expected "${DEV_DATABASE_NAME}".`);
   }
-  if (!model.collection || model.collection.name !== DEV_COLLECTION_NAME) {
-    throw new Error(`Refusing to seed: the model uses collection "${model.collection && model.collection.name}", expected "${DEV_COLLECTION_NAME}".`);
+  if (!model.collection || model.collection.name !== expectedCollectionName) {
+    throw new Error(`Refusing to seed: the model uses collection "${model.collection && model.collection.name}", expected "${expectedCollectionName}".`);
   }
+}
+
+// Removes all read history. Used by the seed and by the tests, only after the same checks.
+async function clearDevArticleReads(readModel = ArticleRead) {
+  assertModelTargetsDevCollection(readModel, DEV_READ_COLLECTION_NAME);
+  await readModel.deleteMany({});
 }
 
 // Expects an open mongoose connection. Returns the ids the checks need.
 // The model parameter exists so the guard can be tested with a stand-in model.
-async function seedDevArticles(model = DevArticle) {
+async function seedDevArticles(model = DevArticle, readModel = ArticleRead) {
+  // Both guards run before the first delete.
   assertModelTargetsDevCollection(model);
+  assertModelTargetsDevCollection(readModel, DEV_READ_COLLECTION_NAME);
 
   const now = Date.now();
   const special = buildSpecialArticles(now);
 
   await model.deleteMany({});
+  await clearDevArticleReads(readModel);
   await model.createIndexes();
+  await readModel.createIndexes();
 
   const samples = [...buildSampleArticles(now), ...buildSearchFixtureArticles(now)];
   await model.insertMany(samples);
@@ -234,7 +247,9 @@ if (require.main === module) {
 module.exports = {
   seedDevArticles,
   assertModelTargetsDevCollection,
+  clearDevArticleReads,
   DEV_COLLECTION_NAME,
+  DEV_READ_COLLECTION_NAME,
   PENDING_MARKER,
   DRAFT_MARKER,
   SSR_END_MARKER,

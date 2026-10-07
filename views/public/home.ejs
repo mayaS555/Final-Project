@@ -1,8 +1,14 @@
 <%
-    const hasFilters = Boolean(filters.q || filters.category);
+    const viewedFilter = filters.viewed || "all";
+    const viewedOptions = [
+        { value: "all", label: "All articles" },
+        { value: "viewed", label: "Viewed" },
+        { value: "unviewed", label: "Not viewed" }
+    ];
+    const hasFilters = Boolean(filters.q || filters.category || viewedFilter !== "all");
     let statusMessage = "";
     if (feed.items.length === 0) {
-        statusMessage = hasFilters ? "No articles match your search or category." : "No published articles yet.";
+        statusMessage = hasFilters ? "No articles match your filters." : "No published articles yet.";
     } else if (!feed.hasMore) {
         statusMessage = "You have reached the end of the results.";
     }
@@ -24,6 +30,11 @@
                 <option value="<%= filters.category %>" selected><%= filters.category %></option>
                 <% } %>
             </select>
+            <select name="viewed" aria-label="Filter by viewed state">
+                <% viewedOptions.forEach(function (option) { %>
+                <option value="<%= option.value %>"<%= option.value === viewedFilter ? " selected" : "" %>><%= option.label %></option>
+                <% }); %>
+            </select>
             <button type="submit">Search</button>
         </form>
 
@@ -32,7 +43,8 @@
              data-next-page="<%= feed.page + 1 %>"
              data-has-more="<%= feed.hasMore %>"
              data-q="<%= filters.q %>"
-             data-category="<%= filters.category %>">
+             data-category="<%= filters.category %>"
+             data-viewed="<%= viewedFilter %>">
             <% feed.items.forEach(function (article) { %>
             <article class="pub-card" data-article-id="<%= article.id %>">
                 <a class="pub-card-link" href="/articles/<%= article.id %>">

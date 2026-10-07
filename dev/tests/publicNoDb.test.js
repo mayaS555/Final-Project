@@ -10,7 +10,8 @@ const createDevApp = require("../createDevApp");
 const { parseFeedQuery, buildFeedHref } = require("../../controllers/publicController");
 const { toSafeImageUrl } = require("../../services/publicArticleService");
 const { DEV_DATABASE_NAME } = require("../connectDevDb");
-const { seedDevArticles, assertModelTargetsDevCollection, DEV_COLLECTION_NAME } = require("../seed-public");
+const { seedDevArticles, assertModelTargetsDevCollection, DEV_COLLECTION_NAME, DEV_READ_COLLECTION_NAME } = require("../seed-public");
+const { deviceIdentity, readDeviceIdCookie, DEVICE_COOKIE_NAME, DEVICE_COOKIE_MAX_AGE_MS } = require("../../middleware/deviceIdentity");
 
 const viewsDir = path.join(__dirname, "..", "..", "views", "public");
 
@@ -51,7 +52,7 @@ describe("public site without a database", () => {
     assert.strictEqual(response.status, 400);
   });
 
-  const structuredQueries = ["q[$ne]=x", "q[]=a", "category[$gt]=", "category[a][b]=1", "page[a]=1", "page[]=1"];
+  const structuredQueries = ["q[$ne]=x", "q[]=a", "category[$gt]=", "category[a][b]=1", "page[a]=1", "page[]=1", "viewed[$ne]=x", "viewed[]=viewed"];
 
   for (const queryString of structuredQueries) {
     it(`API and home page reject the structured parameter ${queryString} with 400`, async () => {
@@ -81,13 +82,19 @@ describe("public site without a database", () => {
     "a newline inside q": "q=a%0Ab",
     "a null character inside category": "category=a%00b",
     "a DEL character in q": "q=%7F",
+    "an unknown viewed value": "viewed=everything",
+    "the old not-viewed spelling": "viewed=not-viewed",
+    "a viewed value in capitals": "viewed=VIEWED",
+    "a repeated viewed": "viewed=viewed&viewed=unviewed",
+    "a viewed value with a control character": "viewed=all%0A",
+    "a viewed value that is too long": `viewed=${"a".repeat(11)}`,
   };
 
   for (const [label, queryString] of Object.entries(badFilterQueries)) {
     it(`API and home page reject ${label} with 400`, async () => {
       const apiResponse = await fetch(`${baseUrl}/api/public/articles?${queryString}`);
       assert.strictEqual(apiResponse.status, 400);
-      assert.match((await apiResponse.json()).error, /q must|category must|invalid characters/);
+      assert.match((await apiResponse.json()).error, /q must|category must|viewed must|invalid characters/);
 
       const pageResponse = await fetch(`${baseUrl}/?${queryString}`);
       assert.strictEqual(pageResponse.status, 400);
@@ -148,7 +155,7 @@ describe("templates", () => {
     assert.ok(html.includes("First paragraph"));
   });
 
-  function renderHome({ items = [article], page = 1, hasMore = false, filters = { q: "", category: "" }, categories = [] } = {}) {
+  function renderHome({ items = [article], page = 1, hasMore = false, filters = { q: "", category: "", viewed: "all" }, categories = [] } = {}) {
     return ejs.renderFile(path.join(viewsDir, "home.ejs"), {
       pageTitle: "The Daily Web",
       feed: { items, page, hasMore },
@@ -157,6 +164,12 @@ describe("templates", () => {
       feedHref: (targetPage) => buildFeedHref(filters, targetPage),
       formatDate,
     });
+  }
+
+  function categorySelect(html) {
+    const match = html.match(/<select name="category"[\s\S]*?<\/select>/);
+    assert.ok(match, "the category select is missing");
+    return match[0];
   }
 
   it("home page escapes user text", async () => {
@@ -171,13 +184,13 @@ describe("templates", () => {
   });
 
   it("empty filtered feed says that nothing matches", async () => {
-    const html = await renderHome({ items: [], filters: { q: "zzz", category: "" } });
-    assert.ok(html.includes("No articles match your search or category."));
+    const html = await renderHome({ items: [], filters: { q: "zzz", category: "", viewed: "all" } });
+    assert.ok(html.includes("No articles match your filters."));
   });
 
   it("search form shows the active filters and escapes them", async () => {
     const html = await renderHome({
-      filters: { q: '"><script>x</script>', category: "Markets" },
+      filters: { q: '"><script>x</script>', category: "Markets", viewed: "all" },
       categories: ["Business", "Markets"],
     });
     assert.ok(!html.includes("<script>x</script>"));
@@ -190,22 +203,56 @@ describe("templates", () => {
   it("an unlisted category from the URL stays selected as an escaped option", async () => {
     const html = await renderHome({
       items: [],
-      filters: { q: "", category: 'No<b>Such' },
+      filters: { q: "", category: 'No<b>Such', viewed: "all" },
       categories: ["Business", "Markets"],
     });
     assert.ok(html.includes('<option value="No&lt;b&gt;Such" selected>No&lt;b&gt;Such</option>'));
     assert.ok(!html.includes("No<b>Such"));
-    assert.strictEqual((html.match(/selected/g) || []).length, 1);
+    assert.strictEqual((categorySelect(html).match(/selected/g) || []).length, 1);
   });
 
   it("a listed category is not added a second time", async () => {
-    const html = await renderHome({ filters: { q: "", category: "Markets" }, categories: ["Business", "Markets"] });
+    const html = await renderHome({ filters: { q: "", category: "Markets", viewed: "all" }, categories: ["Business", "Markets"] });
     assert.strictEqual((html.match(/value="Markets"/g) || []).length, 1);
   });
 
   it("no extra category option appears without a category filter", async () => {
     const html = await renderHome({ categories: ["Business", "Markets"] });
-    assert.strictEqual((html.match(/<option /g) || []).length, 3);
+    assert.strictEqual((categorySelect(html).match(/<option /g) || []).length, 3);
+  });
+
+  function viewedSelect(html) {
+    const match = html.match(/<select name="viewed"[\s\S]*?<\/select>/);
+    assert.ok(match, "the viewed select is missing");
+    return match[0];
+  }
+
+  it("the viewed select has three labelled options and All is selected by default", async () => {
+    const select = viewedSelect(await renderHome());
+    assert.ok(select.includes('aria-label="Filter by viewed state"'));
+    assert.deepStrictEqual([...select.matchAll(/<option value="([a-z]+)"/g)].map((match) => match[1]), ["all", "viewed", "unviewed"]);
+    assert.ok(select.includes('<option value="all" selected>'));
+    assert.strictEqual((select.match(/selected/g) || []).length, 1);
+  });
+
+  it("the viewed select keeps the active choice and the feed element carries it", async () => {
+    for (const viewed of ["viewed", "unviewed"]) {
+      const html = await renderHome({ filters: { q: "", category: "", viewed } });
+      assert.ok(viewedSelect(html).includes(`<option value="${viewed}" selected>`), viewed);
+      assert.strictEqual((viewedSelect(html).match(/selected/g) || []).length, 1);
+      assert.ok(html.includes(`data-viewed="${viewed}"`));
+    }
+  });
+
+  it("an empty result with only a viewed filter says that nothing matches", async () => {
+    const html = await renderHome({ items: [], filters: { q: "", category: "", viewed: "viewed" } });
+    assert.ok(html.includes("No articles match your filters."));
+  });
+
+  it("pager links keep the viewed filter", async () => {
+    const html = await renderHome({ page: 2, hasMore: true, filters: { q: "", category: "", viewed: "unviewed" } });
+    assert.ok(html.includes('href="/?viewed=unviewed"'), "newer link");
+    assert.ok(html.includes('href="/?viewed=unviewed&amp;page=3"'), "older link");
   });
 
   it("pager links are marked so the script can hide only the older one", async () => {
@@ -215,7 +262,7 @@ describe("templates", () => {
   });
 
   it("pager links keep the active filters", async () => {
-    const html = await renderHome({ page: 2, hasMore: true, filters: { q: "harbor report", category: "Markets" } });
+    const html = await renderHome({ page: 2, hasMore: true, filters: { q: "harbor report", category: "Markets", viewed: "all" } });
     assert.ok(html.includes('href="/?q=harbor+report&amp;category=Markets"'), "newer link goes back to page 1");
     assert.ok(html.includes('href="/?q=harbor+report&amp;category=Markets&amp;page=3"'), "older link");
     assert.ok(html.includes('data-next-page="3"'));
@@ -225,12 +272,12 @@ describe("templates", () => {
 
 describe("parseFeedQuery and buildFeedHref", () => {
   it("returns defaults for an empty query", () => {
-    assert.deepStrictEqual(parseFeedQuery({}), { page: 1, q: "", category: "" });
+    assert.deepStrictEqual(parseFeedQuery({}), { page: 1, q: "", category: "", viewed: "all" });
   });
 
   it("trims text and treats empty or blank values as no filter", () => {
-    assert.deepStrictEqual(parseFeedQuery({ q: "  harbor  ", category: " Markets " }), { page: 1, q: "harbor", category: "Markets" });
-    assert.deepStrictEqual(parseFeedQuery({ q: "", category: "   " }), { page: 1, q: "", category: "" });
+    assert.deepStrictEqual(parseFeedQuery({ q: "  harbor  ", category: " Markets " }), { page: 1, q: "harbor", category: "Markets", viewed: "all" });
+    assert.deepStrictEqual(parseFeedQuery({ q: "", category: "   " }), { page: 1, q: "", category: "", viewed: "all" });
   });
 
   it("accepts values exactly at the length limits", () => {
@@ -254,18 +301,41 @@ describe("parseFeedQuery and buildFeedHref", () => {
   });
 
   it("ignores unrelated unknown parameters, including look-alike names", () => {
-    assert.deepStrictEqual(parseFeedQuery({ "unknown[a]": "1", "query[x]": "1", "qq[a]": "1", q: "a" }), { page: 1, q: "a", category: "" });
+    assert.deepStrictEqual(parseFeedQuery({ "unknown[a]": "1", "query[x]": "1", "qq[a]": "1", q: "a" }), { page: 1, q: "a", category: "", viewed: "all" });
+  });
+
+  it("accepts the three viewed values, and an empty value means all", () => {
+    for (const viewed of ["all", "viewed", "unviewed"]) {
+      assert.strictEqual(parseFeedQuery({ viewed }).viewed, viewed);
+    }
+    assert.strictEqual(parseFeedQuery({ viewed: "" }).viewed, "all");
+    assert.strictEqual(parseFeedQuery({ viewed: "  " }).viewed, "all");
+    assert.strictEqual(parseFeedQuery({}).viewed, "all");
+  });
+
+  it("rejects every other viewed value, repeated or structured forms", () => {
+    for (const viewed of ["everything", "not-viewed", "VIEWED", "1", "true", ["viewed"], ["viewed", "all"], { $ne: "x" }]) {
+      assert.match(parseFeedQuery({ viewed }).error, /^viewed must/, JSON.stringify(viewed));
+    }
+    assert.match(parseFeedQuery({ "viewed[$ne]": "x" }).error, /^viewed must be a single value/);
+    assert.match(parseFeedQuery({ "viewed[]": "viewed" }).error, /^viewed must/);
   });
 
   it("returns only the known fields", () => {
     const result = parseFeedQuery({ q: "a", category: "b", page: "2", $where: "1", status: "draft" });
-    assert.deepStrictEqual(Object.keys(result).sort(), ["category", "page", "q"]);
+    assert.deepStrictEqual(Object.keys(result).sort(), ["category", "page", "q", "viewed"]);
   });
 
   it("builds links that keep filters and drop empty ones", () => {
     assert.strictEqual(buildFeedHref({ q: "", category: "" }, 1), "/");
     assert.strictEqual(buildFeedHref({ q: "", category: "" }, 3), "/?page=3");
     assert.strictEqual(buildFeedHref({ q: "a&b=c", category: "Sci Fi" }, 2), "/?q=a%26b%3Dc&category=Sci+Fi&page=2");
+  });
+
+  it("links keep a viewed filter and leave viewed=all out", () => {
+    assert.strictEqual(buildFeedHref({ q: "", category: "", viewed: "all" }, 1), "/");
+    assert.strictEqual(buildFeedHref({ q: "a", category: "", viewed: "viewed" }, 2), "/?q=a&viewed=viewed&page=2");
+    assert.strictEqual(buildFeedHref({ q: "", category: "B", viewed: "unviewed" }, 1), "/?category=B&viewed=unviewed");
   });
 });
 
@@ -346,6 +416,19 @@ describe("seed safety guard", () => {
     });
   }
 
+  it("a wrong read-history model stops the seed before the article collection is touched", async () => {
+    const articles = createFakeModel({ dbName: DEV_DATABASE_NAME, readyState: 1, collectionName: DEV_COLLECTION_NAME });
+    const wrongReads = createFakeModel({ dbName: DEV_DATABASE_NAME, readyState: 1, collectionName: "article_reads_production" });
+    await assert.rejects(() => seedDevArticles(articles.model, wrongReads.model), /article_reads_production/);
+    assert.deepStrictEqual(articles.calls, []);
+    assert.deepStrictEqual(wrongReads.calls, []);
+
+    const otherDatabase = createFakeModel({ dbName: "production_news", readyState: 1, collectionName: DEV_READ_COLLECTION_NAME });
+    await assert.rejects(() => seedDevArticles(articles.model, otherDatabase.model), /production_news/);
+    assert.deepStrictEqual(articles.calls, []);
+    assert.deepStrictEqual(otherDatabase.calls, []);
+  });
+
   it("accepts the dev database and the dev collection", () => {
     const { model } = createFakeModel({ dbName: DEV_DATABASE_NAME, readyState: 1, collectionName: DEV_COLLECTION_NAME });
     assert.doesNotThrow(() => assertModelTargetsDevCollection(model));
@@ -354,5 +437,124 @@ describe("seed safety guard", () => {
   it("the real dev model is rejected while it has no open connection", async () => {
     // Without calling connectDevDb() the real model is not connected, so seeding must refuse.
     await assert.rejects(() => seedDevArticles(), /not on an open database connection/);
+  });
+});
+
+describe("device identity", () => {
+  const validId = "0123456789abcdef0123456789abcdef";
+
+  // Runs the middleware with a fake request and response and records res.cookie calls.
+  function runMiddleware({ cookie, secure = false } = {}) {
+    const req = { headers: cookie === undefined ? {} : { cookie }, secure };
+    const cookieCalls = [];
+    const res = { cookie: (name, value, options) => cookieCalls.push({ name, value, options }) };
+    let nextCalls = 0;
+    deviceIdentity(req, res, () => {
+      nextCalls += 1;
+    });
+    return { req, cookieCalls, nextCalls };
+  }
+
+  it("issues a new random id with the documented cookie options", () => {
+    const { req, cookieCalls, nextCalls } = runMiddleware();
+    assert.strictEqual(nextCalls, 1);
+    assert.match(req.deviceId, /^[0-9a-f]{32}$/);
+    assert.strictEqual(cookieCalls.length, 1);
+    assert.strictEqual(cookieCalls[0].name, DEVICE_COOKIE_NAME);
+    assert.strictEqual(cookieCalls[0].value, req.deviceId);
+    assert.deepStrictEqual(cookieCalls[0].options, {
+      maxAge: DEVICE_COOKIE_MAX_AGE_MS,
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+    });
+    assert.strictEqual(DEVICE_COOKIE_MAX_AGE_MS, 365 * 24 * 60 * 60 * 1000);
+  });
+
+  it("two new visitors get different ids", () => {
+    assert.notStrictEqual(runMiddleware().req.deviceId, runMiddleware().req.deviceId);
+  });
+
+  it("marks the cookie Secure only on an HTTPS request", () => {
+    assert.strictEqual(runMiddleware({ secure: true }).cookieCalls[0].options.secure, true);
+    assert.strictEqual(runMiddleware({ secure: false }).cookieCalls[0].options.secure, false);
+  });
+
+  it("reuses a valid cookie without issuing another one", () => {
+    for (const cookie of [`${DEVICE_COOKIE_NAME}=${validId}`, `theme=dark; ${DEVICE_COOKIE_NAME}=${validId}; other=1`, `  ${DEVICE_COOKIE_NAME} = ${validId} `]) {
+      const { req, cookieCalls, nextCalls } = runMiddleware({ cookie });
+      assert.strictEqual(req.deviceId, validId, cookie);
+      assert.strictEqual(cookieCalls.length, 0, cookie);
+      assert.strictEqual(nextCalls, 1);
+    }
+  });
+
+  it("replaces missing, malformed or wrongly encoded cookies and does not throw", () => {
+    const bad = [
+      "",
+      "garbage",
+      "=",
+      ";;;",
+      `${DEVICE_COOKIE_NAME}=`,
+      `${DEVICE_COOKIE_NAME}=%E0%A4%A`,
+      `${DEVICE_COOKIE_NAME}=%`,
+      `${DEVICE_COOKIE_NAME}=${validId.toUpperCase()}`,
+      `${DEVICE_COOKIE_NAME}=${validId}0`,
+      `${DEVICE_COOKIE_NAME}=${validId.slice(1)}`,
+      `${DEVICE_COOKIE_NAME}=${"z".repeat(32)}`,
+      `${DEVICE_COOKIE_NAME}=${validId}%00`,
+      `${DEVICE_COOKIE_NAME}="${validId}"`,
+      `${DEVICE_COOKIE_NAME}=${"a".repeat(100000)}`,
+      `x${DEVICE_COOKIE_NAME}=${validId}`,
+    ];
+    for (const cookie of bad) {
+      const { req, cookieCalls, nextCalls } = runMiddleware({ cookie });
+      assert.match(req.deviceId, /^[0-9a-f]{32}$/, cookie.slice(0, 40));
+      assert.notStrictEqual(req.deviceId, validId);
+      assert.strictEqual(cookieCalls.length, 1, cookie.slice(0, 40));
+      assert.strictEqual(nextCalls, 1);
+    }
+    assert.strictEqual(readDeviceIdCookie(undefined), null);
+    assert.strictEqual(readDeviceIdCookie(42), null);
+  });
+
+  it("an HTTP visit receives the cookie with the documented attributes", async () => {
+    const server = createDevApp().listen(0);
+    await new Promise((resolve) => server.once("listening", resolve));
+    try {
+      const url = `http://127.0.0.1:${server.address().port}/articles/not-an-id`;
+
+      const first = await fetch(url);
+      assert.strictEqual(first.status, 404);
+      const setCookie = first.headers.getSetCookie();
+      assert.strictEqual(setCookie.length, 1);
+      assert.match(setCookie[0], new RegExp(`^${DEVICE_COOKIE_NAME}=[0-9a-f]{32}; `));
+      assert.ok(setCookie[0].includes("Path=/"));
+      assert.ok(setCookie[0].includes("HttpOnly"));
+      assert.ok(setCookie[0].includes("SameSite=Lax"));
+      assert.ok(setCookie[0].includes(`Max-Age=${DEVICE_COOKIE_MAX_AGE_MS / 1000}`));
+      assert.ok(!setCookie[0].includes("Secure"), "plain HTTP development must still receive the cookie");
+
+      // A returning browser sends the cookie back and gets no new one.
+      const returning = await fetch(url, { headers: { cookie: setCookie[0].split(";")[0] } });
+      assert.strictEqual(returning.headers.getSetCookie().length, 0);
+
+      // The identity is never taken from the query string or other headers.
+      const queryId = "f".repeat(32);
+      const attempt = await fetch(`${url}?deviceId=${queryId}&dw_device=${queryId}`, { headers: { "x-device-id": queryId } });
+      assert.ok(!attempt.headers.getSetCookie()[0].includes(queryId));
+
+      // A malformed cookie value does not break the request.
+      const malformed = await fetch(url, { headers: { cookie: `${DEVICE_COOKIE_NAME}=%E0%A4%A` } });
+      assert.strictEqual(malformed.status, 404);
+      assert.strictEqual(malformed.headers.getSetCookie().length, 1);
+
+      // Static files do not get a device cookie.
+      const css = await fetch(`http://127.0.0.1:${server.address().port}/css/public.css`);
+      assert.strictEqual(css.headers.getSetCookie().length, 0);
+    } finally {
+      server.close();
+    }
   });
 });

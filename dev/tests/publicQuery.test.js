@@ -105,6 +105,59 @@ describe("publicArticleService query construction", () => {
     });
   });
 
+  describe("viewed filter", () => {
+    const readIds = ["64b7f0f2a1b2c3d4e5f60001", "64b7f0f2a1b2c3d4e5f60002"];
+
+    it("viewed=all ignores the history and adds no id filter", async () => {
+      await service.getPublishedArticles({ page: 1, viewed: "all", readArticleIds: readIds });
+      assert.deepStrictEqual(model.calls[0].filter, approvedOnly);
+    });
+
+    it("viewed keeps only the read ids and unviewed excludes them", async () => {
+      await service.getPublishedArticles({ page: 1, viewed: "viewed", readArticleIds: readIds });
+      await service.getPublishedArticles({ page: 1, viewed: "unviewed", readArticleIds: readIds });
+      assert.deepStrictEqual(model.calls[0].filter, { ...approvedOnly, _id: { $in: readIds } });
+      assert.deepStrictEqual(model.calls[1].filter, { ...approvedOnly, _id: { $nin: readIds } });
+    });
+
+    it("an empty history means nothing is viewed and everything is unviewed", async () => {
+      await service.getPublishedArticles({ page: 1, viewed: "viewed", readArticleIds: [] });
+      await service.getPublishedArticles({ page: 1, viewed: "unviewed", readArticleIds: [] });
+      assert.deepStrictEqual(model.calls[0].filter._id, { $in: [] });
+      assert.deepStrictEqual(model.calls[1].filter._id, { $nin: [] });
+    });
+
+    it("viewed is combined with search and category in the same database query, before pagination", async () => {
+      await service.getPublishedArticles({ page: 2, q: "harbor", category: "Markets", viewed: "unviewed", readArticleIds: readIds });
+      const call = model.calls[0];
+      assert.deepStrictEqual(call.filter, {
+        ...approvedOnly,
+        $text: { $search: "harbor" },
+        "approved.category": "Markets",
+        _id: { $nin: readIds },
+      });
+      assert.strictEqual(call.skip, 20);
+      assert.strictEqual(call.limit, 21);
+      assert.deepStrictEqual(call.sort, { "approved.publishedAt": -1, _id: -1 });
+    });
+
+    it("the approved-only condition stays in every viewed query", async () => {
+      await service.getPublishedArticles({ page: 1, viewed: "viewed", readArticleIds: readIds });
+      assert.deepStrictEqual(model.calls[0].filter["approved.publishedAt"], { $type: "date" });
+    });
+
+    it("a viewed filter without a history list is an error, not an unfiltered feed", async () => {
+      await assert.rejects(() => service.getPublishedArticles({ page: 1, viewed: "viewed" }), /list of read article ids/);
+      await assert.rejects(() => service.getPublishedArticles({ page: 1, viewed: "unviewed", readArticleIds: "abc" }), /list of read article ids/);
+      assert.strictEqual(model.calls.length, 0);
+    });
+
+    it("an unknown viewed value is an error", async () => {
+      await assert.rejects(() => service.getPublishedArticles({ page: 1, viewed: "everything", readArticleIds: [] }), /Unknown viewed filter/);
+      assert.strictEqual(model.calls.length, 0);
+    });
+  });
+
   it("categories come from the approved versions only, sorted, without junk values", async () => {
     const categories = await service.getPublishedCategories();
     assert.deepStrictEqual(model.calls[0], { field: "approved.category", filter: approvedOnly });

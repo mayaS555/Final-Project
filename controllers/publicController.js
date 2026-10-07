@@ -1,10 +1,12 @@
 const publicArticleService = require("../services/publicArticleService");
+const articleReadService = require("../services/articleReadService");
 
 const MAX_PAGE = 1000;
 const MAX_SEARCH_LENGTH = 100;
 const MAX_CATEGORY_LENGTH = 50;
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
-const FEED_PARAMETERS = ["q", "category", "page"];
+const VIEWED_VALUES = ["all", "viewed", "unviewed"];
+const FEED_PARAMETERS = ["q", "category", "viewed", "page"];
 
 function parsePage(rawPage) {
   if (rawPage === undefined) {
@@ -41,6 +43,21 @@ function parseOptionalText(rawValue, name, maxLength) {
   return { value };
 }
 
+// Omitted or empty means "all". Anything else must be one of the allowed words.
+function parseViewed(rawValue) {
+  const text = parseOptionalText(rawValue, "viewed", 10);
+  if (text.error) {
+    return { error: text.error };
+  }
+  if (text.value === "") {
+    return { value: "all" };
+  }
+  if (!VIEWED_VALUES.includes(text.value)) {
+    return { error: "viewed must be all, viewed or unviewed." };
+  }
+  return { value: text.value };
+}
+
 // Express's default parser turns q[$ne]=x into a key named "q[$ne]" and leaves q unset,
 // so a structured form of a recognized parameter has to be detected by its key.
 function findStructuredParameter(query) {
@@ -48,7 +65,7 @@ function findStructuredParameter(query) {
 }
 
 // Shared by the HTML feed and the JSON feed so both validate and query the same way.
-// Unknown parameters are ignored; only q, category and page are read.
+// Unknown parameters are ignored; only q, category, viewed and page are read.
 function parseFeedQuery(query) {
   const structuredName = findStructuredParameter(query);
   if (structuredName) {
@@ -67,7 +84,11 @@ function parseFeedQuery(query) {
   if (category.error) {
     return { error: category.error };
   }
-  return { page: page.page, q: search.value, category: category.value };
+  const viewed = parseViewed(query.viewed);
+  if (viewed.error) {
+    return { error: viewed.error };
+  }
+  return { page: page.page, q: search.value, category: category.value, viewed: viewed.value };
 }
 
 // Link to a feed page that keeps the active filters (used by the no-JavaScript pager).
@@ -78,6 +99,9 @@ function buildFeedHref(filters, page) {
   }
   if (filters.category) {
     params.set("category", filters.category);
+  }
+  if (filters.viewed && filters.viewed !== "all") {
+    params.set("viewed", filters.viewed);
   }
   if (page > 1) {
     params.set("page", String(page));
@@ -119,6 +143,13 @@ function handleUnexpectedError(error, res, wantsJson) {
   renderMessagePage(res, 500, "Something went wrong", "Please try again later.");
 }
 
+// Shared by the HTML feed and the JSON feed. The device history is read only when it is needed,
+// and a failure there is not caught: a viewed filter must not silently return the unfiltered feed.
+async function loadFeed(feedQuery, deviceId) {
+  const readArticleIds = feedQuery.viewed === "all" ? undefined : await articleReadService.getReadArticleIds(deviceId);
+  return publicArticleService.getPublishedArticles({ ...feedQuery, readArticleIds });
+}
+
 async function renderHome(req, res) {
   const feedQuery = parseFeedQuery(req.query);
   if (feedQuery.error) {
@@ -126,14 +157,16 @@ async function renderHome(req, res) {
     return;
   }
 
-  const filters = { q: feedQuery.q, category: feedQuery.category };
+  const filters = { q: feedQuery.q, category: feedQuery.category, viewed: feedQuery.viewed };
 
   try {
     // The category list ignores the active filters, so it stays usable during a search.
     const [feed, categories] = await Promise.all([
-      publicArticleService.getPublishedArticles(feedQuery),
+      loadFeed(feedQuery, req.deviceId),
       publicArticleService.getPublishedCategories(),
     ]);
+    // The result depends on the device cookie, so shared caches must not store it.
+    res.set("Cache-Control", "private, no-cache");
     res.render("public/home", {
       pageTitle: "The Daily Web",
       feed,
@@ -155,7 +188,9 @@ async function getFeed(req, res) {
   }
 
   try {
-    res.json(await publicArticleService.getPublishedArticles(feedQuery));
+    const feed = await loadFeed(feedQuery, req.deviceId);
+    res.set("Cache-Control", "private, no-cache");
+    res.json(feed);
   } catch (error) {
     handleUnexpectedError(error, res, true);
   }
@@ -167,6 +202,13 @@ async function renderArticle(req, res) {
     if (!article) {
       renderMessagePage(res, 404, "Article not found", "This article does not exist or is not published.");
       return;
+    }
+
+    // Only an article found in the public set is marked. A failure is logged and does not block the page.
+    try {
+      await articleReadService.markArticleRead(req.deviceId, article.id);
+    } catch (error) {
+      console.error("Could not store the read state:", error);
     }
 
     // Integration point: D's recordArticleView(article.id) belongs here, once per successful page visit.

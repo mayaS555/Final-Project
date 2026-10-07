@@ -1,4 +1,4 @@
-// Upgrades the server-rendered home page: AJAX search/category filter and infinite scroll.
+// Upgrades the server-rendered home page: AJAX search/category/viewed filters and infinite scroll.
 // Without JavaScript the GET form and the "Older articles" links keep working.
 // The first 20 articles are already in the HTML, so page 1 is not fetched again on load.
 
@@ -12,7 +12,11 @@ const olderLink = document.querySelector('#pub-pager [data-pager="older"]');
 const newerLink = document.querySelector('#pub-pager [data-pager="newer"]');
 
 const renderedIds = new Set();
-let appliedFilters = { q: feedElement.dataset.q, category: feedElement.dataset.category };
+let appliedFilters = {
+  q: feedElement.dataset.q,
+  category: feedElement.dataset.category,
+  viewed: feedElement.dataset.viewed,
+};
 let nextPage = Number(feedElement.dataset.nextPage);
 let hasMore = feedElement.dataset.hasMore === "true";
 let isLoading = false;
@@ -20,7 +24,7 @@ let hasFailed = false;
 // Each filter change gets a new token. A response from an older token is ignored.
 let requestToken = 0;
 
-// Empty filters are left out, which the server treats as "no filter".
+// Empty filters and viewed=all are left out, which the server treats as "no filter".
 function buildFilterParams(filters) {
   const params = new URLSearchParams();
   if (filters.q) {
@@ -28,6 +32,9 @@ function buildFilterParams(filters) {
   }
   if (filters.category) {
     params.set("category", filters.category);
+  }
+  if (filters.viewed && filters.viewed !== "all") {
+    params.set("viewed", filters.viewed);
   }
   return params;
 }
@@ -113,8 +120,8 @@ function setStatus(message, showRetry) {
 
 function showResultStatus() {
   if (feedElement.children.length === 0) {
-    const hasFilters = Boolean(appliedFilters.q || appliedFilters.category);
-    setStatus(hasFilters ? "No articles match your search or category." : "No published articles yet.", false);
+    const hasFilters = Boolean(appliedFilters.q || appliedFilters.category || appliedFilters.viewed !== "all");
+    setStatus(hasFilters ? "No articles match your filters." : "No published articles yet.", false);
   } else if (!hasMore) {
     setStatus("You have reached the end of the results.", false);
   } else {
@@ -185,6 +192,7 @@ function applyFilters() {
   appliedFilters = {
     q: filterForm.elements.q.value.trim(),
     category: filterForm.elements.category.value,
+    viewed: filterForm.elements.viewed.value,
   };
 
   requestToken += 1;
@@ -213,6 +221,7 @@ filterForm.addEventListener("submit", function (event) {
   applyFilters();
 });
 filterForm.elements.category.addEventListener("change", applyFilters);
+filterForm.elements.viewed.addEventListener("change", applyFilters);
 window.addEventListener("scroll", loadMoreIfNeeded, { passive: true });
 window.addEventListener("resize", loadMoreIfNeeded);
 
