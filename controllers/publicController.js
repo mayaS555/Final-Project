@@ -1,5 +1,6 @@
 const publicArticleService = require("../services/publicArticleService");
 const articleReadService = require("../services/articleReadService");
+const commentService = require("../services/commentService");
 
 const MAX_PAGE = 1000;
 const MAX_SEARCH_LENGTH = 100;
@@ -122,6 +123,18 @@ function formatDate(isoString) {
   });
 }
 
+// Date and time for comments. UTC keeps the server-rendered text equal to the one public-comments.js builds.
+function formatDateTime(isoString) {
+  if (!isoString) {
+    return "";
+  }
+  return new Date(isoString).toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }) + " UTC";
+}
+
 // Plain-text article body: blank lines separate paragraphs, the view escapes the text.
 function splitParagraphs(text) {
   return text
@@ -212,11 +225,28 @@ async function renderArticle(req, res) {
     }
 
     // Integration point: D's recordArticleView(article.id) belongs here, once per successful page visit.
+
+    // The first page of comments is rendered with the article. If it cannot be read, the article is
+    // still served and the page says that comments are unavailable.
+    let comments = { items: [], hasMore: false, nextBefore: null };
+    let commentsFailed = false;
+    try {
+      comments = await commentService.listComments(article.id, { viewerDeviceId: req.deviceId });
+    } catch (error) {
+      console.error("Could not load comments:", error);
+      commentsFailed = true;
+    }
+
+    // The comment controls (edit, delete) depend on the device cookie, so shared caches must not store the page.
+    res.set("Cache-Control", "private, no-cache");
     res.render("public/article", {
       pageTitle: article.title,
       article,
       paragraphs: splitParagraphs(article.content),
+      comments,
+      commentsFailed,
       formatDate,
+      formatDateTime,
     });
   } catch (error) {
     handleUnexpectedError(error, res, false);

@@ -246,3 +246,146 @@
         font-size: 26px;
     }
 }
+
+/* Comments on the article page. */
+.pub-site .pub-comments {
+    max-width: 760px;
+    margin: 24px auto 0;
+    padding: 24px;
+    background: #ffffff;
+    border-radius: 8px;
+}
+
+.pub-site .pub-comments-title {
+    margin: 0 0 16px;
+    font-size: 24px;
+}
+
+.pub-site .pub-comment-form {
+    margin-bottom: 24px;
+}
+
+/* The fieldset only exists to disable all controls before the script runs; reset its default look. */
+.pub-site .pub-comment-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.pub-site .pub-comment-form label {
+    font-weight: bold;
+}
+
+.pub-site .pub-comment-form input,
+.pub-site .pub-comment-form textarea,
+.pub-site .pub-comment-edit-input {
+    width: 100%;
+    padding: 10px 12px;
+    font: inherit;
+    border: 1px solid #b8c0cc;
+    border-radius: 6px;
+    background: #ffffff;
+    color: inherit;
+}
+
+.pub-site .pub-comment-form textarea,
+.pub-site .pub-comment-edit-input {
+    resize: vertical;
+}
+
+.pub-site .pub-comment-form button,
+.pub-site .pub-comment-editor button,
+.pub-site .pub-comment-actions button,
+.pub-site .pub-secondary-button {
+    padding: 8px 16px;
+    font-size: 15px;
+    cursor: pointer;
+    border: 1px solid #14213d;
+    border-radius: 6px;
+    background: #14213d;
+    color: #ffffff;
+}
+
+.pub-site .pub-comment-form button {
+    align-self: flex-start;
+}
+
+.pub-site .pub-comment-actions button,
+.pub-site .pub-comment-editor button[data-action="cancel"],
+.pub-site .pub-secondary-button {
+    background: #ffffff;
+    color: #14213d;
+}
+
+.pub-site .pub-comments button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.pub-site .pub-form-status {
+    min-height: 1.5em;
+    margin: 0;
+    color: #52606d;
+}
+
+.pub-site .pub-status-error {
+    color: #b00020;
+}
+
+.pub-site .pub-comments-note {
+    margin: 0 0 16px;
+    color: #52606d;
+}
+
+.pub-site .pub-comment-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pub-site .pub-comment {
+    padding: 16px 0;
+    border-top: 1px solid #e1e5ea;
+}
+
+.pub-site .pub-comment-meta {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: #52606d;
+}
+
+.pub-site .pub-comment-author {
+    color: #1f2933;
+}
+
+.pub-site .pub-comment-body {
+    margin: 0 0 8px;
+    /* Keeps the line breaks typed by the reader. */
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.pub-site .pub-comment-actions,
+.pub-site .pub-comment-editor {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pub-site .pub-comment-editor .pub-comment-edit-input {
+    flex: 1 1 100%;
+}
+
+.pub-site .pub-comment-error {
+    margin: 8px 0 0;
+}
+
+@media (max-width: 600px) {
+    .pub-site .pub-comments {
+        padding: 16px;
+    }
+}

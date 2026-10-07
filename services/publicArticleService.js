@@ -161,8 +161,18 @@ async function getPublishedArticleById(id) {
   return document ? toFullArticle(document) : null;
 }
 
+// Used before any comment operation. True only when the article has an approved public version.
+async function isArticlePublished(id) {
+  if (typeof id !== "string" || !OBJECT_ID_PATTERN.test(id)) {
+    return false;
+  }
+  const found = await getArticleModel().exists({ _id: id, ...approvedOnlyFilter });
+  return Boolean(found);
+}
+
 module.exports = {
   FEED_PAGE_SIZE,
+  isArticlePublished,
   useArticleModel,
   getPublishedArticles,
   getPublishedCategories,

@@ -21,6 +21,56 @@
             </div>
         </article>
 
+        <%# Comment markup must stay in sync with createCommentItem() in public/js/public-comments.js. %>
+        <section class="pub-comments" id="pub-comments" aria-labelledby="pub-comments-title"
+                 data-article-id="<%= article.id %>"
+                 data-has-more="<%= comments.hasMore %>"
+                 data-next-before="<%= comments.nextBefore || "" %>">
+            <h2 class="pub-comments-title" id="pub-comments-title">Comments</h2>
+
+            <form class="pub-comment-form" id="pub-comment-form">
+                <%# Disabled until public-comments.js attaches its submit handler, so without JavaScript the form cannot submit. %>
+                <fieldset class="pub-comment-fields" id="pub-comment-fields" disabled>
+                    <label for="pub-comment-name">Your name</label>
+                    <input id="pub-comment-name" name="displayName" type="text" maxlength="40" required autocomplete="nickname">
+                    <label for="pub-comment-body">Your comment</label>
+                    <textarea id="pub-comment-body" name="body" rows="4" maxlength="1000" required></textarea>
+                    <p class="pub-form-status" id="pub-comment-form-status" role="status" aria-live="polite"></p>
+                    <button type="submit" id="pub-comment-submit">Post comment</button>
+                </fieldset>
+                <noscript><p class="pub-form-status pub-status-error">JavaScript is needed to post comments.</p></noscript>
+            </form>
+
+            <% if (commentsFailed) { %>
+            <p class="pub-comments-note pub-status-error">Comments are temporarily unavailable. Please reload the page later.</p>
+            <% } %>
+            <p class="pub-comments-note" id="pub-comments-empty"<%= (comments.items.length > 0 || comments.hasMore || commentsFailed) ? " hidden" : "" %>>No comments yet. Be the first to comment.</p>
+
+            <ol class="pub-comment-list" id="pub-comment-list">
+                <% comments.items.forEach(function (comment) { %>
+                <li class="pub-comment" data-comment-id="<%= comment.id %>">
+                    <p class="pub-comment-meta">
+                        <strong class="pub-comment-author"><%= comment.displayName %></strong>
+                        <time datetime="<%= comment.createdAt %>"><%= formatDateTime(comment.createdAt) %></time>
+                        <span class="pub-comment-edited"<%= comment.updatedAt === comment.createdAt ? " hidden" : "" %>>(edited)</span>
+                    </p>
+                    <p class="pub-comment-body"><%= comment.body %></p>
+                    <% if (comment.canEdit || comment.canDelete) { %>
+                    <div class="pub-comment-actions">
+                        <% if (comment.canEdit) { %><button type="button" data-action="edit">Edit</button><% } %>
+                        <% if (comment.canDelete) { %><button type="button" data-action="delete">Delete</button><% } %>
+                    </div>
+                    <% } %>
+                    <p class="pub-comment-error pub-status-error" role="alert" hidden></p>
+                </li>
+                <% }); %>
+            </ol>
+
+            <p class="pub-form-status" id="pub-comments-status" role="status" aria-live="polite"></p>
+            <button type="button" class="pub-secondary-button" id="pub-comments-more"<%= comments.hasMore ? "" : " hidden" %>>Load more comments</button>
+        </section>
+
         <p class="pub-back"><a href="/">Back to all articles</a></p>
     </main>
+    <script src="/js/public-comments.js" defer></script>
 <%- include("partials/bottom") %>

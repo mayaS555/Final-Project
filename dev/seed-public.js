@@ -1,19 +1,23 @@
 // DEVELOPMENT ONLY. Run with: node dev/seed-public.js
-// Deletes every document in the collection of the dev article model and in the read-history
-// collection "article_reads", then inserts fixtures (new article ids make old read records useless).
+// Deletes every document in the collection of the dev article model, in the read-history
+// collection "article_reads" and in the "comments" collection, then inserts article fixtures
+// (new article ids make old read records and comments useless). No comment fixtures are added:
+// the final demo comments belong to D's seed, and the tests create what they need.
 // Before deleting, seedDevArticles() verifies that each model is on an open connection to
 // the database DEV_DATABASE_NAME and uses its expected collection; otherwise
-// it throws and deletes nothing. It only ever calls those two models, never another collection.
+// it throws and deletes nothing. It only ever calls those three models, never another collection.
 
 require("dotenv").config({ quiet: true });
 
 const mongoose = require("mongoose");
 const DevArticle = require("./devArticleModel");
 const ArticleRead = require("../models/ArticleRead");
+const Comment = require("../models/Comment");
 const { connectDevDb, DEV_DATABASE_NAME } = require("./connectDevDb");
 
 const DEV_COLLECTION_NAME = "dev_public_articles";
 const DEV_READ_COLLECTION_NAME = "article_reads";
+const DEV_COMMENTS_COLLECTION_NAME = "comments";
 
 // Text that must never reach public output. Tests search for these markers.
 // The words and categories below exist only in pending or draft revisions, so no public
@@ -192,20 +196,29 @@ async function clearDevArticleReads(readModel = ArticleRead) {
   await readModel.deleteMany({});
 }
 
+// Removes all comments, with the same checks. Used by the seed and by the tests.
+async function clearDevComments(commentModel = Comment) {
+  assertModelTargetsDevCollection(commentModel, DEV_COMMENTS_COLLECTION_NAME);
+  await commentModel.deleteMany({});
+}
+
 // Expects an open mongoose connection. Returns the ids the checks need.
 // The model parameter exists so the guard can be tested with a stand-in model.
-async function seedDevArticles(model = DevArticle, readModel = ArticleRead) {
-  // Both guards run before the first delete.
+async function seedDevArticles(model = DevArticle, readModel = ArticleRead, commentModel = Comment) {
+  // All guards run before the first delete.
   assertModelTargetsDevCollection(model);
   assertModelTargetsDevCollection(readModel, DEV_READ_COLLECTION_NAME);
+  assertModelTargetsDevCollection(commentModel, DEV_COMMENTS_COLLECTION_NAME);
 
   const now = Date.now();
   const special = buildSpecialArticles(now);
 
   await model.deleteMany({});
   await clearDevArticleReads(readModel);
+  await clearDevComments(commentModel);
   await model.createIndexes();
   await readModel.createIndexes();
+  await commentModel.createIndexes();
 
   const samples = [...buildSampleArticles(now), ...buildSearchFixtureArticles(now)];
   await model.insertMany(samples);
@@ -248,8 +261,10 @@ module.exports = {
   seedDevArticles,
   assertModelTargetsDevCollection,
   clearDevArticleReads,
+  clearDevComments,
   DEV_COLLECTION_NAME,
   DEV_READ_COLLECTION_NAME,
+  DEV_COMMENTS_COLLECTION_NAME,
   PENDING_MARKER,
   DRAFT_MARKER,
   SSR_END_MARKER,

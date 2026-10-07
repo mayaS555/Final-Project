@@ -10,4 +10,7 @@ router.get("/", deviceIdentity, publicController.renderHome);
 router.get("/articles/:id", deviceIdentity, publicController.renderArticle);
 router.get("/api/public/articles", deviceIdentity, publicController.getFeed);
 
+// Comment API. Mounted here so the application only has to mount this one router.
+router.use(require("./commentRoutes"));
+
 module.exports = router;

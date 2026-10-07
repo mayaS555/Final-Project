@@ -11,6 +11,7 @@ const assert = require("node:assert");
 const crypto = require("crypto");
 const mongoose = require("mongoose");
 const ArticleRead = require("../../models/ArticleRead");
+const Comment = require("../../models/Comment");
 const { markArticleRead } = require("../../services/articleReadService");
 const { useArticleModel, FEED_PAGE_SIZE } = require("../../services/publicArticleService");
 const DevArticle = require("../devArticleModel");
@@ -19,6 +20,7 @@ const createDevApp = require("../createDevApp");
 const {
   seedDevArticles,
   clearDevArticleReads,
+  clearDevComments,
   PENDING_MARKER,
   DRAFT_MARKER,
   SSR_END_MARKER,
@@ -97,6 +99,7 @@ describe("public feed and article page against dev MongoDB", { skip }, () => {
     await connectDevDb();
     await DevArticle.init();
     await ArticleRead.init();
+    await Comment.init();
     useArticleModel(DevArticle);
     seeded = await seedDevArticles();
     server = createDevApp().listen(0);
@@ -110,6 +113,7 @@ describe("public feed and article page against dev MongoDB", { skip }, () => {
     }
     // Guarded: only the dev read-history collection is cleared.
     await clearDevArticleReads();
+    await clearDevComments();
     await mongoose.disconnect();
   });
 
@@ -726,6 +730,532 @@ describe("public feed and article page against dev MongoDB", { skip }, () => {
         // Without a viewed filter the history is not needed, so the feed still works.
         assert.strictEqual((await getJson("/api/public/articles", deviceId)).status, 200);
         assert.strictEqual((await getHtml("/", deviceId)).status, 200);
+      });
+    });
+  });
+
+  describe("comments", () => {
+    const HOSTILE = '<script>alert("x")</script><img src=x onerror=alert(1)>';
+    let articleId;
+    let otherArticleId;
+
+    // JSON request as a device. Node fetch has no cookie jar, so the cookie is sent by hand.
+    async function api(method, pathAndQuery, { deviceId, body, headers } = {}) {
+      const response = await fetch(baseUrl + pathAndQuery, {
+        method,
+        headers: { "Content-Type": "application/json", ...cookieHeader(deviceId), ...headers },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      const text = await response.text();
+      return { status: response.status, headers: response.headers, text, body: text ? JSON.parse(text) : null };
+    }
+
+    const commentsPath = (id) => `/api/public/articles/${id}/comments`;
+    const validComment = (overrides = {}) => ({ displayName: "Dana", body: "A short comment.", ...overrides });
+
+    function postComment(deviceId, id = articleId, body = validComment()) {
+      return api("POST", commentsPath(id), { deviceId, body });
+    }
+
+    // Replaces a model method for one test and always restores it. The error log is captured.
+    async function withBrokenMethod(model, method, replacement, run) {
+      const originalConsoleError = console.error;
+      const logged = [];
+      console.error = (...args) => logged.push(args);
+      model[method] = replacement;
+      try {
+        await run(logged);
+      } finally {
+        delete model[method];
+        console.error = originalConsoleError;
+      }
+    }
+
+    const failingCreate = async () => {
+      throw new Error("simulated create failure");
+    };
+    // find() returns a query-like object because the service chains select, sort, limit and lean.
+    const failingFind = () => {
+      const query = { select: () => query, sort: () => query, limit: () => query, lean: async () => { throw new Error("simulated find failure"); } };
+      return query;
+    };
+
+    before(async () => {
+      articleId = seeded.pendingUpdateId;
+      otherArticleId = seeded.scriptInContentId;
+    });
+
+    describe("create, read, update and delete", () => {
+      it("a device creates, reads, edits and deletes its own comment", async () => {
+        const deviceId = newDeviceId();
+        const created = await postComment(deviceId, articleId, { displayName: "  Dana  ", body: "  Hello\r\nworld  " });
+        assert.strictEqual(created.status, 201);
+        assert.deepStrictEqual(Object.keys(created.body).sort(), ["articleId", "body", "canDelete", "canEdit", "createdAt", "displayName", "id", "updatedAt"]);
+        assert.strictEqual(created.body.displayName, "Dana");
+        assert.strictEqual(created.body.body, "Hello\nworld");
+        assert.strictEqual(created.body.articleId, articleId);
+        assert.strictEqual(created.body.canEdit, true);
+        assert.strictEqual(created.body.canDelete, true);
+        assert.strictEqual(created.body.createdAt, created.body.updatedAt);
+
+        const stored = await Comment.findById(created.body.id).select("+deviceId").lean();
+        assert.strictEqual(stored.deviceId, deviceId);
+        assert.strictEqual(String(stored.articleId), articleId);
+
+        const listed = await api("GET", commentsPath(articleId), { deviceId });
+        assert.strictEqual(listed.status, 200);
+        assert.deepStrictEqual(listed.body.items.map((item) => item.id), [created.body.id]);
+
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        const edited = await api("PATCH", `/api/public/comments/${created.body.id}`, { deviceId, body: { body: "Edited text" } });
+        assert.strictEqual(edited.status, 200);
+        assert.strictEqual(edited.body.body, "Edited text");
+        assert.strictEqual(edited.body.displayName, "Dana");
+        assert.ok(edited.body.updatedAt > edited.body.createdAt);
+        assert.strictEqual(edited.body.createdAt, created.body.createdAt);
+
+        const removed = await api("DELETE", `/api/public/comments/${created.body.id}`, { deviceId });
+        assert.strictEqual(removed.status, 204);
+        assert.strictEqual(removed.text, "");
+        assert.deepStrictEqual((await api("GET", commentsPath(articleId), { deviceId })).body.items, []);
+        assert.strictEqual(await Comment.countDocuments({ _id: created.body.id }), 0);
+
+        assert.strictEqual((await api("DELETE", `/api/public/comments/${created.body.id}`, { deviceId })).status, 404);
+        assert.strictEqual((await api("PATCH", `/api/public/comments/${created.body.id}`, { deviceId, body: { body: "again" } })).status, 404);
+      });
+
+      it("accepts text exactly at the length limits and rejects a comment over them without storing it", async () => {
+        const deviceId = newDeviceId();
+        const edge = await postComment(deviceId, articleId, { displayName: "n".repeat(40), body: "b".repeat(1000) });
+        assert.strictEqual(edge.status, 201);
+
+        const before = await Comment.countDocuments({ articleId });
+        for (const body of [validComment({ displayName: "n".repeat(41) }), validComment({ body: "b".repeat(1001) }), validComment({ body: "   " }), validComment({ displayName: "" })]) {
+          assert.strictEqual((await postComment(deviceId, articleId, body)).status, 400);
+        }
+        assert.strictEqual(await Comment.countDocuments({ articleId }), before);
+      });
+
+      it("a form post from another site (not JSON) cannot create a comment", async () => {
+        const deviceId = newDeviceId();
+        const response = await fetch(baseUrl + commentsPath(articleId), {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded", ...cookieHeader(deviceId) },
+          body: "displayName=Mallory&body=spam",
+        });
+        assert.strictEqual(response.status, 415);
+        assert.strictEqual(await Comment.countDocuments({ displayName: "Mallory" }), 0);
+      });
+
+      it("application/json with a charset parameter is accepted", async () => {
+        const deviceId = newDeviceId();
+        const response = await fetch(baseUrl + commentsPath(articleId), {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8", ...cookieHeader(deviceId) },
+          body: JSON.stringify({ displayName: "Charset", body: "hello" }),
+        });
+        assert.strictEqual(response.status, 201);
+      });
+
+      it("comments of one article are not listed for another", async () => {
+        const deviceId = newDeviceId();
+        const created = (await postComment(deviceId, articleId)).body;
+        const other = await api("GET", commentsPath(otherArticleId), { deviceId });
+        assert.ok(!other.body.items.some((item) => item.id === created.id));
+        assert.ok((await api("GET", commentsPath(articleId), { deviceId })).body.items.some((item) => item.id === created.id));
+      });
+
+      it("an article with a pending update accepts comments and the page still shows the approved text", async () => {
+        const deviceId = newDeviceId();
+        assert.strictEqual((await postComment(deviceId, seeded.pendingUpdateId)).status, 201);
+        const html = (await getHtml(`/articles/${seeded.pendingUpdateId}`, deviceId)).html;
+        assert.ok(html.includes("Approved paragraph one."));
+        assert.ok(!html.includes(PENDING_MARKER));
+      });
+    });
+
+    describe("ownership and forged input", () => {
+      it("another device cannot edit or delete a comment, and the comment stays unchanged", async () => {
+        const owner = newDeviceId();
+        const intruder = newDeviceId();
+        const created = (await postComment(owner)).body;
+
+        const edit = await api("PATCH", `/api/public/comments/${created.id}`, { deviceId: intruder, body: { body: "Hijacked" } });
+        assert.strictEqual(edit.status, 403);
+        const remove = await api("DELETE", `/api/public/comments/${created.id}`, { deviceId: intruder });
+        assert.strictEqual(remove.status, 403);
+        // A request with no cookie at all is just another new device.
+        assert.strictEqual((await api("DELETE", `/api/public/comments/${created.id}`)).status, 403);
+
+        const stored = await Comment.findById(created.id).lean();
+        assert.strictEqual(stored.body, "A short comment.");
+        const listedForIntruder = (await api("GET", commentsPath(articleId), { deviceId: intruder })).body.items.find((item) => item.id === created.id);
+        assert.strictEqual(listedForIntruder.canEdit, false);
+        assert.strictEqual(listedForIntruder.canDelete, false);
+      });
+
+      it("forged owner, article, date and role fields in a new comment are ignored", async () => {
+        const deviceId = newDeviceId();
+        const victim = newDeviceId();
+        const forged = {
+          ...validComment(),
+          _id: String(new mongoose.Types.ObjectId()),
+          deviceId: victim,
+          articleId: otherArticleId,
+          createdAt: "2001-01-01T00:00:00.000Z",
+          updatedAt: "2001-01-01T00:00:00.000Z",
+          role: "editor",
+          isOwner: true,
+          canEdit: true,
+          canDelete: true,
+        };
+        const response = await api("POST", `${commentsPath(articleId)}?role=editor&deviceId=${victim}`, {
+          deviceId,
+          body: forged,
+          headers: { "x-role": "editor", "x-device-id": victim },
+        });
+        assert.strictEqual(response.status, 201);
+        assert.notStrictEqual(response.body.id, forged._id);
+        assert.strictEqual(response.body.articleId, articleId);
+        assert.ok(response.body.createdAt > "2020-01-01");
+
+        const stored = await Comment.findById(response.body.id).select("+deviceId").lean();
+        assert.strictEqual(stored.deviceId, deviceId);
+        assert.strictEqual(String(stored.articleId), articleId);
+        assert.strictEqual(await Comment.countDocuments({ deviceId: victim }), 0);
+      });
+
+      it("forged fields cannot change anything but the text of an own comment, or give rights over another one", async () => {
+        const owner = newDeviceId();
+        const intruder = newDeviceId();
+        const created = (await postComment(owner)).body;
+
+        const ownEdit = await api("PATCH", `/api/public/comments/${created.id}`, {
+          deviceId: owner,
+          body: { body: "New text", displayName: "Hacked", articleId: otherArticleId, deviceId: intruder, createdAt: "2001-01-01T00:00:00.000Z", role: "editor" },
+        });
+        assert.strictEqual(ownEdit.status, 200);
+        const stored = await Comment.findById(created.id).select("+deviceId").lean();
+        assert.strictEqual(stored.body, "New text");
+        assert.strictEqual(stored.displayName, "Dana");
+        assert.strictEqual(String(stored.articleId), articleId);
+        assert.strictEqual(stored.deviceId, owner);
+        assert.strictEqual(stored.createdAt.toISOString(), created.createdAt);
+
+        const forgedRights = { deviceId: intruder, headers: { "x-role": "editor", "x-device-id": owner } };
+        assert.strictEqual((await api("PATCH", `/api/public/comments/${created.id}?role=editor&deviceId=${owner}`, { ...forgedRights, body: { body: "x", role: "editor", deviceId: owner, isOwner: true } })).status, 403);
+        assert.strictEqual((await api("DELETE", `/api/public/comments/${created.id}?role=editor&deviceId=${owner}`, forgedRights)).status, 403);
+        assert.strictEqual((await Comment.findById(created.id).lean()).body, "New text");
+      });
+
+      it("the stored device id never appears in an API response or in the HTML", async () => {
+        const deviceId = newDeviceId();
+        const created = await postComment(deviceId);
+        const listed = await api("GET", commentsPath(articleId), { deviceId });
+        const edited = await api("PATCH", `/api/public/comments/${created.body.id}`, { deviceId, body: { body: "Edited" } });
+        const page = await getHtml(`/articles/${articleId}`, deviceId);
+        for (const text of [created.text, listed.text, edited.text, page.html]) {
+          assert.ok(!text.includes(deviceId));
+          assert.ok(!text.includes("deviceId"));
+        }
+        const otherView = await getHtml(`/articles/${articleId}`, newDeviceId());
+        assert.ok(!otherView.html.includes(deviceId));
+      });
+    });
+
+    describe("articles that are not public", () => {
+      it("a draft-only, missing or malformed article id exposes no comments and accepts none", async () => {
+        const deviceId = newDeviceId();
+        const missing = String(new mongoose.Types.ObjectId());
+        for (const id of [seeded.draftOnlyId, missing, "not-an-id"]) {
+          assert.strictEqual((await api("GET", commentsPath(id), { deviceId })).status, 404, `GET ${id}`);
+          assert.strictEqual((await postComment(deviceId, id)).status, 404, `POST ${id}`);
+        }
+        assert.strictEqual(await Comment.countDocuments({ articleId: seeded.draftOnlyId }), 0);
+      });
+
+      it("existing comments of a draft-only or missing article cannot be listed, edited or deleted", async () => {
+        const deviceId = newDeviceId();
+        const missing = String(new mongoose.Types.ObjectId());
+        const hidden = await Comment.create([
+          { articleId: seeded.draftOnlyId, deviceId, displayName: "Dana", body: "On a draft." },
+          { articleId: missing, deviceId, displayName: "Dana", body: "On a missing article." },
+        ]);
+
+        assert.strictEqual((await api("GET", commentsPath(seeded.draftOnlyId), { deviceId })).status, 404);
+        for (const comment of hidden) {
+          // Even the device that wrote the comment gets 404, and the comment stays in the database.
+          assert.strictEqual((await api("PATCH", `/api/public/comments/${comment._id}`, { deviceId, body: { body: "changed" } })).status, 404);
+          assert.strictEqual((await api("DELETE", `/api/public/comments/${comment._id}`, { deviceId })).status, 404);
+        }
+        for (const comment of hidden) {
+          assert.strictEqual((await Comment.findById(comment._id).lean()).body.startsWith("On a"), true);
+        }
+        assert.strictEqual((await getHtml(`/articles/${seeded.draftOnlyId}`, deviceId)).status, 404);
+        assert.ok(!(await getHtml(`/articles/${seeded.draftOnlyId}`, deviceId)).html.includes("On a draft."));
+      });
+    });
+
+    describe("rendering", () => {
+      it("hostile text is escaped in the article page and the first comments are in the initial HTML", async () => {
+        const deviceId = newDeviceId();
+        const created = await postComment(deviceId, articleId, { displayName: "<b>Eve</b>", body: `${HOSTILE}\nsecond line` });
+        assert.strictEqual(created.status, 201);
+        assert.strictEqual(created.body.displayName, "<b>Eve</b>", "the API returns the stored text unchanged");
+        assert.match(created.headers.get("content-type"), /application\/json/);
+
+        const { status, html } = await getHtml(`/articles/${articleId}`, deviceId);
+        assert.strictEqual(status, 200);
+        assert.ok(html.includes("&lt;script&gt;alert(&#34;x&#34;)&lt;/script&gt;"));
+        assert.ok(html.includes("&lt;b&gt;Eve&lt;/b&gt;"));
+        assert.ok(!html.includes("<script>alert"));
+        assert.ok(!html.includes("<img src=x"));
+        assert.ok(!html.includes("<b>Eve</b>"));
+        assert.ok(html.includes("Approved paragraph one."), "the article content is still in the initial HTML");
+      });
+
+      it("Edit and Delete are rendered only for the device's own comments, and the page is not cached publicly", async () => {
+        const owner = newDeviceId();
+        const created = (await postComment(owner, otherArticleId, validComment({ displayName: "Owner" }))).body;
+
+        const ownView = await fetch(`${baseUrl}/articles/${otherArticleId}`, { headers: cookieHeader(owner) });
+        const ownHtml = await ownView.text();
+        assert.ok(ownHtml.includes(`data-comment-id="${created.id}"`));
+        assert.ok(ownHtml.includes('data-action="edit"') && ownHtml.includes('data-action="delete"'));
+        assert.strictEqual(ownView.headers.get("cache-control"), "private, no-cache");
+
+        const strangerHtml = (await getHtml(`/articles/${otherArticleId}`, newDeviceId())).html;
+        assert.ok(strangerHtml.includes(`data-comment-id="${created.id}"`));
+        assert.ok(!strangerHtml.includes('data-action="edit"') && !strangerHtml.includes('data-action="delete"'));
+      });
+
+      it("the comment list response is private and the page has the empty state when there are no comments", async () => {
+        const listed = await api("GET", commentsPath(articleId), { deviceId: newDeviceId() });
+        assert.strictEqual(listed.headers.get("cache-control"), "private, no-cache");
+
+        const cleanArticle = seeded.unsafeImageId;
+        const { html } = await getHtml(`/articles/${cleanArticle}`, newDeviceId());
+        assert.ok(html.includes("No comments yet. Be the first to comment."));
+        assert.ok(!/id="pub-comments-empty" hidden/.test(html));
+      });
+
+      it("if comments cannot be read the article is still served, with a message, and the API gives 500", async () => {
+        await withBrokenMethod(Comment, "find", failingFind, async (logged) => {
+          const { status, html } = await getHtml(`/articles/${articleId}`, newDeviceId());
+          assert.strictEqual(status, 200);
+          assert.ok(html.includes("Approved paragraph one."));
+          assert.ok(html.includes("Comments are temporarily unavailable."));
+          assert.ok(!html.includes("simulated"));
+          assert.strictEqual(logged.length, 1);
+
+          const api500 = await api("GET", commentsPath(articleId), { deviceId: newDeviceId() });
+          assert.strictEqual(api500.status, 500);
+          assert.ok(!api500.text.includes("simulated"));
+        });
+      });
+    });
+
+    describe("pagination", () => {
+      let paginationArticleId;
+      let expectedIds;
+
+      before(async () => {
+        // 25 comments on one article. Dates repeat in groups of five to exercise the _id tie-breaker.
+        paginationArticleId = seeded.unsafeImageId;
+        await Comment.deleteMany({ articleId: paginationArticleId });
+        const base = Date.UTC(2026, 0, 1);
+        const documents = [];
+        for (let index = 0; index < 25; index += 1) {
+          documents.push({
+            articleId: paginationArticleId,
+            deviceId: newDeviceId(),
+            displayName: `Reader ${index}`,
+            body: `Comment number ${index}`,
+            createdAt: new Date(base + Math.floor(index / 5) * 60000),
+            updatedAt: new Date(base + Math.floor(index / 5) * 60000),
+          });
+        }
+        const inserted = await Comment.insertMany(documents, { timestamps: false });
+        expectedIds = inserted
+          .map((comment) => ({ id: String(comment._id), time: comment.createdAt.getTime() }))
+          .sort((first, second) => second.time - first.time || (second.id > first.id ? 1 : -1))
+          .map((entry) => entry.id);
+      });
+
+      async function readPage(before) {
+        const query = before ? `?before=${encodeURIComponent(before)}` : "";
+        const response = await api("GET", commentsPath(paginationArticleId) + query, { deviceId: newDeviceId() });
+        assert.strictEqual(response.status, 200);
+        return response.body;
+      }
+
+      it("pages of 10 follow newest first, with ids as the tie-breaker, without duplicates", async () => {
+        const first = await readPage();
+        const second = await readPage(first.nextBefore);
+        const third = await readPage(second.nextBefore);
+
+        assert.deepStrictEqual([first.items.length, second.items.length, third.items.length], [10, 10, 5]);
+        assert.deepStrictEqual([first.hasMore, second.hasMore, third.hasMore], [true, true, false]);
+        const all = [...first.items, ...second.items, ...third.items];
+        assert.deepStrictEqual(all.map((item) => item.id), expectedIds);
+        assert.strictEqual(new Set(all.map((item) => item.id)).size, 25);
+        for (let index = 1; index < all.length; index += 1) {
+          assert.ok(all[index - 1].createdAt >= all[index].createdAt);
+        }
+        const empty = await readPage(third.nextBefore);
+        assert.deepStrictEqual(empty, { items: [], hasMore: false, nextBefore: null });
+      });
+
+      it("a comment added or deleted between two pages does not cause a duplicate or a gap", async () => {
+        const first = await readPage();
+        const newcomer = (await postComment(newDeviceId(), paginationArticleId)).body;
+        // Delete the comment that the cursor points at and one already read.
+        await Comment.deleteMany({ _id: { $in: [first.items[9].id, first.items[0].id] } });
+
+        const second = await readPage(first.nextBefore);
+        assert.deepStrictEqual(second.items.map((item) => item.id), expectedIds.slice(10, 20));
+        assert.ok(!second.items.some((item) => item.id === newcomer.id));
+
+        const fresh = await readPage();
+        assert.strictEqual(fresh.items[0].id, newcomer.id, "a new comment goes to the top");
+        await Comment.deleteOne({ _id: newcomer.id });
+      });
+
+      it("the article page renders the first page and the same cursor as the API", async () => {
+        const api1 = await readPage();
+        const { html } = await getHtml(`/articles/${paginationArticleId}`, newDeviceId());
+        const renderedIds = [...html.matchAll(/data-comment-id="([0-9a-f]{24})"/g)].map((match) => match[1]);
+        assert.deepStrictEqual(renderedIds, api1.items.map((item) => item.id));
+        assert.ok(html.includes(`data-next-before="${api1.nextBefore}"`));
+        assert.ok(html.includes('data-has-more="true"'));
+        assert.ok(!/id="pub-comments-more" hidden/.test(html));
+      });
+    });
+
+    describe("limit of 3 new comments per rolling 60 seconds per device", () => {
+      it("the first three are created and the fourth is rejected with 429, a message and Retry-After", async () => {
+        const deviceId = newDeviceId();
+        for (let count = 1; count <= 3; count += 1) {
+          assert.strictEqual((await postComment(deviceId)).status, 201, `comment ${count}`);
+        }
+        const fourth = await postComment(deviceId);
+        assert.strictEqual(fourth.status, 429);
+        assert.match(fourth.body.error, /at most 3 comments per minute/);
+        const retryAfter = Number(fourth.headers.get("retry-after"));
+        assert.ok(Number.isInteger(retryAfter) && retryAfter >= 1 && retryAfter <= 60);
+        assert.strictEqual(fourth.body.retryAfterSeconds, retryAfter);
+        assert.strictEqual(await Comment.countDocuments({ displayName: "Dana", body: "A short comment.", deviceId }), 3);
+      });
+
+      it("different articles share the same device quota", async () => {
+        const deviceId = newDeviceId();
+        assert.strictEqual((await postComment(deviceId, articleId)).status, 201);
+        assert.strictEqual((await postComment(deviceId, otherArticleId)).status, 201);
+        assert.strictEqual((await postComment(deviceId, articleId)).status, 201);
+        assert.strictEqual((await postComment(deviceId, otherArticleId)).status, 429);
+        assert.strictEqual((await postComment(deviceId, articleId)).status, 429);
+      });
+
+      it("devices have independent quotas", async () => {
+        const first = newDeviceId();
+        const second = newDeviceId();
+        for (let count = 0; count < 3; count += 1) {
+          await postComment(first);
+        }
+        assert.strictEqual((await postComment(first)).status, 429);
+        for (let count = 0; count < 3; count += 1) {
+          assert.strictEqual((await postComment(second)).status, 201);
+        }
+      });
+
+      it("simultaneous requests cannot exceed the limit", async () => {
+        const deviceId = newDeviceId();
+        const responses = await Promise.all(
+          Array.from({ length: 12 }, (_, index) => postComment(deviceId, index % 2 === 0 ? articleId : otherArticleId))
+        );
+        const statuses = responses.map((response) => response.status).sort();
+        assert.deepStrictEqual(statuses, [201, 201, 201, ...Array(9).fill(429)]);
+        assert.strictEqual(await Comment.countDocuments({ deviceId }), 3);
+      });
+
+      it("invalid input and nonpublic articles do not use a slot", async () => {
+        const deviceId = newDeviceId();
+        const invalid = [
+          validComment({ displayName: "" }),
+          validComment({ body: "  " }),
+          validComment({ body: "x".repeat(1001) }),
+          validComment({ displayName: 5 }),
+          validComment({ body: { $ne: 1 } }),
+        ];
+        for (const body of invalid) {
+          assert.strictEqual((await postComment(deviceId, articleId, body)).status, 400);
+        }
+        const malformedJson = await fetch(baseUrl + commentsPath(articleId), { method: "POST", headers: { "Content-Type": "application/json", ...cookieHeader(deviceId) }, body: "{oops" });
+        assert.strictEqual(malformedJson.status, 400);
+        for (const id of [seeded.draftOnlyId, String(new mongoose.Types.ObjectId()), "not-an-id"]) {
+          assert.strictEqual((await postComment(deviceId, id)).status, 404);
+        }
+
+        for (let count = 0; count < 3; count += 1) {
+          assert.strictEqual((await postComment(deviceId)).status, 201, `valid comment ${count + 1}`);
+        }
+        assert.strictEqual((await postComment(deviceId)).status, 429);
+      });
+
+      it("a failed database write releases its slot", async () => {
+        const deviceId = newDeviceId();
+        await withBrokenMethod(Comment, "create", failingCreate, async (logged) => {
+          for (let attempt = 0; attempt < 5; attempt += 1) {
+            const response = await postComment(deviceId);
+            assert.strictEqual(response.status, 500);
+            assert.ok(!response.text.includes("simulated"));
+          }
+          assert.strictEqual(logged.length, 5);
+        });
+        assert.strictEqual(await Comment.countDocuments({ deviceId }), 0);
+
+        for (let count = 0; count < 3; count += 1) {
+          assert.strictEqual((await postComment(deviceId)).status, 201);
+        }
+        assert.strictEqual((await postComment(deviceId)).status, 429);
+      });
+
+      it("simultaneous failing writes do not leave slots reserved", async () => {
+        const deviceId = newDeviceId();
+        // The write fails only after a delay, so all 8 requests overlap while their slots are reserved.
+        const slowFailingCreate = async () => {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          throw new Error("simulated create failure");
+        };
+        await withBrokenMethod(Comment, "create", slowFailingCreate, async () => {
+          const responses = await Promise.all(Array.from({ length: 8 }, () => postComment(deviceId)));
+          // Only 3 slots exist, so 3 attempts reach the database and the other 5 are told to wait.
+          const statuses = responses.map((response) => response.status);
+          assert.strictEqual(statuses.filter((status) => status === 500).length, 3);
+          assert.strictEqual(statuses.filter((status) => status === 429).length, 5);
+        });
+        for (let count = 0; count < 3; count += 1) {
+          assert.strictEqual((await postComment(deviceId)).status, 201, `after the failures, comment ${count + 1}`);
+        }
+      });
+
+      it("editing and deleting do not use a slot and deleting does not give one back", async () => {
+        const deviceId = newDeviceId();
+        const first = (await postComment(deviceId)).body;
+        for (let count = 0; count < 5; count += 1) {
+          assert.strictEqual((await api("PATCH", `/api/public/comments/${first.id}`, { deviceId, body: { body: `Edit ${count}` } })).status, 200);
+        }
+        assert.strictEqual((await postComment(deviceId)).status, 201, "edits did not use a slot");
+        assert.strictEqual((await postComment(deviceId)).status, 201);
+
+        assert.strictEqual((await api("DELETE", `/api/public/comments/${first.id}`, { deviceId })).status, 204);
+        assert.strictEqual((await postComment(deviceId)).status, 429, "deleting did not free a slot");
+
+        // Editing and deleting still work while posting is blocked.
+        const remaining = (await api("GET", commentsPath(articleId), { deviceId })).body.items.filter((item) => item.canEdit);
+        assert.ok(remaining.length >= 2);
+        assert.strictEqual((await api("PATCH", `/api/public/comments/${remaining[0].id}`, { deviceId, body: { body: "Still editable" } })).status, 200);
+        assert.strictEqual((await api("DELETE", `/api/public/comments/${remaining[0].id}`, { deviceId })).status, 204);
       });
     });
   });

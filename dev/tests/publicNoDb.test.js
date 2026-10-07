@@ -10,7 +10,7 @@ const createDevApp = require("../createDevApp");
 const { parseFeedQuery, buildFeedHref } = require("../../controllers/publicController");
 const { toSafeImageUrl } = require("../../services/publicArticleService");
 const { DEV_DATABASE_NAME } = require("../connectDevDb");
-const { seedDevArticles, assertModelTargetsDevCollection, DEV_COLLECTION_NAME, DEV_READ_COLLECTION_NAME } = require("../seed-public");
+const { seedDevArticles, assertModelTargetsDevCollection, DEV_COLLECTION_NAME, DEV_READ_COLLECTION_NAME, DEV_COMMENTS_COLLECTION_NAME } = require("../seed-public");
 const { deviceIdentity, readDeviceIdCookie, DEVICE_COOKIE_NAME, DEVICE_COOKIE_MAX_AGE_MS } = require("../../middleware/deviceIdentity");
 
 const viewsDir = path.join(__dirname, "..", "..", "views", "public");
@@ -147,7 +147,10 @@ describe("templates", () => {
       pageTitle: article.title,
       article,
       paragraphs: ["First paragraph", article.content],
+      comments: { items: [], hasMore: false, nextBefore: null },
+      commentsFailed: false,
       formatDate,
+      formatDateTime: () => "Oct 1, 2026, 10:00 AM UTC",
     });
     assert.ok(html.includes("&lt;script&gt;alert(1)&lt;/script&gt;"));
     assert.ok(!html.includes("<script>"));
@@ -427,6 +430,20 @@ describe("seed safety guard", () => {
     await assert.rejects(() => seedDevArticles(articles.model, otherDatabase.model), /production_news/);
     assert.deepStrictEqual(articles.calls, []);
     assert.deepStrictEqual(otherDatabase.calls, []);
+  });
+
+  it("a wrong comments model stops the seed before anything is deleted", async () => {
+    const articles = createFakeModel({ dbName: DEV_DATABASE_NAME, readyState: 1, collectionName: DEV_COLLECTION_NAME });
+    const reads = createFakeModel({ dbName: DEV_DATABASE_NAME, readyState: 1, collectionName: DEV_READ_COLLECTION_NAME });
+    const wrongCollection = createFakeModel({ dbName: DEV_DATABASE_NAME, readyState: 1, collectionName: "comments_production" });
+    await assert.rejects(() => seedDevArticles(articles.model, reads.model, wrongCollection.model), /comments_production/);
+
+    const otherDatabase = createFakeModel({ dbName: "production_news", readyState: 1, collectionName: DEV_COMMENTS_COLLECTION_NAME });
+    await assert.rejects(() => seedDevArticles(articles.model, reads.model, otherDatabase.model), /production_news/);
+
+    for (const fake of [articles, reads, wrongCollection, otherDatabase]) {
+      assert.deepStrictEqual(fake.calls, []);
+    }
   });
 
   it("accepts the dev database and the dev collection", () => {
