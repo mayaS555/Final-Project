@@ -7,6 +7,7 @@ const assert = require("node:assert");
 const path = require("path");
 const ejs = require("ejs");
 const createDevApp = require("../createDevApp");
+const { parseFeedQuery, buildFeedHref } = require("../../controllers/publicController");
 const { toSafeImageUrl } = require("../../services/publicArticleService");
 const { DEV_DATABASE_NAME } = require("../connectDevDb");
 const { seedDevArticles, assertModelTargetsDevCollection, DEV_COLLECTION_NAME } = require("../seed-public");
@@ -49,6 +50,49 @@ describe("public site without a database", () => {
     const response = await fetch(`${baseUrl}/?page=abc`);
     assert.strictEqual(response.status, 400);
   });
+
+  const structuredQueries = ["q[$ne]=x", "q[]=a", "category[$gt]=", "category[a][b]=1", "page[a]=1", "page[]=1"];
+
+  for (const queryString of structuredQueries) {
+    it(`API and home page reject the structured parameter ${queryString} with 400`, async () => {
+      const apiResponse = await fetch(`${baseUrl}/api/public/articles?${queryString}`);
+      assert.strictEqual(apiResponse.status, 400);
+      assert.match((await apiResponse.json()).error, /structured/);
+
+      const pageResponse = await fetch(`${baseUrl}/?${queryString}`);
+      assert.strictEqual(pageResponse.status, 400);
+      assert.match(await pageResponse.text(), /structured/);
+    });
+  }
+
+  it("unrelated unknown parameters, even structured ones, are ignored", async () => {
+    // No model is connected here, so a request that passes validation ends in the generic 500.
+    for (const queryString of ["unknown=1", "unknown[a]=1", "$where=1&status=draft", "query[x]=1"]) {
+      assert.strictEqual((await fetch(`${baseUrl}/api/public/articles?${queryString}`)).status, 500, queryString);
+      assert.strictEqual((await fetch(`${baseUrl}/?${queryString}`)).status, 500, queryString);
+    }
+  });
+
+  const badFilterQueries = {
+    "a repeated q": "q=a&q=b",
+    "a repeated category": "category=a&category=b",
+    "a q longer than 100 characters": `q=${"a".repeat(101)}`,
+    "a category longer than 50 characters": `category=${"a".repeat(51)}`,
+    "a newline inside q": "q=a%0Ab",
+    "a null character inside category": "category=a%00b",
+    "a DEL character in q": "q=%7F",
+  };
+
+  for (const [label, queryString] of Object.entries(badFilterQueries)) {
+    it(`API and home page reject ${label} with 400`, async () => {
+      const apiResponse = await fetch(`${baseUrl}/api/public/articles?${queryString}`);
+      assert.strictEqual(apiResponse.status, 400);
+      assert.match((await apiResponse.json()).error, /q must|category must|invalid characters/);
+
+      const pageResponse = await fetch(`${baseUrl}/?${queryString}`);
+      assert.strictEqual(pageResponse.status, 400);
+    });
+  }
 
   it("malformed article ids give 404 without touching the database", async () => {
     for (const id of ["not-an-id", "123", "zzzzzzzzzzzzzzzzzzzzzzzz", "%24ne"]) {
@@ -104,23 +148,124 @@ describe("templates", () => {
     assert.ok(html.includes("First paragraph"));
   });
 
-  it("home page escapes user text", async () => {
-    const html = await ejs.renderFile(path.join(viewsDir, "home.ejs"), {
+  function renderHome({ items = [article], page = 1, hasMore = false, filters = { q: "", category: "" }, categories = [] } = {}) {
+    return ejs.renderFile(path.join(viewsDir, "home.ejs"), {
       pageTitle: "The Daily Web",
-      feed: { items: [article], page: 1, hasMore: false },
+      feed: { items, page, hasMore },
+      categories,
+      filters,
+      feedHref: (targetPage) => buildFeedHref(filters, targetPage),
       formatDate,
     });
+  }
+
+  it("home page escapes user text", async () => {
+    const html = await renderHome();
     assert.ok(!html.includes("<b>bold</b>"));
     assert.ok(html.includes("Title &lt;b&gt;bold&lt;/b&gt;"));
   });
 
   it("empty feed shows an empty state", async () => {
-    const html = await ejs.renderFile(path.join(viewsDir, "home.ejs"), {
-      pageTitle: "The Daily Web",
-      feed: { items: [], page: 1, hasMore: false },
-      formatDate,
-    });
+    const html = await renderHome({ items: [] });
     assert.ok(html.includes("No published articles yet."));
+  });
+
+  it("empty filtered feed says that nothing matches", async () => {
+    const html = await renderHome({ items: [], filters: { q: "zzz", category: "" } });
+    assert.ok(html.includes("No articles match your search or category."));
+  });
+
+  it("search form shows the active filters and escapes them", async () => {
+    const html = await renderHome({
+      filters: { q: '"><script>x</script>', category: "Markets" },
+      categories: ["Business", "Markets"],
+    });
+    assert.ok(!html.includes("<script>x</script>"));
+    assert.ok(html.includes("&#34;&gt;&lt;script&gt;x&lt;/script&gt;"));
+    assert.ok(html.includes('<option value="Markets" selected>Markets</option>'));
+    assert.ok(html.includes('<option value="Business">Business</option>'));
+    assert.ok(html.includes('data-category="Markets"'));
+  });
+
+  it("an unlisted category from the URL stays selected as an escaped option", async () => {
+    const html = await renderHome({
+      items: [],
+      filters: { q: "", category: 'No<b>Such' },
+      categories: ["Business", "Markets"],
+    });
+    assert.ok(html.includes('<option value="No&lt;b&gt;Such" selected>No&lt;b&gt;Such</option>'));
+    assert.ok(!html.includes("No<b>Such"));
+    assert.strictEqual((html.match(/selected/g) || []).length, 1);
+  });
+
+  it("a listed category is not added a second time", async () => {
+    const html = await renderHome({ filters: { q: "", category: "Markets" }, categories: ["Business", "Markets"] });
+    assert.strictEqual((html.match(/value="Markets"/g) || []).length, 1);
+  });
+
+  it("no extra category option appears without a category filter", async () => {
+    const html = await renderHome({ categories: ["Business", "Markets"] });
+    assert.strictEqual((html.match(/<option /g) || []).length, 3);
+  });
+
+  it("pager links are marked so the script can hide only the older one", async () => {
+    const html = await renderHome({ page: 2, hasMore: true });
+    assert.ok(html.includes('data-pager="newer"'));
+    assert.ok(html.includes('data-pager="older"'));
+  });
+
+  it("pager links keep the active filters", async () => {
+    const html = await renderHome({ page: 2, hasMore: true, filters: { q: "harbor report", category: "Markets" } });
+    assert.ok(html.includes('href="/?q=harbor+report&amp;category=Markets"'), "newer link goes back to page 1");
+    assert.ok(html.includes('href="/?q=harbor+report&amp;category=Markets&amp;page=3"'), "older link");
+    assert.ok(html.includes('data-next-page="3"'));
+    assert.ok(html.includes('data-has-more="true"'));
+  });
+});
+
+describe("parseFeedQuery and buildFeedHref", () => {
+  it("returns defaults for an empty query", () => {
+    assert.deepStrictEqual(parseFeedQuery({}), { page: 1, q: "", category: "" });
+  });
+
+  it("trims text and treats empty or blank values as no filter", () => {
+    assert.deepStrictEqual(parseFeedQuery({ q: "  harbor  ", category: " Markets " }), { page: 1, q: "harbor", category: "Markets" });
+    assert.deepStrictEqual(parseFeedQuery({ q: "", category: "   " }), { page: 1, q: "", category: "" });
+  });
+
+  it("accepts values exactly at the length limits", () => {
+    const result = parseFeedQuery({ q: "a".repeat(100), category: "b".repeat(50), page: "1000" });
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(result.page, 1000);
+  });
+
+  it("rejects arrays and objects where a string is expected", () => {
+    assert.ok(parseFeedQuery({ q: ["a", "b"] }).error);
+    assert.ok(parseFeedQuery({ category: ["a"] }).error);
+    assert.ok(parseFeedQuery({ q: { $ne: "x" } }).error);
+    assert.ok(parseFeedQuery({ category: { $gt: "" } }).error);
+  });
+
+  it("rejects structured forms of recognized parameters and names the parameter", () => {
+    assert.match(parseFeedQuery({ "q[$ne]": "x" }).error, /^q must be a single value/);
+    assert.match(parseFeedQuery({ "q[]": "a" }).error, /^q must/);
+    assert.match(parseFeedQuery({ "category[$gt]": "" }).error, /^category must/);
+    assert.match(parseFeedQuery({ "page[a]": "1" }).error, /^page must/);
+  });
+
+  it("ignores unrelated unknown parameters, including look-alike names", () => {
+    assert.deepStrictEqual(parseFeedQuery({ "unknown[a]": "1", "query[x]": "1", "qq[a]": "1", q: "a" }), { page: 1, q: "a", category: "" });
+  });
+
+  it("returns only the known fields", () => {
+    const result = parseFeedQuery({ q: "a", category: "b", page: "2", $where: "1", status: "draft" });
+    assert.deepStrictEqual(Object.keys(result).sort(), ["category", "page", "q"]);
+  });
+
+  it("builds links that keep filters and drop empty ones", () => {
+    assert.strictEqual(buildFeedHref({ q: "", category: "" }, 1), "/");
+    assert.strictEqual(buildFeedHref({ q: "", category: "" }, 3), "/?page=3");
+    assert.strictEqual(buildFeedHref({ q: "a&b=c", category: "Sci Fi" }, 2), "/?q=a%26b%3Dc&category=Sci+Fi&page=2");
   });
 });
 

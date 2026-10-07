@@ -34,8 +34,17 @@ const devArticleSchema = new mongoose.Schema(
   { collection: "dev_public_articles" }
 );
 
-// Proposed feed index for B's schema: matches the date-sorted feed query.
+// Proposed feed indexes for B's schema.
+// Date-sorted feed:
 devArticleSchema.index({ "approved.publishedAt": -1, _id: -1 });
+// Category filter with the same sort, and the distinct list of categories:
+devArticleSchema.index({ "approved.category": 1, "approved.publishedAt": -1, _id: -1 });
+// Title search. Only the approved title is indexed, so pending titles can never match.
+// The language decides stemming and stop words; see docs/person-c-integration.md.
+devArticleSchema.index(
+  { "approved.title": "text" },
+  { name: "approved_title_text", default_language: "english" }
+);
 
 const DevArticle = mongoose.model("DevArticle", devArticleSchema);
 

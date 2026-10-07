@@ -121,6 +121,60 @@
     color: #52606d;
 }
 
+/* The hidden attribute must win over the display values set below. */
+.pub-site [hidden] {
+    display: none !important;
+}
+
+.pub-site .pub-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.pub-site .pub-filters input,
+.pub-site .pub-filters select,
+.pub-site .pub-filters button,
+.pub-site .pub-retry-button {
+    padding: 10px 12px;
+    font-size: 16px;
+    border: 1px solid #b8c0cc;
+    border-radius: 6px;
+    background: #ffffff;
+    color: inherit;
+}
+
+.pub-site .pub-filters input {
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.pub-site .pub-filters select {
+    flex: 0 1 220px;
+    min-width: 0;
+}
+
+.pub-site .pub-filters button,
+.pub-site .pub-retry-button {
+    cursor: pointer;
+    background: #14213d;
+    border-color: #14213d;
+    color: #ffffff;
+}
+
+.pub-site .pub-feed-status {
+    margin: 20px 0 0;
+    text-align: center;
+    color: #52606d;
+}
+
+.pub-site .pub-retry-button {
+    margin-left: 12px;
+    padding: 6px 14px;
+    font-size: 14px;
+}
+
 .pub-site .pub-empty {
     padding: 24px;
     background: #ffffff;
@@ -177,6 +231,11 @@
 @media (max-width: 600px) {
     .pub-site .pub-header {
         padding: 12px 16px;
+    }
+
+    .pub-site .pub-filters select,
+    .pub-site .pub-filters button {
+        flex: 1 1 100%;
     }
 
     .pub-site .pub-article {

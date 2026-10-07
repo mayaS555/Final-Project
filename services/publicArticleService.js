@@ -93,11 +93,27 @@ function toFullArticle(document) {
   };
 }
 
+// The filter is built field by field. q and category must already be validated strings;
+// an empty string means "no filter".
+// q uses MongoDB text search on the approved title only (needs a text index on that field).
+function buildFeedFilter({ q, category }) {
+  const filter = { ...approvedOnlyFilter };
+
+  if (q) {
+    filter.$text = { $search: q };
+  }
+  if (category) {
+    filter["approved.category"] = category;
+  }
+  return filter;
+}
+
 // page must already be a validated integer >= 1.
+// Filters are applied by MongoDB before skip and limit.
 // One extra row is requested only to learn whether another page exists.
-async function getPublishedArticles({ page }) {
+async function getPublishedArticles({ page, q = "", category = "" }) {
   const documents = await getArticleModel()
-    .find(approvedOnlyFilter, feedProjection)
+    .find(buildFeedFilter({ q, category }), feedProjection)
     .sort(feedSort)
     .skip((page - 1) * FEED_PAGE_SIZE)
     .limit(FEED_PAGE_SIZE + 1)
@@ -108,6 +124,15 @@ async function getPublishedArticles({ page }) {
     page,
     hasMore: documents.length > FEED_PAGE_SIZE,
   };
+}
+
+// Category choices come only from approved versions, never from pending revisions.
+async function getPublishedCategories() {
+  const categories = await getArticleModel().distinct("approved.category", approvedOnlyFilter);
+
+  return categories
+    .filter((category) => typeof category === "string" && category.length > 0)
+    .sort((first, second) => first.localeCompare(second));
 }
 
 // Returns null for malformed ids, missing articles, and articles with no approved version.
@@ -127,6 +152,7 @@ module.exports = {
   FEED_PAGE_SIZE,
   useArticleModel,
   getPublishedArticles,
+  getPublishedCategories,
   getPublishedArticleById,
   toSafeImageUrl,
 };

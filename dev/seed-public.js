@@ -13,9 +13,15 @@ const { connectDevDb, DEV_DATABASE_NAME } = require("./connectDevDb");
 const DEV_COLLECTION_NAME = "dev_public_articles";
 
 // Text that must never reach public output. Tests search for these markers.
+// The words and categories below exist only in pending or draft revisions, so no public
+// search or category filter may ever find them.
 const PENDING_MARKER = "PENDING-ONLY-TEXT";
 const DRAFT_MARKER = "DRAFT-ONLY-TEXT";
 const SSR_END_MARKER = "SSR-LAST-PARAGRAPH-MARKER";
+const PENDING_ONLY_WORD = "zyxpendingword";
+const PENDING_ONLY_CATEGORY = "PendingOnlyCategory";
+const DRAFT_ONLY_WORD = "zyxdraftword";
+const DRAFT_ONLY_CATEGORY = "DraftOnlyCategory";
 
 const CATEGORIES = ["Technology", "Sports", "Culture", "Science", "Business"];
 const HOUR = 60 * 60 * 1000;
@@ -46,6 +52,55 @@ function buildSampleArticles(now) {
   return samples;
 }
 
+function buildApprovedArticle({ title, category, publishedAt, number }) {
+  return {
+    status: "published",
+    approved: {
+      title,
+      summary: `Search fixture summary ${number}.`,
+      content: `Search fixture content ${number}.`,
+      category,
+      imageUrl: null,
+      authorName: `Reporter ${(number % 4) + 1}`,
+      publishedAt,
+      updatedAt: publishedAt,
+    },
+  };
+}
+
+// Data for search and category checks, all older than the other fixtures:
+//   q=harbor                  -> 28 articles (25 Markets + 3 in other categories)
+//   category=Markets          -> 27 articles (25 harbor reports + 2 without "harbor")
+//   q=harbor & category=Markets -> 25 articles
+// Each result is larger than one page of 20, so the second filtered page is exercised.
+function buildSearchFixtureArticles(now) {
+  const articles = [];
+
+  for (let index = 1; index <= 25; index += 1) {
+    const publishedAt = new Date(now - (30 + Math.floor(index / 2)) * DAY);
+    const label = String(index).padStart(2, "0");
+    articles.push(buildApprovedArticle({ title: `Harbor report ${label}`, category: "Markets", publishedAt, number: index }));
+  }
+
+  const otherHarborTitles = [
+    { title: "Harbor festival opens this weekend", category: "Culture" },
+    { title: "New harbor bridge approved", category: "Business" },
+    { title: "Harbor swim returns", category: "Sports" },
+  ];
+  otherHarborTitles.forEach((entry, offset) => {
+    const publishedAt = new Date(now - (50 + offset) * DAY);
+    articles.push(buildApprovedArticle({ ...entry, publishedAt, number: 100 + offset }));
+  });
+
+  const otherMarketsTitles = ["Stocks close higher", "Currency markets steady"];
+  otherMarketsTitles.forEach((title, offset) => {
+    const publishedAt = new Date(now - (60 + offset) * DAY);
+    articles.push(buildApprovedArticle({ title, category: "Markets", publishedAt, number: 200 + offset }));
+  });
+
+  return articles;
+}
+
 function buildSpecialArticles(now) {
   const pendingUpdate = {
     status: "pending",
@@ -60,10 +115,10 @@ function buildSpecialArticles(now) {
       updatedAt: new Date(now - 1 * HOUR),
     },
     pending: {
-      title: `${PENDING_MARKER} new title`,
+      title: `${PENDING_MARKER} ${PENDING_ONLY_WORD} new title`,
       summary: `${PENDING_MARKER} new summary`,
       content: `${PENDING_MARKER} new content`,
-      category: "Business",
+      category: PENDING_ONLY_CATEGORY,
       imageUrl: "https://example.com/pending.jpg",
       authorName: "Reporter 1",
     },
@@ -72,10 +127,10 @@ function buildSpecialArticles(now) {
   const draftOnly = {
     status: "draft",
     pending: {
-      title: `${DRAFT_MARKER} title`,
+      title: `${DRAFT_MARKER} ${DRAFT_ONLY_WORD} title`,
       summary: `${DRAFT_MARKER} summary`,
       content: `${DRAFT_MARKER} content`,
-      category: "Sports",
+      category: DRAFT_ONLY_CATEGORY,
       authorName: "Reporter 2",
     },
   };
@@ -139,7 +194,7 @@ async function seedDevArticles(model = DevArticle) {
   await model.deleteMany({});
   await model.createIndexes();
 
-  const samples = buildSampleArticles(now);
+  const samples = [...buildSampleArticles(now), ...buildSearchFixtureArticles(now)];
   await model.insertMany(samples);
 
   // insertMany keeps input order, so the special documents can be matched by position.
@@ -151,7 +206,7 @@ async function seedDevArticles(model = DevArticle) {
   ]);
 
   return {
-    // 30 samples + pending update + script check + unsafe image. The draft is not counted.
+    // Every sample is approved, plus pending update + script check + unsafe image. The draft is not counted.
     approvedCount: samples.length + 3,
     pendingUpdateId: String(pendingUpdate._id),
     draftOnlyId: String(draftOnly._id),
@@ -183,4 +238,8 @@ module.exports = {
   PENDING_MARKER,
   DRAFT_MARKER,
   SSR_END_MARKER,
+  PENDING_ONLY_WORD,
+  PENDING_ONLY_CATEGORY,
+  DRAFT_ONLY_WORD,
+  DRAFT_ONLY_CATEGORY,
 };

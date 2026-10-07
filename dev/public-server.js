@@ -12,6 +12,8 @@ const DEV_PORT = 3100;
 
 async function start() {
   await connectDevDb();
+  // Title search fails without its text index, so wait until the indexes exist.
+  await DevArticle.init();
   useArticleModel(DevArticle);
 
   createDevApp().listen(DEV_PORT, () => {

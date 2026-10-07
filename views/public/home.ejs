@@ -1,13 +1,40 @@
+<%
+    const hasFilters = Boolean(filters.q || filters.category);
+    let statusMessage = "";
+    if (feed.items.length === 0) {
+        statusMessage = hasFilters ? "No articles match your search or category." : "No published articles yet.";
+    } else if (!feed.hasMore) {
+        statusMessage = "You have reached the end of the results.";
+    }
+%>
 <%- include("partials/top", { metaDescription: "Latest published articles from The Daily Web." }) %>
     <main class="pub-main">
         <h1 class="pub-page-title">Latest articles</h1>
 
-        <% if (feed.items.length === 0) { %>
-        <p class="pub-empty">No published articles yet.</p>
-        <% } else { %>
-        <div class="pub-feed">
+        <%# Plain GET form: works without JavaScript. public-feed.js upgrades it to AJAX. %>
+        <form class="pub-filters" id="pub-filter-form" method="get" action="/">
+            <input type="search" name="q" value="<%= filters.q %>" placeholder="Search titles" aria-label="Search article titles" maxlength="100">
+            <select name="category" aria-label="Filter by category">
+                <option value="">All categories</option>
+                <% categories.forEach(function (category) { %>
+                <option value="<%= category %>"<%= category === filters.category ? " selected" : "" %>><%= category %></option>
+                <% }); %>
+                <%# Echo of the category typed in the URL, so the form matches the results. It is user input, not a stored category. %>
+                <% if (filters.category && !categories.includes(filters.category)) { %>
+                <option value="<%= filters.category %>" selected><%= filters.category %></option>
+                <% } %>
+            </select>
+            <button type="submit">Search</button>
+        </form>
+
+        <%# Card markup must stay in sync with createCard() in public/js/public-feed.js. %>
+        <div class="pub-feed" id="pub-feed"
+             data-next-page="<%= feed.page + 1 %>"
+             data-has-more="<%= feed.hasMore %>"
+             data-q="<%= filters.q %>"
+             data-category="<%= filters.category %>">
             <% feed.items.forEach(function (article) { %>
-            <article class="pub-card">
+            <article class="pub-card" data-article-id="<%= article.id %>">
                 <a class="pub-card-link" href="/articles/<%= article.id %>">
                     <% if (article.imageUrl) { %>
                     <img class="pub-card-image" src="<%= article.imageUrl %>" alt="" loading="lazy">
@@ -27,17 +54,19 @@
             </article>
             <% }); %>
         </div>
-        <% } %>
+
+        <p class="pub-feed-status" id="pub-feed-status" aria-live="polite"><%= statusMessage %></p>
 
         <% if (feed.page > 1 || feed.hasMore) { %>
-        <nav class="pub-pager" aria-label="Feed pages">
+        <nav class="pub-pager" id="pub-pager" aria-label="Feed pages">
             <% if (feed.page > 1) { %>
-            <a href="/?page=<%= feed.page - 1 %>">Newer articles</a>
+            <a href="<%= feedHref(feed.page - 1) %>" data-pager="newer">Newer articles</a>
             <% } %>
             <% if (feed.hasMore) { %>
-            <a href="/?page=<%= feed.page + 1 %>">Older articles</a>
+            <a href="<%= feedHref(feed.page + 1) %>" data-pager="older">Older articles</a>
             <% } %>
         </nav>
         <% } %>
     </main>
+    <script src="/js/public-feed.js" defer></script>
 <%- include("partials/bottom") %>
