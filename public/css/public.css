@@ -1,0 +1,189 @@
+/* Every rule is scoped under .pub-site so staff pages are not affected. */
+
+.pub-site {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.5;
+    color: #1f2933;
+    background: #f4f5f7;
+}
+
+.pub-site *,
+.pub-site *::before,
+.pub-site *::after {
+    box-sizing: border-box;
+}
+
+.pub-site a {
+    color: inherit;
+}
+
+.pub-site .pub-dev-notice {
+    margin: 0;
+    padding: 6px 16px;
+    background: #ffe08a;
+    color: #4a3b00;
+    font-size: 14px;
+    text-align: center;
+}
+
+.pub-site .pub-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: #14213d;
+    color: #ffffff;
+}
+
+.pub-site .pub-header a {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.pub-site .pub-brand {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.pub-site .pub-main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+
+.pub-site .pub-page-title {
+    margin: 0 0 20px;
+    font-size: 28px;
+}
+
+.pub-site .pub-feed {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.pub-site .pub-card {
+    flex: 1 1 300px;
+    max-width: 100%;
+    background: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.pub-site .pub-card-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+}
+
+.pub-site .pub-card-image {
+    display: block;
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.pub-site .pub-card-image-empty {
+    background: #d5d9e0;
+}
+
+.pub-site .pub-card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 16px;
+}
+
+.pub-site .pub-category {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #8a5a00;
+}
+
+.pub-site .pub-card-title {
+    margin: 0 0 8px;
+    font-size: 20px;
+}
+
+.pub-site .pub-card-summary {
+    margin: 0 0 12px;
+    flex: 1;
+}
+
+.pub-site .pub-meta {
+    margin: 0;
+    font-size: 14px;
+    color: #52606d;
+}
+
+.pub-site .pub-empty {
+    padding: 24px;
+    background: #ffffff;
+    border-radius: 8px;
+}
+
+.pub-site .pub-pager {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 28px;
+}
+
+.pub-site .pub-pager a,
+.pub-site .pub-back a {
+    font-weight: bold;
+}
+
+.pub-site .pub-article {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px;
+    background: #ffffff;
+    border-radius: 8px;
+}
+
+.pub-site .pub-article-title {
+    margin: 0 0 8px;
+    font-size: 34px;
+    line-height: 1.2;
+}
+
+.pub-site .pub-article-image {
+    display: block;
+    width: 100%;
+    max-height: 420px;
+    margin: 20px 0;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.pub-site .pub-article-content p {
+    margin: 0 0 16px;
+    font-size: 18px;
+    /* Keeps single line breaks typed by the reporter. */
+    white-space: pre-line;
+}
+
+.pub-site .pub-back {
+    max-width: 760px;
+    margin: 20px auto 0;
+}
+
+@media (max-width: 600px) {
+    .pub-site .pub-header {
+        padding: 12px 16px;
+    }
+
+    .pub-site .pub-article {
+        padding: 16px;
+    }
+
+    .pub-site .pub-article-title {
+        font-size: 26px;
+    }
+}

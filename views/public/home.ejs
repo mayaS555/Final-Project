@@ -1,0 +1,43 @@
+<%- include("partials/top", { metaDescription: "Latest published articles from The Daily Web." }) %>
+    <main class="pub-main">
+        <h1 class="pub-page-title">Latest articles</h1>
+
+        <% if (feed.items.length === 0) { %>
+        <p class="pub-empty">No published articles yet.</p>
+        <% } else { %>
+        <div class="pub-feed">
+            <% feed.items.forEach(function (article) { %>
+            <article class="pub-card">
+                <a class="pub-card-link" href="/articles/<%= article.id %>">
+                    <% if (article.imageUrl) { %>
+                    <img class="pub-card-image" src="<%= article.imageUrl %>" alt="" loading="lazy">
+                    <% } else { %>
+                    <div class="pub-card-image pub-card-image-empty"></div>
+                    <% } %>
+                    <div class="pub-card-body">
+                        <p class="pub-category"><%= article.category %></p>
+                        <h2 class="pub-card-title"><%= article.title %></h2>
+                        <p class="pub-card-summary"><%= article.summary %></p>
+                        <p class="pub-meta">
+                            <%= article.authorName %>
+                            <time datetime="<%= article.publishedAt %>"><%= formatDate(article.publishedAt) %></time>
+                        </p>
+                    </div>
+                </a>
+            </article>
+            <% }); %>
+        </div>
+        <% } %>
+
+        <% if (feed.page > 1 || feed.hasMore) { %>
+        <nav class="pub-pager" aria-label="Feed pages">
+            <% if (feed.page > 1) { %>
+            <a href="/?page=<%= feed.page - 1 %>">Newer articles</a>
+            <% } %>
+            <% if (feed.hasMore) { %>
+            <a href="/?page=<%= feed.page + 1 %>">Older articles</a>
+            <% } %>
+        </nav>
+        <% } %>
+    </main>
+<%- include("partials/bottom") %>

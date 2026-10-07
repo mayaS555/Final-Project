@@ -1,0 +1,26 @@
+<%- include("partials/top", { metaDescription: article.summary }) %>
+    <main class="pub-main">
+        <article class="pub-article">
+            <header class="pub-article-header">
+                <p class="pub-category"><%= article.category %></p>
+                <h1 class="pub-article-title"><%= article.title %></h1>
+                <p class="pub-meta">
+                    By <%= article.authorName %>
+                    <time datetime="<%= article.publishedAt %>"><%= formatDate(article.publishedAt) %></time>
+                </p>
+            </header>
+
+            <% if (article.imageUrl) { %>
+            <img class="pub-article-image" src="<%= article.imageUrl %>" alt="<%= article.title %>">
+            <% } %>
+
+            <div class="pub-article-content">
+                <% paragraphs.forEach(function (paragraph) { %>
+                <p><%= paragraph %></p>
+                <% }); %>
+            </div>
+        </article>
+
+        <p class="pub-back"><a href="/">Back to all articles</a></p>
+    </main>
+<%- include("partials/bottom") %>
