@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <% if (locals.metaDescription) { %>
+    <meta name="description" content="<%= metaDescription %>">
+    <% } %>
+    <title><%= pageTitle %></title>
+    <link rel="stylesheet" href="/css/public.css">
+</head>
+<body class="pub-site">
+    <header class="pub-header">
+        <a class="pub-brand" href="/">The Daily Web</a>
+        <nav aria-label="Staff">
+            <a href="/login.html">Staff Login</a>
+        </nav>
+    </header>

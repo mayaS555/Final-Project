@@ -1,0 +1,389 @@
+/* Every rule is scoped under .pub-site so staff pages are not affected. */
+
+.pub-site {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.5;
+    color: #1f2933;
+    background: #f4f5f7;
+}
+
+.pub-site *,
+.pub-site *::before,
+.pub-site *::after {
+    box-sizing: border-box;
+}
+
+.pub-site a {
+    color: inherit;
+}
+
+.pub-site .pub-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: #14213d;
+    color: #ffffff;
+}
+
+.pub-site .pub-header a {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.pub-site .pub-brand {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.pub-site .pub-main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+
+.pub-site .pub-page-title {
+    margin: 0 0 20px;
+    font-size: 28px;
+}
+
+.pub-site .pub-feed {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.pub-site .pub-card {
+    flex: 1 1 300px;
+    max-width: 100%;
+    background: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.pub-site .pub-card-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+}
+
+.pub-site .pub-card-image {
+    display: block;
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.pub-site .pub-card-image-empty {
+    background: #d5d9e0;
+}
+
+.pub-site .pub-card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 16px;
+}
+
+.pub-site .pub-category {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #8a5a00;
+}
+
+.pub-site .pub-card-title {
+    margin: 0 0 8px;
+    font-size: 20px;
+}
+
+.pub-site .pub-card-summary {
+    margin: 0 0 12px;
+    flex: 1;
+}
+
+.pub-site .pub-meta {
+    margin: 0;
+    font-size: 14px;
+    color: #52606d;
+}
+
+/* The hidden attribute must win over the display values set below. */
+.pub-site [hidden] {
+    display: none !important;
+}
+
+.pub-site .pub-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.pub-site .pub-filters input,
+.pub-site .pub-filters select,
+.pub-site .pub-filters button,
+.pub-site .pub-retry-button {
+    padding: 10px 12px;
+    font-size: 16px;
+    border: 1px solid #b8c0cc;
+    border-radius: 6px;
+    background: #ffffff;
+    color: inherit;
+}
+
+.pub-site .pub-filters input {
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.pub-site .pub-filters select {
+    flex: 0 1 220px;
+    min-width: 0;
+}
+
+.pub-site .pub-filters button,
+.pub-site .pub-retry-button {
+    cursor: pointer;
+    background: #14213d;
+    border-color: #14213d;
+    color: #ffffff;
+}
+
+.pub-site .pub-feed-status {
+    margin: 20px 0 0;
+    text-align: center;
+    color: #52606d;
+}
+
+.pub-site .pub-retry-button {
+    margin-left: 12px;
+    padding: 6px 14px;
+    font-size: 14px;
+}
+
+.pub-site .pub-empty {
+    padding: 24px;
+    background: #ffffff;
+    border-radius: 8px;
+}
+
+.pub-site .pub-pager {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 28px;
+}
+
+.pub-site .pub-pager a,
+.pub-site .pub-back a {
+    font-weight: bold;
+}
+
+.pub-site .pub-article {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px;
+    background: #ffffff;
+    border-radius: 8px;
+}
+
+.pub-site .pub-article-title {
+    margin: 0 0 8px;
+    font-size: 34px;
+    line-height: 1.2;
+}
+
+.pub-site .pub-article-image {
+    display: block;
+    width: 100%;
+    max-height: 420px;
+    margin: 20px 0;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.pub-site .pub-article-content p {
+    margin: 0 0 16px;
+    font-size: 18px;
+    /* Keeps single line breaks typed by the reporter. */
+    white-space: pre-line;
+}
+
+.pub-site .pub-back {
+    max-width: 760px;
+    margin: 20px auto 0;
+}
+
+@media (max-width: 600px) {
+    .pub-site .pub-header {
+        padding: 12px 16px;
+    }
+
+    .pub-site .pub-filters select,
+    .pub-site .pub-filters button {
+        flex: 1 1 100%;
+    }
+
+    .pub-site .pub-article {
+        padding: 16px;
+    }
+
+    /* Larger touch targets for the no-JavaScript pager and the back link. */
+    .pub-site .pub-pager a,
+    .pub-site .pub-back a {
+        display: inline-block;
+        padding: 10px 4px;
+    }
+
+    .pub-site .pub-article-title {
+        font-size: 26px;
+    }
+}
+
+/* Comments on the article page. */
+.pub-site .pub-comments {
+    max-width: 760px;
+    margin: 24px auto 0;
+    padding: 24px;
+    background: #ffffff;
+    border-radius: 8px;
+}
+
+.pub-site .pub-comments-title {
+    margin: 0 0 16px;
+    font-size: 24px;
+}
+
+.pub-site .pub-comment-form {
+    margin-bottom: 24px;
+}
+
+/* The fieldset only exists to disable all controls before the script runs; reset its default look. */
+.pub-site .pub-comment-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.pub-site .pub-comment-form label {
+    font-weight: bold;
+}
+
+.pub-site .pub-comment-form input,
+.pub-site .pub-comment-form textarea,
+.pub-site .pub-comment-edit-input {
+    width: 100%;
+    padding: 10px 12px;
+    font: inherit;
+    border: 1px solid #b8c0cc;
+    border-radius: 6px;
+    background: #ffffff;
+    color: inherit;
+}
+
+.pub-site .pub-comment-form textarea,
+.pub-site .pub-comment-edit-input {
+    resize: vertical;
+}
+
+.pub-site .pub-comment-form button,
+.pub-site .pub-comment-editor button,
+.pub-site .pub-comment-actions button,
+.pub-site .pub-secondary-button {
+    padding: 8px 16px;
+    font-size: 15px;
+    cursor: pointer;
+    border: 1px solid #14213d;
+    border-radius: 6px;
+    background: #14213d;
+    color: #ffffff;
+}
+
+.pub-site .pub-comment-form button {
+    align-self: flex-start;
+}
+
+.pub-site .pub-comment-actions button,
+.pub-site .pub-comment-editor button[data-action="cancel"],
+.pub-site .pub-secondary-button {
+    background: #ffffff;
+    color: #14213d;
+}
+
+.pub-site .pub-comments button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.pub-site .pub-form-status {
+    min-height: 1.5em;
+    margin: 0;
+    color: #52606d;
+}
+
+.pub-site .pub-status-error {
+    color: #b00020;
+}
+
+.pub-site .pub-comments-note {
+    margin: 0 0 16px;
+    color: #52606d;
+}
+
+.pub-site .pub-comment-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pub-site .pub-comment {
+    padding: 16px 0;
+    border-top: 1px solid #e1e5ea;
+}
+
+.pub-site .pub-comment-meta {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: #52606d;
+}
+
+.pub-site .pub-comment-author {
+    color: #1f2933;
+}
+
+.pub-site .pub-comment-body {
+    margin: 0 0 8px;
+    /* Keeps the line breaks typed by the reader. */
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.pub-site .pub-comment-actions,
+.pub-site .pub-comment-editor {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pub-site .pub-comment-editor .pub-comment-edit-input {
+    flex: 1 1 100%;
+}
+
+.pub-site .pub-comment-error {
+    margin: 8px 0 0;
+}
+
+@media (max-width: 600px) {
+    .pub-site .pub-comments {
+        padding: 16px;
+    }
+}
