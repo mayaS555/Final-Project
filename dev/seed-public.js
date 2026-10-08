@@ -53,6 +53,9 @@ function buildSampleArticles(now) {
         publishedAt,
         updatedAt: publishedAt,
       },
+      // Fixed values. Articles in one date group share their views, so some pairs tie on views and date
+      // (the _id decides) and other pairs tie on views only (the date decides).
+      totalViews: (Math.floor(index / 3) % 4) * 100,
     });
   }
 
@@ -62,6 +65,8 @@ function buildSampleArticles(now) {
 function buildApprovedArticle({ title, category, publishedAt, number }) {
   return {
     status: "published",
+    // Fixed values with repeats (0 to 90), unrelated to the date order.
+    totalViews: ((number * 7) % 10) * 10,
     approved: {
       title,
       summary: `Search fixture summary ${number}.`,
@@ -109,8 +114,11 @@ function buildSearchFixtureArticles(now) {
 }
 
 function buildSpecialArticles(now) {
+  // The article with a pending update has the highest popularity of all public fixtures, and the
+  // draft-only article has a larger one: popularity must never make a draft public.
   const pendingUpdate = {
     status: "pending",
+    totalViews: 5000,
     approved: {
       title: "Approved version: city opens new library",
       summary: "Approved summary shown to the public.",
@@ -133,6 +141,7 @@ function buildSpecialArticles(now) {
 
   const draftOnly = {
     status: "draft",
+    totalViews: 9999,
     pending: {
       title: `${DRAFT_MARKER} ${DRAFT_ONLY_WORD} title`,
       summary: `${DRAFT_MARKER} summary`,

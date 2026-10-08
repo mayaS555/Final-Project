@@ -7,7 +7,8 @@ const MAX_SEARCH_LENGTH = 100;
 const MAX_CATEGORY_LENGTH = 50;
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
 const VIEWED_VALUES = ["all", "viewed", "unviewed"];
-const FEED_PARAMETERS = ["q", "category", "viewed", "page"];
+const SORT_VALUES = ["date", "popular"];
+const FEED_PARAMETERS = ["q", "category", "viewed", "sort", "page"];
 
 function parsePage(rawPage) {
   if (rawPage === undefined) {
@@ -59,6 +60,21 @@ function parseViewed(rawValue) {
   return { value: text.value };
 }
 
+// Omitted or empty means the default, newest first.
+function parseSort(rawValue) {
+  const text = parseOptionalText(rawValue, "sort", 10);
+  if (text.error) {
+    return { error: text.error };
+  }
+  if (text.value === "") {
+    return { value: "date" };
+  }
+  if (!SORT_VALUES.includes(text.value)) {
+    return { error: "sort must be date or popular." };
+  }
+  return { value: text.value };
+}
+
 // Express's default parser turns q[$ne]=x into a key named "q[$ne]" and leaves q unset,
 // so a structured form of a recognized parameter has to be detected by its key.
 function findStructuredParameter(query) {
@@ -66,7 +82,7 @@ function findStructuredParameter(query) {
 }
 
 // Shared by the HTML feed and the JSON feed so both validate and query the same way.
-// Unknown parameters are ignored; only q, category, viewed and page are read.
+// Unknown parameters are ignored; only q, category, viewed, sort and page are read.
 function parseFeedQuery(query) {
   const structuredName = findStructuredParameter(query);
   if (structuredName) {
@@ -89,7 +105,11 @@ function parseFeedQuery(query) {
   if (viewed.error) {
     return { error: viewed.error };
   }
-  return { page: page.page, q: search.value, category: category.value, viewed: viewed.value };
+  const sort = parseSort(query.sort);
+  if (sort.error) {
+    return { error: sort.error };
+  }
+  return { page: page.page, q: search.value, category: category.value, viewed: viewed.value, sort: sort.value };
 }
 
 // Link to a feed page that keeps the active filters (used by the no-JavaScript pager).
@@ -103,6 +123,9 @@ function buildFeedHref(filters, page) {
   }
   if (filters.viewed && filters.viewed !== "all") {
     params.set("viewed", filters.viewed);
+  }
+  if (filters.sort && filters.sort !== "date") {
+    params.set("sort", filters.sort);
   }
   if (page > 1) {
     params.set("page", String(page));
@@ -170,7 +193,7 @@ async function renderHome(req, res) {
     return;
   }
 
-  const filters = { q: feedQuery.q, category: feedQuery.category, viewed: feedQuery.viewed };
+  const filters = { q: feedQuery.q, category: feedQuery.category, viewed: feedQuery.viewed, sort: feedQuery.sort };
 
   try {
     // The category list ignores the active filters, so it stays usable during a search.

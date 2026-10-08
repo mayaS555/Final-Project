@@ -5,6 +5,12 @@
         { value: "viewed", label: "Viewed" },
         { value: "unviewed", label: "Not viewed" }
     ];
+    const sortFilter = filters.sort || "date";
+    const sortOptions = [
+        { value: "date", label: "Newest first" },
+        { value: "popular", label: "Most popular" }
+    ];
+    // Sorting only orders the results, so it does not count as a filter for the "no matches" message.
     const hasFilters = Boolean(filters.q || filters.category || viewedFilter !== "all");
     let statusMessage = "";
     if (feed.items.length === 0) {
@@ -35,6 +41,11 @@
                 <option value="<%= option.value %>"<%= option.value === viewedFilter ? " selected" : "" %>><%= option.label %></option>
                 <% }); %>
             </select>
+            <select name="sort" aria-label="Sort articles">
+                <% sortOptions.forEach(function (option) { %>
+                <option value="<%= option.value %>"<%= option.value === sortFilter ? " selected" : "" %>><%= option.label %></option>
+                <% }); %>
+            </select>
             <button type="submit">Search</button>
         </form>
 
@@ -44,7 +55,8 @@
              data-has-more="<%= feed.hasMore %>"
              data-q="<%= filters.q %>"
              data-category="<%= filters.category %>"
-             data-viewed="<%= viewedFilter %>">
+             data-viewed="<%= viewedFilter %>"
+             data-sort="<%= sortFilter %>">
             <% feed.items.forEach(function (article) { %>
             <article class="pub-card" data-article-id="<%= article.id %>">
                 <a class="pub-card-link" href="/articles/<%= article.id %>">
@@ -72,10 +84,10 @@
         <% if (feed.page > 1 || feed.hasMore) { %>
         <nav class="pub-pager" id="pub-pager" aria-label="Feed pages">
             <% if (feed.page > 1) { %>
-            <a href="<%= feedHref(feed.page - 1) %>" data-pager="newer">Newer articles</a>
+            <a href="<%= feedHref(feed.page - 1) %>" data-pager="newer">Previous articles</a>
             <% } %>
             <% if (feed.hasMore) { %>
-            <a href="<%= feedHref(feed.page + 1) %>" data-pager="older">Older articles</a>
+            <a href="<%= feedHref(feed.page + 1) %>" data-pager="older">Next articles</a>
             <% } %>
         </nav>
         <% } %>

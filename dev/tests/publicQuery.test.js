@@ -88,6 +88,56 @@ describe("publicArticleService query construction", () => {
     assert.deepStrictEqual(call.sort, { "approved.publishedAt": -1, _id: -1 });
   });
 
+  describe("sort", () => {
+    const dateSort = { "approved.publishedAt": -1, _id: -1 };
+    const popularSort = { totalViews: -1, "approved.publishedAt": -1, _id: -1 };
+
+    it("date is the default and sorts by publication date, then by id", async () => {
+      await service.getPublishedArticles({ page: 1 });
+      await service.getPublishedArticles({ page: 1, sort: "date" });
+      assert.deepStrictEqual(model.calls[0].sort, dateSort);
+      assert.deepStrictEqual(model.calls[1].sort, dateSort);
+    });
+
+    it("popular sorts by views, then by publication date, then by id", async () => {
+      await service.getPublishedArticles({ page: 1, sort: "popular" });
+      assert.deepStrictEqual(model.calls[0].sort, popularSort);
+      assert.deepStrictEqual(Object.keys(model.calls[0].sort), ["totalViews", "approved.publishedAt", "_id"]);
+    });
+
+    it("sorting is part of the same database query as the filters and the pagination", async () => {
+      await service.getPublishedArticles({ page: 3, q: "harbor", category: "Markets", viewed: "unviewed", sort: "popular", readArticleIds: ["64b7f0f2a1b2c3d4e5f60001"] });
+      const call = model.calls[0];
+      assert.deepStrictEqual(call.filter, {
+        ...approvedOnly,
+        $text: { $search: "harbor" },
+        "approved.category": "Markets",
+        _id: { $nin: ["64b7f0f2a1b2c3d4e5f60001"] },
+      });
+      assert.deepStrictEqual(call.sort, popularSort);
+      assert.strictEqual(call.skip, 40);
+      assert.strictEqual(call.limit, 21);
+      assert.strictEqual(model.calls.length, 1);
+    });
+
+    it("sorting never adds a condition on views to the filter, so it cannot hide an article", async () => {
+      await service.getPublishedArticles({ page: 1, sort: "popular" });
+      assert.deepStrictEqual(model.calls[0].filter, approvedOnly);
+    });
+
+    it("an unknown sort is an error and no query runs", async () => {
+      for (const sort of ["views", "POPULAR", "", "constructor", "__proto__", "toString"]) {
+        await assert.rejects(() => service.getPublishedArticles({ page: 1, sort }), /Unknown sort/, sort);
+      }
+      assert.strictEqual(model.calls.length, 0);
+    });
+
+    it("the feed projection does not ask for the view count", async () => {
+      await service.getPublishedArticles({ page: 1, sort: "popular" });
+      assert.ok(!("totalViews" in model.calls[0].projection));
+    });
+  });
+
   it("never filters on pending data, status, summary or content", async () => {
     await service.getPublishedArticles({ page: 1, q: "harbor", category: "Markets" });
     const filterText = JSON.stringify(model.calls[0].filter);

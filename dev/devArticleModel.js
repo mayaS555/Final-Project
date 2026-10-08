@@ -30,6 +30,9 @@ const devArticleSchema = new mongoose.Schema(
     status: { type: String, enum: ["draft", "pending", "published"], required: true },
     approved: approvedVersion,
     pending: pendingVersion,
+    // Popularity input for the sort=popular feed. DEV FIXTURE ONLY: B's schema and D's counter are
+    // not agreed. C only reads it; nothing in C increments it. Not versioned: views belong to the article.
+    totalViews: { type: Number, default: 0, min: 0 },
   },
   { collection: "dev_public_articles" }
 );

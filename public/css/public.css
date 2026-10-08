@@ -242,6 +242,13 @@
         padding: 16px;
     }
 
+    /* Larger touch targets for the no-JavaScript pager and the back link. */
+    .pub-site .pub-pager a,
+    .pub-site .pub-back a {
+        display: inline-block;
+        padding: 10px 4px;
+    }
+
     .pub-site .pub-article-title {
         font-size: 26px;
     }

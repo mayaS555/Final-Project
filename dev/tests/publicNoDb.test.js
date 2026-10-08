@@ -11,6 +11,7 @@ const { parseFeedQuery, buildFeedHref } = require("../../controllers/publicContr
 const { toSafeImageUrl } = require("../../services/publicArticleService");
 const { DEV_DATABASE_NAME } = require("../connectDevDb");
 const { seedDevArticles, assertModelTargetsDevCollection, DEV_COLLECTION_NAME, DEV_READ_COLLECTION_NAME, DEV_COMMENTS_COLLECTION_NAME } = require("../seed-public");
+const { assertBenchTarget, BenchArticle, BENCH_COLLECTION_NAME } = require("../measure-feed-queries");
 const { deviceIdentity, readDeviceIdCookie, DEVICE_COOKIE_NAME, DEVICE_COOKIE_MAX_AGE_MS } = require("../../middleware/deviceIdentity");
 
 const viewsDir = path.join(__dirname, "..", "..", "views", "public");
@@ -258,6 +259,40 @@ describe("templates", () => {
     assert.ok(html.includes('href="/?viewed=unviewed&amp;page=3"'), "older link");
   });
 
+  function sortSelect(html) {
+    const match = html.match(/<select name="sort"[\s\S]*?<\/select>/);
+    assert.ok(match, "the sort select is missing");
+    return match[0];
+  }
+
+  it("the sort select has two labelled options and Newest first is selected by default", async () => {
+    // These renders pass filters without a sort, like an older caller would.
+    const html = await renderHome();
+    const select = sortSelect(html);
+    assert.ok(select.includes('aria-label="Sort articles"'));
+    assert.deepStrictEqual([...select.matchAll(/<option value="([a-z]+)"/g)].map((match) => match[1]), ["date", "popular"]);
+    assert.ok(select.includes('<option value="date" selected>Newest first</option>'));
+    assert.ok(select.includes(">Most popular</option>"));
+    assert.strictEqual((select.match(/selected/g) || []).length, 1);
+    assert.ok(html.includes('data-sort="date"'));
+  });
+
+  it("the sort select keeps the popular choice and the feed element carries it", async () => {
+    const html = await renderHome({ filters: { q: "", category: "", viewed: "all", sort: "popular" } });
+    assert.ok(sortSelect(html).includes('<option value="popular" selected>Most popular</option>'));
+    assert.strictEqual((sortSelect(html).match(/selected/g) || []).length, 1);
+    assert.ok(html.includes('data-sort="popular"'));
+  });
+
+  it("pager links keep the popular sort and the sort alone does not count as a filter", async () => {
+    const filters = { q: "", category: "", viewed: "all", sort: "popular" };
+    const html = await renderHome({ page: 2, hasMore: true, filters });
+    assert.ok(html.includes('href="/?sort=popular"'), "newer link");
+    assert.ok(html.includes('href="/?sort=popular&amp;page=3"'), "older link");
+    const empty = await renderHome({ items: [], filters });
+    assert.ok(empty.includes("No published articles yet."));
+  });
+
   it("pager links are marked so the script can hide only the older one", async () => {
     const html = await renderHome({ page: 2, hasMore: true });
     assert.ok(html.includes('data-pager="newer"'));
@@ -275,12 +310,12 @@ describe("templates", () => {
 
 describe("parseFeedQuery and buildFeedHref", () => {
   it("returns defaults for an empty query", () => {
-    assert.deepStrictEqual(parseFeedQuery({}), { page: 1, q: "", category: "", viewed: "all" });
+    assert.deepStrictEqual(parseFeedQuery({}), { page: 1, q: "", category: "", viewed: "all", sort: "date" });
   });
 
   it("trims text and treats empty or blank values as no filter", () => {
-    assert.deepStrictEqual(parseFeedQuery({ q: "  harbor  ", category: " Markets " }), { page: 1, q: "harbor", category: "Markets", viewed: "all" });
-    assert.deepStrictEqual(parseFeedQuery({ q: "", category: "   " }), { page: 1, q: "", category: "", viewed: "all" });
+    assert.deepStrictEqual(parseFeedQuery({ q: "  harbor  ", category: " Markets " }), { page: 1, q: "harbor", category: "Markets", viewed: "all", sort: "date" });
+    assert.deepStrictEqual(parseFeedQuery({ q: "", category: "   " }), { page: 1, q: "", category: "", viewed: "all", sort: "date" });
   });
 
   it("accepts values exactly at the length limits", () => {
@@ -304,7 +339,7 @@ describe("parseFeedQuery and buildFeedHref", () => {
   });
 
   it("ignores unrelated unknown parameters, including look-alike names", () => {
-    assert.deepStrictEqual(parseFeedQuery({ "unknown[a]": "1", "query[x]": "1", "qq[a]": "1", q: "a" }), { page: 1, q: "a", category: "", viewed: "all" });
+    assert.deepStrictEqual(parseFeedQuery({ "unknown[a]": "1", "query[x]": "1", "qq[a]": "1", q: "a" }), { page: 1, q: "a", category: "", viewed: "all", sort: "date" });
   });
 
   it("accepts the three viewed values, and an empty value means all", () => {
@@ -326,7 +361,32 @@ describe("parseFeedQuery and buildFeedHref", () => {
 
   it("returns only the known fields", () => {
     const result = parseFeedQuery({ q: "a", category: "b", page: "2", $where: "1", status: "draft" });
-    assert.deepStrictEqual(Object.keys(result).sort(), ["category", "page", "q", "viewed"]);
+    assert.deepStrictEqual(Object.keys(result).sort(), ["category", "page", "q", "sort", "viewed"]);
+  });
+
+  it("accepts date and popular, and an empty value means date", () => {
+    for (const sort of ["date", "popular"]) {
+      assert.strictEqual(parseFeedQuery({ sort }).sort, sort);
+    }
+    assert.strictEqual(parseFeedQuery({ sort: "" }).sort, "date");
+    assert.strictEqual(parseFeedQuery({ sort: "  " }).sort, "date");
+    assert.strictEqual(parseFeedQuery({}).sort, "date");
+    assert.strictEqual(parseFeedQuery({ sort: " popular " }).sort, "popular");
+  });
+
+  it("rejects every other sort value, repeated or structured forms", () => {
+    for (const sort of ["views", "newest", "POPULAR", "-date", "date,popular", "constructor", "__proto__", "1", ["popular"], ["date", "popular"], { $ne: "x" }]) {
+      assert.match(parseFeedQuery({ sort }).error, /^sort must/, JSON.stringify(sort));
+    }
+    assert.match(parseFeedQuery({ "sort[$ne]": "x" }).error, /^sort must be a single value/);
+    assert.match(parseFeedQuery({ "sort[]": "popular" }).error, /^sort must/);
+    assert.match(parseFeedQuery({ sort: "a\nb" }).error, /^sort contains invalid characters/);
+  });
+
+  it("sort links keep popular and leave the default date out", () => {
+    assert.strictEqual(buildFeedHref({ q: "", category: "", viewed: "all", sort: "date" }, 1), "/");
+    assert.strictEqual(buildFeedHref({ q: "", category: "", viewed: "all", sort: "popular" }, 1), "/?sort=popular");
+    assert.strictEqual(buildFeedHref({ q: "a", category: "B", viewed: "viewed", sort: "popular" }, 3), "/?q=a&category=B&viewed=viewed&sort=popular&page=3");
   });
 
   it("builds links that keep filters and drop empty ones", () => {
@@ -454,6 +514,35 @@ describe("seed safety guard", () => {
   it("the real dev model is rejected while it has no open connection", async () => {
     // Without calling connectDevDb() the real model is not connected, so seeding must refuse.
     await assert.rejects(() => seedDevArticles(), /not on an open database connection/);
+  });
+});
+
+describe("measurement guard", () => {
+  const fakeModel = (dbName, readyState, collectionName) => ({ db: { name: dbName, readyState }, collection: { name: collectionName } });
+
+  it("accepts only the bench collection of the dev database on an open connection", () => {
+    assert.doesNotThrow(() => assertBenchTarget(fakeModel(DEV_DATABASE_NAME, 1, BENCH_COLLECTION_NAME)));
+  });
+
+  const rejected = [
+    { label: "a different database", model: fakeModel("production_news", 1, BENCH_COLLECTION_NAME), message: /production_news/ },
+    { label: "a connection that is not open", model: fakeModel(DEV_DATABASE_NAME, 0, BENCH_COLLECTION_NAME), message: /not on an open/ },
+    { label: "the regular article collection", model: fakeModel(DEV_DATABASE_NAME, 1, DEV_COLLECTION_NAME), message: /dev_public_articles/ },
+    { label: "the read-history collection", model: fakeModel(DEV_DATABASE_NAME, 1, DEV_READ_COLLECTION_NAME), message: /article_reads/ },
+    { label: "the comments collection", model: fakeModel(DEV_DATABASE_NAME, 1, DEV_COMMENTS_COLLECTION_NAME), message: /comments/ },
+    { label: "a model without a collection", model: { db: { name: DEV_DATABASE_NAME, readyState: 1 } }, message: /expected/ },
+  ];
+
+  for (const { label, model, message } of rejected) {
+    it(`rejects ${label}`, () => {
+      assert.throws(() => assertBenchTarget(model), message);
+    });
+  }
+
+  it("the bench model uses its own collection and is not connected until the script connects", () => {
+    assert.strictEqual(BenchArticle.collection.name, BENCH_COLLECTION_NAME);
+    assert.notStrictEqual(BENCH_COLLECTION_NAME, DEV_COLLECTION_NAME);
+    assert.throws(() => assertBenchTarget(BenchArticle), /not on an open database connection/);
   });
 });
 

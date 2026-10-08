@@ -1,7 +1,9 @@
 # Person C - public site integration notes
 
 Status: milestone 4 (comments with CRUD and a rate limit, on top of the device cookie, read history and viewed
-filter). Sorting and view counting are not implemented yet.
+filter) and milestone 5 step 1 (sort by date or popularity). View counting is not implemented by C and the
+popularity input is not integrated yet (see "Sorting"). Query performance was measured once on 5000 generated articles
+(see "Measurements on 5000 articles").
 
 Facts below describe code that exists in this branch. Items under "Assumptions" are proposals
 by C and are not agreed with A, B or D.
@@ -10,7 +12,7 @@ by C and are not agreed with A, B or D.
 
 ```
 GET /                     -> deviceIdentity -> renderHome   -+-> getReadArticleIds(deviceId) when viewed is not "all"
-GET /api/public/articles  -> deviceIdentity -> getFeed      -+-> getPublishedArticles({ page, q, category, viewed, readArticleIds })
+GET /api/public/articles  -> deviceIdentity -> getFeed      -+-> getPublishedArticles({ page, q, category, viewed, sort, readArticleIds })
                                                                (+ getPublishedCategories() for the home page)
 GET /articles/:id         -> deviceIdentity -> renderArticle ---> getPublishedArticleById(id), then markArticleRead(deviceId, id),
                                                                then commentService.listComments(id) for the first comments
@@ -25,7 +27,7 @@ validation (`parseFeedQuery`) and the same service function.
 
 | Route | Result |
 | --- | --- |
-| `GET /` | EJS feed page: filter form, first 20 matching articles, plain Newer/Older links. |
+| `GET /` | EJS feed page: filter form, first 20 matching articles, plain Previous/Next links. |
 | `GET /api/public/articles` | `{ "items": [...], "page": N, "hasMore": true }`. |
 | `GET /articles/:id` | EJS article page with the full content and the first 10 comments in the initial HTML. |
 | `/api/public/...comments` | Comment API, see "Comments". |
@@ -37,16 +39,18 @@ Both feed routes read the same parameters. Unknown parameters are ignored.
 | `q` | Optional. One string, at most 100 characters. Title search, see "Search". |
 | `category` | Optional. One string, at most 50 characters. Exact, case-sensitive match on the approved category. |
 | `viewed` | Optional. `all` (default), `viewed` or `unviewed`. Empty means `all`. See "Viewed state". |
+| `sort` | Optional. `date` (default, newest first) or `popular`. Empty means `date`. See "Sorting". |
 | `page` | Optional, whole number 1 to 1000, default 1. |
 
 `q` and `category` are trimmed. An empty value means no filter. These give HTTP 400 (`{ "error": "..." }` for the
 API, an HTML message page for `/`):
 
 - a repeated parameter (`q=a&q=b`);
-- a structured form of `q`, `category`, `viewed` or `page` (`q[$ne]=x`, `viewed[]=viewed`, `page[]=1`). Express's
+- a structured form of `q`, `category`, `viewed`, `sort` or `page` (`q[$ne]=x`, `viewed[]=viewed`, `page[]=1`). Express's
   default parser keeps such keys as plain names like `q[$ne]`, so the controller rejects any key that starts with
-  `q[`, `category[`, `viewed[` or `page[`;
+  `q[`, `category[`, `viewed[`, `sort[` or `page[`;
 - a `viewed` value other than the three words (case-sensitive; `not-viewed` is rejected);
+- a `sort` value other than `date` or `popular` (case-sensitive);
 - a control character, or a value over the length limit.
 
 Other unknown parameters, structured or not, are ignored. A valid category with no articles returns an empty result,
@@ -57,9 +61,35 @@ Feed item fields: `id`, `title`, `summary`, `imageUrl` (or `null`), `category`, 
 An unknown, malformed, draft-only or unapproved article id gives HTTP 404.
 Unexpected failures give HTTP 500 with a generic message; details are only logged on the server.
 
-Filters are applied by MongoDB before `skip` and `limit`. Pages are 20 articles. The service fetches 21 rows to
-compute `hasMore`. Ordering is `approved.publishedAt` descending, then `_id` descending (stable for equal dates).
-There is no relevance or popularity sorting yet.
+Filters and the sort are applied by MongoDB before `skip` and `limit`. Pages are 20 articles. The service fetches 21
+rows to compute `hasMore`.
+
+## Sorting
+
+`sort=date` (default): `approved.publishedAt` descending, then `_id` descending. `sort=popular`: `totalViews`
+descending, then `approved.publishedAt` descending, then `_id` descending. Both end with `_id`, so equal values never
+give a random order. The sort does not change which articles match; it works together with `q`, `category` and `viewed`, in
+the same database query. The HTML page, the JSON feed, the Previous/Next links and the AJAX loading all use the same
+parameter and the same validation. The select in the form submits `sort`; the default `date` is left out of links.
+
+**The popularity input C needs (proposal, not agreed with B or D).** One number per article, stored on the article itself
+(not inside `approved`, because views belong to the article, not to a version): `totalViews`, a whole number of at
+least 0, meaning the accumulated number of views. C only reads this field to order the feed. C does not create, change or
+display it, and it does not appear in any response. Who writes it and how is for D (and B's schema) to decide; C does
+not call or implement anything for it. An article without the field sorts last under `popular` (MongoDB sorts a missing
+value below numbers in a descending sort), so B should give the field a default of 0.
+
+An article that is public but has a pending update is ranked by its own popularity, and the page shows only its approved
+content. A draft with no approved version is never public, whatever its views.
+
+Popularity can change while a reader scrolls, so a later page is not a snapshot of the order the earlier pages used. An
+article can then move between pages: the browser skips an id it already shows, but a different article can be missed
+until the feed is reloaded. This is a limitation of the current implementation (page/skip/limit without a snapshot). The
+tests use fixed data.
+
+In the dev fixture `totalViews` is a plain number in `dev/devArticleModel.js`, set by `dev/seed-public.js` only to test
+the order (it includes ties on views and date, and on views only). No index on `totalViews` is added; see
+"Measurements on 5000 articles" for the reasons and the numbers.
 
 ## Viewed state
 
@@ -242,8 +272,8 @@ Language: the text index uses `default_language: "english"` because the current 
 MongoDB has no Hebrew stemmer. If the final content is Hebrew, use `default_language: "none"` (whole-word match, no
 stemming) and re-check these examples. This is an open decision for the team.
 
-Performance: on the 64-document dev fixture, `explain` showed a text-search stage (TEXT_MATCH) followed by a SORT stage
-for the date order. How this behaves with thousands of articles has not been measured and remains unverified.
+Performance: with a text query the plan is a text-index scan followed by an in-memory SORT. Numbers for 5000 articles are
+in "Measurements on 5000 articles".
 
 ## Categories
 
@@ -258,16 +288,81 @@ read from the database.
 ## Browser behavior (`public/js/public-feed.js`)
 
 - The first 20 articles are server-rendered and page 1 is not requested again on load.
-- Without JavaScript: the GET form and the Newer/Older links work and keep `q`, `category` and `viewed`.
-- With JavaScript: submitting the form or changing the category or the viewed select reloads the feed through `/api/public/articles`,
+- Without JavaScript: the GET form and the Previous/Next links work and keep `q`, `category`, `viewed` and `sort`.
+- With JavaScript: submitting the form or changing the category, viewed or sort select reloads the feed through `/api/public/articles`,
   resets to page 1, scrolls to the top and updates the address bar. More pages load when the user is within
-  600px of the bottom. Only the "Older articles" link is hidden, because scrolling replaces it. "Newer articles"
+  600px of the bottom. Only the "Next articles" link is hidden, because scrolling replaces it. "Previous articles"
   stays when the page is opened at `?page=2` or later and keeps that page's filters. After a filter change the feed
   is back at page 1, so the pager is hidden to avoid a link built from the old filters.
 - A new filter ignores answers to older requests, one load runs at a time, and the page counter moves only after
   a successful response. After an error the user must press "Try again"; there is no automatic retry.
 - API text is inserted with `textContent`. `createCard()` mirrors the card markup in `views/public/home.ejs`;
   keep the two in sync.
+
+## Measurements on 5000 articles
+
+`node dev/measure-feed-queries.js` (needs `DEV_MONGODB_URI`) builds 5000 generated articles in the separate collection
+`dev_public_articles_bench` of the dev database, runs the feed queries through the real `getPublishedArticles()`, asks
+MongoDB to `explain("executionStats")` the same query, and drops the collection at the end. Before it deletes or inserts
+anything it checks the connection, the database name and the collection name (`assertBenchTarget`, covered by
+`publicNoDb.test.js`). It first drops the bench collection with its indexes, so nothing from an earlier run (for example
+a candidate index) can remain, and it builds the indexes of the dev model again. It sets `autoIndex` and `autoCreate` to
+false before loading the dev article model, so loading the model creates nothing. It never reads or writes
+`dev_public_articles`, `article_reads` or `comments`. With `--candidate-indexes` it also creates two popularity indexes
+in the bench collection only, to show what they would change. The script stops with an error if a page that must contain
+articles is empty.
+
+Setup of the run documented here: MongoDB 8.0.32 and Node 24.21.0 on one development Mac, one client, warm cache, 3 warm-up
+and 15 timed runs per query. Data (fixed random seed; dates are relative to the time of the run): 5000 documents, 4749
+public, 490 of them with a pending revision, 251 draft only; 8 categories (uneven); 20 percent of the view counts are 0 and
+many values repeat. About 30 percent of the articles get a publication date without a time-of-day offset (a whole number of
+days before the run), so those can share the exact same date; the other dates are almost never equal. Existing indexes of
+the dev model: date, category + date, approved title text. Numbers are the median of the service call in milliseconds; keys
+and docs are `totalKeysExamined` and `totalDocsExamined` from explain. "Read ids" are lists built in memory.
+
+| Query (page 1 unless noted) | date | popular | popular with candidate indexes |
+| --- | --- | --- | --- |
+| no filter | 0.4 ms, 21 keys, 21 docs | 2.7 ms, 4749 keys, 4749 docs, in-memory sort | 0.3 ms, 22 keys, 22 docs |
+| no filter, page 200 (deep, 20 articles) | 0.9 ms, 4001 keys, 21 docs | 4.4 ms, 4749 keys, 4749 docs, sort | 2.1 ms, 4201 keys, 4201 docs |
+| no filter, page 250 (past the end, 0 articles) | 0.9 ms, 4749 keys, 0 docs | 4.1 ms, 4749 keys, 4749 docs, sort | 2.2 ms, 5000 keys, 5000 docs |
+| category Technology (largest) | 0.3 ms, 21 keys, 21 docs | 0.9 ms, 1162 keys, 1162 docs, sort | 0.3 ms, 21 keys, 21 docs |
+| category Health (smallest) | 0.3 ms, 21 keys, 21 docs | 0.5 ms, 413 keys, 413 docs, sort | 0.3 ms, 21 keys, 21 docs |
+| search `market` | 0.6 ms, 385 keys, 770 docs, sort | 0.6 ms, same plan | 0.6 ms, same plan |
+| search `Reykjavik` | 0.4 ms, 164 keys, 328 docs, sort | 0.4 ms, same plan | 0.4 ms, same plan |
+| search `market` + category Markets | 0.5 ms, 385 keys, 770 docs, sort | 0.5 ms, same plan | 0.5 ms, same plan |
+| unviewed, 1000 read ids | 0.7 ms, 22 keys, 21 docs | 3.7 ms, 4750 keys, 3749 docs, sort | 0.4 ms, 31 keys, 31 docs |
+| unviewed, 4000 read ids | 2.2 ms, 145 keys, 21 docs | 4.7 ms, 4750 keys, 749 docs, sort | 1.2 ms, 142 keys, 142 docs |
+| viewed, 1000 read ids | 0.6 ms, 107 keys, 21 docs | 1.4 ms, 1791 keys, 1000 docs, sort | 0.5 ms, 72 keys, 72 docs |
+| category Technology + unviewed, 1000 | 0.6 ms, 28 keys, 21 docs | 1.4 ms, 1163 keys, 924 docs, sort | 0.6 ms, 27 keys, 21 docs |
+| search + category + unviewed, 1000 | 0.8 ms, 385 keys, 770 docs, sort | 0.8 ms, same plan | 0.8 ms, same plan |
+
+`getPublishedCategories()` (distinct): 2.1 ms median. The largest single timed run in the baseline table was 5.0 ms.
+Every page marked 20 articles returned 20; page 250 is past the end of the 4749 public articles and returns none, which
+shows only that a request beyond the end is cheap for `date` and not for `popular`.
+
+Findings:
+
+- **date:** every query without text search stops after about 21 documents using the existing indexes (0.3 to 2.2 ms);
+  unviewed with 4000 read ids scans 145 keys. A deep page (200) skips 3980 index keys and fetches 21 documents. No new index
+  is needed for `date` at this size.
+- **popular without an index:** MongoDB reads every matching article and sorts in memory, so the work grows with the number
+  of matching articles (413 to 4750 documents here, 0.5 to 4.7 ms). What happens above 5000 articles is not measured.
+- **search:** the text index drives the plan and the results are sorted in memory, for date and for popular alike, so the
+  sort option changes nothing for text queries (164 to 385 matching keys).
+- **candidate indexes** `{ totalViews: -1, "approved.publishedAt": -1, _id: -1 }` and `{ "approved.category": 1, totalViews: -1,
+  "approved.publishedAt": -1, _id: -1 }` reduced the work of the measured popular queries without text search
+  considerably: 21 to 142 keys instead of 413 to 4750, and the time fell from 0.5 to 4.7 ms to 0.3 to 1.2 ms. They do not
+  change text queries, and the deep pages (200, 250) still read thousands of keys and documents.
+- **Decision (temporary):** the candidate indexes are not added to the dev model for now. This depends on integration: it
+  needs B's real data size and the way D maintains `totalViews`. An index on `totalViews` means the database also updates
+  that article's index entries whenever the value changes. The cost of that was not measured, because C does not implement
+  the counter, so this note makes no claim about how large it is. If popular queries are slow with the real data, the
+  single index on `totalViews` is the first one to try; the category variant is optional. B and D decide together with C.
+
+Limits of these numbers: one machine, one client, no concurrent requests, synthetic data, warm cache, localhost network.
+Read-id lists are made in memory, so they do not measure the `ArticleRead` lookup of the real history
+(`getReadArticleIds`), only what the feed query does with a list of that size. They say nothing about behavior with many
+simultaneous users and are not a load test.
 
 ## Public content rule
 
@@ -283,6 +378,8 @@ Image URLs must be absolute http(s) or site-relative; anything else is dropped.
   next to a separate `pending` revision. Field names live only in `services/publicArticleService.js`.
 - Article body is plain text, not HTML.
 - Feed pagination uses page/skip/limit.
+- Popularity means accumulated views of the article, available as a number `totalViews` on the article document. The
+  PDF only says "popularity" and does not define it.
 
 ## Indexes proposed for B's Article schema
 
@@ -305,7 +402,8 @@ as a filter on its matches.
   temporary and should move to A's shared partials. A's central error handler can replace the try/catch in the controller.
   The home page loads `/js/public-feed.js` and `/css/public.css` from the static folder.
 - B: confirm or replace the approved/pending field names above, add the three indexes, and make sure they are built
-  before the first search request.
+  before the first search request. For `sort=popular`: decide whether the article document has a numeric `totalViews`
+  (default 0) and tell C if the name or place differs. Any index for it will be proposed after measuring.
 - A, for the device cookie and read history (no other edit is needed):
   - nothing extra if `routes/publicRoutes.js` is mounted as described above (the middleware is attached inside the router);
   - the app must connect mongoose before the first request. The unique `{ deviceId, articleId }` index must exist
@@ -330,6 +428,9 @@ as a filter on its matches.
   (or raw) if `createdAt` is back-dated, otherwise mongoose sets it. Display order follows `createdAt`, then `_id`.
   Comments of deleted or draft-only articles are never shown. When an article is deleted its comments and `ArticleRead`
   records should be deleted too; that needs coordination with B and D and is not done.
+- D: C needs only that a number such as `totalViews` is available on the article document (see "Sorting"). How it is
+  maintained is D's decision. If D keeps the counts elsewhere (for example per hour in a separate collection), tell C,
+  because sorting by a value from another collection would need a different query.
 - D: `recordArticleView(articleId)` is not called yet. The call site is marked in `controllers/publicController.js`.
   It must stay separate from `ArticleRead`: D's counters answer "how many views over time", C's records answer
   "did this browser open the article". They may be written in the same request, but neither reads the other.
@@ -348,6 +449,7 @@ Before deleting anything, the seed checks that the model is on an open connectio
    database and uses that collection)
 4. `node dev/public-server.js` and open http://localhost:3100. Restart it after code changes.
 5. `node --test "dev/tests/*.test.js"` (`publicDb.test.js` reseeds the dev collection)
+6. Optional: `node dev/measure-feed-queries.js` (see "Measurements on 5000 articles"; it uses only its own bench collection)
 
 The tests act as devices by sending the `dw_device` cookie themselves (Node `fetch` has no cookie jar). They clear
 only `article_reads` and `comments` of the dev database, after the same database and collection check as the seed.

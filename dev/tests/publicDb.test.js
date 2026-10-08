@@ -52,7 +52,7 @@ function categoryOptions(html) {
   return values.filter((value) => value !== "");
 }
 
-function feedQuery({ q, category, viewed, page } = {}) {
+function feedQuery({ q, category, viewed, sort, page } = {}) {
   const params = new URLSearchParams();
   if (q !== undefined) {
     params.set("q", q);
@@ -62,6 +62,9 @@ function feedQuery({ q, category, viewed, page } = {}) {
   }
   if (viewed !== undefined) {
     params.set("viewed", viewed);
+  }
+  if (sort !== undefined) {
+    params.set("sort", sort);
   }
   if (page !== undefined) {
     params.set("page", String(page));
@@ -731,6 +734,217 @@ describe("public feed and article page against dev MongoDB", { skip }, () => {
         assert.strictEqual((await getJson("/api/public/articles", deviceId)).status, 200);
         assert.strictEqual((await getHtml("/", deviceId)).status, 200);
       });
+    });
+  });
+
+  describe("sorting by date or popularity", () => {
+    // Independent of the service: reads the stored documents and sorts them in JavaScript.
+    async function loadPublicDocuments() {
+      return DevArticle.find({ "approved.publishedAt": { $type: "date" } }).lean();
+    }
+
+    function compareIds(first, second) {
+      const a = String(first._id);
+      const b = String(second._id);
+      return a < b ? 1 : a > b ? -1 : 0;
+    }
+
+    function byDate(first, second) {
+      return second.approved.publishedAt - first.approved.publishedAt || compareIds(first, second);
+    }
+
+    function byPopularity(first, second) {
+      return second.totalViews - first.totalViews || byDate(first, second);
+    }
+
+    function ids(documents) {
+      return documents.map((document) => String(document._id));
+    }
+
+    function itemIds(items) {
+      return items.map((item) => item.id);
+    }
+
+    it("date is the default: omitted, empty and sort=date give the same order as before", async () => {
+      const expected = ids((await loadPublicDocuments()).sort(byDate));
+      const plain = itemIds(await fetchAllItems());
+      assert.deepStrictEqual(plain, expected);
+      assert.deepStrictEqual(itemIds(await fetchAllItems({ sort: "date" })), expected);
+      assert.deepStrictEqual(itemIds(await fetchAllItems({ sort: "" })), expected);
+      assert.deepStrictEqual(itemIds(await fetchAllItems({ sort: "  " })), expected);
+    });
+
+    it("popular orders every public article by views, then date, then id, across all pages", async () => {
+      const documents = await loadPublicDocuments();
+      const expected = ids(documents.slice().sort(byPopularity));
+
+      const pages = await fetchAllPages({ sort: "popular" });
+      const items = pages.flatMap((body) => body.items);
+      assert.deepStrictEqual(itemIds(items), expected);
+      assert.strictEqual(items.length, seeded.approvedCount);
+      assert.deepStrictEqual(pages.map((body) => body.items.length), [20, 20, 20, seeded.approvedCount - 60]);
+      assert.strictEqual(pages[pages.length - 1].hasMore, false);
+
+      // The fixture must really contain both kinds of ties, otherwise this test proves little.
+      const views = new Map(documents.map((document) => [String(document._id), document]));
+      let tiedOnViewsAndDate = 0;
+      let tiedOnViewsOnly = 0;
+      for (let index = 1; index < expected.length; index += 1) {
+        const previous = views.get(expected[index - 1]);
+        const current = views.get(expected[index]);
+        if (previous.totalViews === current.totalViews) {
+          if (previous.approved.publishedAt.getTime() === current.approved.publishedAt.getTime()) {
+            tiedOnViewsAndDate += 1;
+          } else {
+            tiedOnViewsOnly += 1;
+          }
+        }
+      }
+      assert.ok(tiedOnViewsAndDate > 0, "no pair ties on views and date");
+      assert.ok(tiedOnViewsOnly > 0, "no pair ties on views only");
+
+      // Fixed data gives the same order on every request.
+      assert.deepStrictEqual(itemIds(await fetchAllItems({ sort: "popular" })), expected);
+    });
+
+    it("the sort is applied before pagination, not inside each page", async () => {
+      const documents = await loadPublicDocuments();
+      const viewsById = new Map(documents.map((document) => [String(document._id), document.totalViews]));
+      const pages = await fetchAllPages({ sort: "popular" });
+      const dateFirstPage = itemIds((await getJson("/api/public/articles")).body.items);
+
+      // Every article of an earlier page has at least as many views as every article of a later page.
+      for (let index = 1; index < pages.length; index += 1) {
+        const earlierMin = Math.min(...pages[index - 1].items.map((item) => viewsById.get(item.id)));
+        const laterMax = Math.max(...pages[index].items.map((item) => viewsById.get(item.id)));
+        assert.ok(earlierMin >= laterMax, `page ${index} has fewer views than page ${index + 1}`);
+      }
+      // And the first page is not simply the 20 newest articles re-sorted.
+      assert.notDeepStrictEqual(new Set(itemIds(pages[0].items)), new Set(dateFirstPage));
+    });
+
+    it("an article with a pending update is ranked by its popularity, and only the approved version is shown", async () => {
+      const pages = await fetchAllPages({ sort: "popular" });
+      const first = pages[0].items[0];
+      assert.strictEqual(first.id, seeded.pendingUpdateId);
+      assert.strictEqual(first.title, "Approved version: city opens new library");
+      assert.ok(!JSON.stringify(pages).includes(PENDING_MARKER));
+
+      const { html } = await getHtml("/?sort=popular");
+      assert.strictEqual(cardIds(html)[0], seeded.pendingUpdateId);
+      assert.ok(html.includes("Approved version: city opens new library"));
+      assert.ok(!html.includes(PENDING_MARKER));
+    });
+
+    it("a draft with the most views never appears, in any sort or filter", async () => {
+      for (const filters of [{ sort: "popular" }, { sort: "date" }, { sort: "popular", q: DRAFT_ONLY_WORD }, { sort: "popular", category: DRAFT_ONLY_CATEGORY }]) {
+        const items = await fetchAllItems(filters);
+        assert.ok(!itemIds(items).includes(seeded.draftOnlyId), JSON.stringify(filters));
+        assert.ok(!JSON.stringify(items).includes(DRAFT_MARKER));
+      }
+      assert.ok(!(await getHtml("/?sort=popular")).html.includes(DRAFT_MARKER));
+    });
+
+    it("the view count is not part of the JSON items or the HTML", async () => {
+      const { body } = await getJson("/api/public/articles?sort=popular");
+      for (const item of body.items) {
+        assert.deepStrictEqual(Object.keys(item).sort(), ["authorName", "category", "id", "imageUrl", "publishedAt", "summary", "title"]);
+      }
+      assert.ok(!JSON.stringify(body).includes("totalViews"));
+      assert.ok(!(await getHtml("/?sort=popular")).html.includes("totalViews"));
+    });
+
+    it("popular combines with search, category and both together, in the database before pagination", async () => {
+      const documents = await loadPublicDocuments();
+      const harbor = documents.filter((document) => /\bharbor\b/i.test(document.approved.title));
+      const markets = documents.filter((document) => document.approved.category === "Markets");
+      const harborMarkets = harbor.filter((document) => document.approved.category === "Markets");
+      assert.deepStrictEqual([harbor.length, markets.length, harborMarkets.length], [HARBOR_COUNT, MARKETS_COUNT, HARBOR_IN_MARKETS_COUNT]);
+
+      const cases = [
+        { filters: { q: "harbor" }, documents: harbor },
+        { filters: { category: "Markets" }, documents: markets },
+        { filters: { q: "harbor", category: "Markets" }, documents: harborMarkets },
+      ];
+      for (const { filters, documents: matching } of cases) {
+        const pages = await fetchAllPages({ ...filters, sort: "popular" });
+        assert.deepStrictEqual(itemIds(pages.flatMap((body) => body.items)), ids(matching.slice().sort(byPopularity)), JSON.stringify(filters));
+        assert.strictEqual(pages.length, 2, "the filtered result is larger than one page");
+        assert.strictEqual(pages[0].items.length, FEED_PAGE_SIZE);
+      }
+    });
+
+    it("popular combines with viewed and unviewed, also with the other filters", async () => {
+      const documents = await loadPublicDocuments();
+      const popularOrder = documents.slice().sort(byPopularity);
+      const deviceId = newDeviceId();
+      const read = [0, 3, 25, 40, 55].map((index) => String(popularOrder[index]._id));
+      for (const id of read) {
+        await markArticleRead(deviceId, id);
+      }
+
+      const viewed = await fetchAllItems({ viewed: "viewed", sort: "popular" }, deviceId);
+      assert.deepStrictEqual(itemIds(viewed), ids(popularOrder).filter((id) => read.includes(id)));
+
+      const unviewed = await fetchAllItems({ viewed: "unviewed", sort: "popular" }, deviceId);
+      assert.deepStrictEqual(itemIds(unviewed), ids(popularOrder).filter((id) => !read.includes(id)));
+      assert.strictEqual(unviewed.length, seeded.approvedCount - read.length);
+
+      const harborUnviewed = await fetchAllItems({ q: "harbor", category: "Markets", viewed: "unviewed", sort: "popular" }, deviceId);
+      const expected = ids(documents.filter((document) => /\bharbor\b/i.test(document.approved.title) && document.approved.category === "Markets").sort(byPopularity));
+      assert.deepStrictEqual(itemIds(harborUnviewed), expected.filter((id) => !read.includes(id)));
+    });
+
+    it("the home page and the JSON feed agree for sort=popular, with and without other filters", async () => {
+      const cases = [{}, { q: "harbor" }, { category: "Markets" }, { q: "harbor", category: "Markets" }, { viewed: "unviewed" }];
+      for (const filters of cases) {
+        for (const page of [1, 2, 3]) {
+          const query = feedQuery({ ...filters, sort: "popular", page });
+          const json = (await getJson(`/api/public/articles${query}`)).body;
+          const { status, html } = await getHtml(`/${query}`);
+          assert.strictEqual(status, 200);
+          assert.deepStrictEqual(cardIds(html), itemIds(json.items), JSON.stringify({ filters, page }));
+          assert.strictEqual(html.includes('data-has-more="true"'), json.hasMore);
+          assert.ok(html.includes('<option value="popular" selected>Most popular</option>'));
+          assert.ok(html.includes('data-sort="popular"'));
+        }
+      }
+    });
+
+    it("the home page keeps the choice, and Previous and Next links keep the sort and the other filters", async () => {
+      const { html } = await getHtml(`/${feedQuery({ q: "harbor", category: "Markets", sort: "popular", page: 2 })}`);
+      assert.ok(html.includes('href="/?q=harbor&amp;category=Markets&amp;sort=popular"'), "newer link goes back to page 1");
+      const first = await getHtml(`/${feedQuery({ sort: "popular" })}`);
+      assert.ok(first.html.includes('href="/?sort=popular&amp;page=2"'), "older link");
+
+      const dateHtml = (await getHtml("/")).html;
+      assert.ok(dateHtml.includes('<option value="date" selected>Newest first</option>'));
+      assert.ok(dateHtml.includes('data-sort="date"'));
+      assert.ok(!dateHtml.includes("sort=date"), "the default is not added to links");
+    });
+
+    it("invalid sort values are rejected on both routes", async () => {
+      for (const query of ["sort=views", "sort=POPULAR", "sort=popular&sort=date", "sort[$ne]=x", "sort[]=popular", "sort=constructor"]) {
+        assert.strictEqual((await getJson(`/api/public/articles?${query}`)).status, 400, `API ${query}`);
+        assert.strictEqual((await getHtml(`/?${query}`)).status, 400, `HTML ${query}`);
+      }
+    });
+
+    it("an article without a views value ranks last by popularity and by date as usual", async () => {
+      // Raw insert: a schema default would add totalViews. The article is newer than every fixture.
+      const inserted = await DevArticle.collection.insertOne({
+        status: "published",
+        approved: { title: "Raw article without views", summary: "s", content: "c", category: "Science", imageUrl: null, authorName: "Reporter 1", publishedAt: new Date(), updatedAt: new Date() },
+      });
+      const id = String(inserted.insertedId);
+      try {
+        const popular = itemIds(await fetchAllItems({ sort: "popular" }));
+        assert.strictEqual(popular[popular.length - 1], id);
+        const byDateItems = itemIds(await fetchAllItems({ sort: "date" }));
+        assert.strictEqual(byDateItems[0], id);
+      } finally {
+        await DevArticle.collection.deleteOne({ _id: inserted.insertedId });
+      }
     });
   });
 

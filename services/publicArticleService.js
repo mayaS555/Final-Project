@@ -13,8 +13,13 @@ const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
 
 const approvedOnlyFilter = { "approved.publishedAt": { $type: "date" } };
 
-// Deterministic order: _id breaks ties between equal publication dates.
-const feedSort = { "approved.publishedAt": -1, _id: -1 };
+// Deterministic orders: every sort ends with _id, so equal values never give a random order.
+// date is the default. popular needs a numeric article-level field totalViews, which is a
+// proposal for B's schema and D's counter (not agreed). An article without the field sorts last.
+const FEED_SORTS = {
+  date: { "approved.publishedAt": -1, _id: -1 },
+  popular: { totalViews: -1, "approved.publishedAt": -1, _id: -1 },
+};
 
 const feedProjection = {
   "approved.title": 1,
@@ -121,13 +126,16 @@ function buildFeedFilter({ q, category, viewed, readArticleIds }) {
   return filter;
 }
 
-// page must already be a validated integer >= 1.
-// Filters are applied by MongoDB before skip and limit.
+// page must already be a validated integer >= 1, and sort is "date" or "popular".
+// Filters and sorting are applied by MongoDB before skip and limit.
 // One extra row is requested only to learn whether another page exists.
-async function getPublishedArticles({ page, q = "", category = "", viewed = "all", readArticleIds }) {
+async function getPublishedArticles({ page, q = "", category = "", viewed = "all", sort = "date", readArticleIds }) {
+  if (!Object.hasOwn(FEED_SORTS, sort)) {
+    throw new Error("Unknown sort.");
+  }
   const documents = await getArticleModel()
     .find(buildFeedFilter({ q, category, viewed, readArticleIds }), feedProjection)
-    .sort(feedSort)
+    .sort(FEED_SORTS[sort])
     .skip((page - 1) * FEED_PAGE_SIZE)
     .limit(FEED_PAGE_SIZE + 1)
     .lean();

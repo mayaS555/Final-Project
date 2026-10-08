@@ -1,5 +1,5 @@
 // Upgrades the server-rendered home page: AJAX search/category/viewed filters and infinite scroll.
-// Without JavaScript the GET form and the "Older articles" links keep working.
+// Without JavaScript the GET form and the "Next articles" links keep working.
 // The first 20 articles are already in the HTML, so page 1 is not fetched again on load.
 
 const SCROLL_THRESHOLD_PX = 600;
@@ -16,6 +16,7 @@ let appliedFilters = {
   q: feedElement.dataset.q,
   category: feedElement.dataset.category,
   viewed: feedElement.dataset.viewed,
+  sort: feedElement.dataset.sort,
 };
 let nextPage = Number(feedElement.dataset.nextPage);
 let hasMore = feedElement.dataset.hasMore === "true";
@@ -24,7 +25,7 @@ let hasFailed = false;
 // Each filter change gets a new token. A response from an older token is ignored.
 let requestToken = 0;
 
-// Empty filters and viewed=all are left out, which the server treats as "no filter".
+// Empty filters, viewed=all and sort=date are left out, which the server treats as the defaults.
 function buildFilterParams(filters) {
   const params = new URLSearchParams();
   if (filters.q) {
@@ -35,6 +36,9 @@ function buildFilterParams(filters) {
   }
   if (filters.viewed && filters.viewed !== "all") {
     params.set("viewed", filters.viewed);
+  }
+  if (filters.sort && filters.sort !== "date") {
+    params.set("sort", filters.sort);
   }
   return params;
 }
@@ -193,6 +197,7 @@ function applyFilters() {
     q: filterForm.elements.q.value.trim(),
     category: filterForm.elements.category.value,
     viewed: filterForm.elements.viewed.value,
+    sort: filterForm.elements.sort.value,
   };
 
   requestToken += 1;
@@ -204,7 +209,7 @@ function applyFilters() {
   feedElement.replaceChildren();
   // Without this the old scroll position can sit near the bottom and trigger page 2 at once.
   window.scrollTo(0, 0);
-  // The "Newer articles" link was built from the old filters and a page the feed no longer shows.
+  // The "Previous articles" link was built from the old filters and a page the feed no longer shows.
   if (pagerElement) {
     pagerElement.hidden = true;
   }
@@ -222,13 +227,14 @@ filterForm.addEventListener("submit", function (event) {
 });
 filterForm.elements.category.addEventListener("change", applyFilters);
 filterForm.elements.viewed.addEventListener("change", applyFilters);
+filterForm.elements.sort.addEventListener("change", applyFilters);
 window.addEventListener("scroll", loadMoreIfNeeded, { passive: true });
 window.addEventListener("resize", loadMoreIfNeeded);
 
 for (const card of feedElement.querySelectorAll("[data-article-id]")) {
   renderedIds.add(card.dataset.articleId);
 }
-// Infinite scroll replaces only the "Older articles" link. "Newer articles" stays usable
+// Infinite scroll replaces only the "Next articles" link. "Previous articles" stays usable
 // when the page was opened at ?page=2 or later.
 if (olderLink) {
   olderLink.hidden = true;
