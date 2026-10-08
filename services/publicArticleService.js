@@ -38,7 +38,7 @@ const fullArticleProjection = {
 
 let ArticleModel = null;
 
-// Explicit hookup. A dev server or the real app passes the Mongoose model once at startup.
+// Explicit hookup. The application passes B's Article model once at startup.
 function useArticleModel(model) {
   ArticleModel = model;
 }

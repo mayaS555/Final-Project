@@ -11,28 +11,20 @@
 - Per-device read state (an anonymous cookie plus an `ArticleRead` collection).
 - Comment model with create, read, update and delete over AJAX, and a limit of 3 new comments per device per minute.
 
-**What merging does and does not do.** The merge adds files only. It does not mount C in `server.js`, does not change
-`package.json`, and does not change what `npm start` does. Until A mounts the router (see section 3), the public module
-runs only through the development tool below.
+**Status: a module ready for integration, not a standalone application.** It has not been connected to the shared
+server. The branch adds files only. It does not mount C in `server.js`, does not change `package.json`, and does not
+change what `npm start` does. There is no demo server, no fixture model and no seed in this branch: C's pages and API
+start working only after A mounts the router and the article model is passed in (section 3). The branch also contains
+no automated tests of C (see section 5).
 
-**How to run the existing demo** (needs a local MongoDB; see section 5 for details):
-
-1. Put `DEV_MONGODB_URI=<your MongoDB connection string>` in the local `.env` (see `dev/env.example`). Do not commit it.
-2. `npm ci`
-3. `node dev/seed-public.js` (it resets the demo articles, the comments and the read history in the
-   `daily_web_dev_public` database; run it for the first setup or for an intentional reset, not on every server start)
-4. `node dev/public-server.js`, then open http://localhost:3100
-
-**Connections needed from the team** (details in section 3): A mounts the router before `express.static`, sets up EJS,
-connects mongoose and passes B's Article model to C; B confirms the approved-version field names and adds the indexes;
-D provides the view counter and the call to record a view. None of these exist in `main` today.
-
-**`dev/` is a temporary tool.** It exists only so C can run before the other parts exist. It is not a model, a folder
-structure or a convention the team has to adopt, and it is not a replacement for A's server or B's Article model.
+**Connections needed from the team** (details in section 3): A mounts the router before the global body parsers and
+`express.static`, sets up EJS with the project's `views` folder as the template root, connects mongoose and passes B's
+Article model to C; B confirms the approved-version field names and adds the indexes; D provides the view counter and
+the call to record a view. None of these exist in `main` today.
 
 **How to read this document.** Section 1 describes behavior that exists in this branch ("Implemented"). Sections 2 and
 3 list what C proposes or needs from others; these are proposals, not agreements. Section 4 lists open questions; they
-are not new requirements for anyone. Section 6 states what was and was not verified.
+are not new requirements for anyone. Section 5 states what was and was not verified.
 
 ## 1. Implemented behavior and interface contracts
 
@@ -105,7 +97,7 @@ different article can be missed until the feed is reloaded. This is a known limi
 ### Search
 
 Title search uses a MongoDB text index on `approved.title` only; it is not a substring search. Checked on MongoDB 8.0
-with the dev fixture: whole words only (`harbor` matches "Harbor report", `harb` does not); case-insensitive with English
+before the cleanup, with C's own test data (not part of this branch): whole words only (`harbor` matches "Harbor report", `harb` does not); case-insensitive with English
 stemming (`libraries` finds "library"); several words match articles with any of them; a quoted phrase needs the whole
 phrase; a leading minus excludes a word; stop words are ignored, so a query of only stop words finds nothing. Summary,
 content, and pending or draft titles are never searched. With a text query the plan is a text-index scan followed by an
@@ -227,7 +219,7 @@ need an atomic shared counter in MongoDB.
 
 ## 2. Indexes proposed for B's Article schema (proposal)
 
-Defined in `dev/devArticleModel.js` for the dev fixture, using the field names in section 3:
+Proposed for B's schema, using the field names in section 3:
 
 | Index | Used by |
 | --- | --- |
@@ -244,7 +236,10 @@ is maintained (every change to the value also updates that index). B, D and C sh
 
 **A**
 - Mount `routes/publicRoutes.js` before `express.static`; otherwise `public/index.html` answers `GET /`.
-- Set the EJS view engine and the `views` folder. A's error handler may replace the try/catch in the controllers.
+- Set the EJS view engine. The template root must be the project's `views` folder (the one that contains `public/`),
+  not the project root: the controllers render `public/home`, `public/article` and `public/message`. The static
+  folder must serve `public/css/public.css` and `public/js/public-feed.js`, `public-comments.js` at `/css/...` and
+  `/js/...`. A's error handler may replace the try/catch in the controllers.
 - Coordinate the middleware order for the comment routes. They rely on three things: the `Content-Type` check
   (415), the 10 KB limit (413) and JSON error answers (400/413). The JSON parser (`express.json({ limit: "10kb" })`)
   is attached only to the two routes that read a body, and the router has its own error handler. A global body parser
@@ -273,10 +268,48 @@ is maintained (every change to the value also updates that index). B, D and C sh
   open the article") stay separate; neither reads the other.
 - C needs only a number such as `totalViews` on the article. If D keeps counts elsewhere (for example per hour in another
   collection), tell C, because sorting by a value from another collection needs a different query.
-- Comments seed: C's seed adds no comment fixtures. A seeded comment needs `articleId` (an article with an approved
+- Comments seed: C provides no comment fixtures. A seeded comment needs `articleId` (an article with an approved
   version), `displayName` (1 to 40 characters), `body` (1 to 1000), `createdAt`, `updatedAt` and a `deviceId` that is any
   32-character lowercase hex string (random, not a real reader's cookie). Back-dated `createdAt` needs `timestamps: false`
   (or a raw insert). Comments of deleted or draft-only articles are never shown.
+
+### Example connection order (a proposal only, A decides the real structure)
+
+Illustrative sketch of the order that the notes above assume. It is not code from this branch and not an agreed design.
+
+```js
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));   // the folder that contains views/public/
+
+await mongoose.connect(process.env.MONGODB_URI);  // A's connection and variable name
+await Article.init();                             // B's model; the text index must exist before the first search
+await ArticleRead.init();
+await Comment.init();
+useArticleModel(Article);                         // from services/publicArticleService.js
+
+app.use(publicRoutes);                            // routes/publicRoutes.js, before the global parsers and express.static
+app.use(express.json());                          // the rest of the application as A designs it
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, "public")));
+```
+
+If the global parsers must stay first, check the comment-route behavior listed below before accepting it.
+
+### Short checks after connecting (suggested)
+
+1. `GET /` answers 200 with at most 20 article cards in the HTML, and the page works without JavaScript.
+2. `GET /api/public/articles?page=1` returns `items` (at most 20) and `hasMore`.
+3. An article with a pending update shows its approved version in the feed, in search and on its page. A draft-only
+   article gives 404 on its page and never appears in the feed, search, categories or comments.
+4. `?q=<a word from a title>` returns results and not a 500 (the text index exists).
+5. Opening an article sets the `dw_device` cookie, and the article then appears under `viewed=viewed` in that browser.
+6. A comment can be posted, edited and deleted from the same browser; a browser with another cookie gets 403 on edit and
+   delete.
+7. The fourth comment within a minute from one browser gets 429 with a message.
+8. A comment request with the wrong `Content-Type` gets 415, malformed JSON gets a JSON 400, and a body over 10 KB gets a
+   JSON 413. This confirms that the middleware order does not bypass the local parser.
+9. `sort=popular` follows `totalViews` only after D provides it; without the field it behaves like the date order.
+10. Staff pages look unchanged (the public CSS is scoped under `.pub-site`).
 
 ## 4. Open questions (not requirements)
 
@@ -294,33 +327,18 @@ These are questions for the team and the course material. None of them is a new 
 - Which techniques used here were covered in the course: `crypto.randomBytes`, cookie options, `$in`/`$nin`, upsert, a
   compound unique index, `fetch`, `history.replaceState`, a MongoDB text index, `explain()`? C did not confirm this.
 
-## 5. Development tool (`dev/`, temporary)
+## 5. Verification limits
 
-`dev/` holds a fixture model (`dev_public_articles`, with `approved`, `pending` and `totalViews`), a small server that
-mounts only the public module, a seed, a measurement script and the tests. The dev connection always selects the
-database `daily_web_dev_public`, whatever the URI. The seed deletes all documents in `dev_public_articles`, and also
-clears `article_reads` and `comments`, but only after checking for each model that it is on that database and collection.
-
-- `node dev/seed-public.js`: 63 approved articles, one with a different pending revision, one draft-only.
-- `node dev/public-server.js`: http://localhost:3100. Restart it after code changes.
-- `node --test "dev/tests/*.test.js"`: `publicDb.test.js` reseeds the dev collection and is skipped, and says so, when
-  `DEV_MONGODB_URI` is not set. `publicNoDb.test.js`, `commentNoDb.test.js` and `publicQuery.test.js` need no MongoDB.
-  The comment database tests are inside `publicDb.test.js` because files that reseed would collide when `node --test`
-  runs them in parallel.
-- `node dev/measure-feed-queries.js`: optional; uses only its own `dev_public_articles_bench` collection.
-
-The tests act as devices by sending the `dw_device` cookie themselves. After A and B integrate, the database tests still
-depend on this fixture; they would need to be adapted if the fixture is removed.
-
-## 6. Verification limits
-
-Checked by C, locally only: automated tests against MongoDB 8.0 on the dev fixture, a manual pass in the embedded
-browser, and one set of query measurements on 5000 generated articles. The measurements are local and limited (one
-machine, one client, synthetic data, warm cache); they do not show behavior under load. Detailed history is kept
-privately by C and is not part of the repository.
+The earlier verification was done before the cleanup, on C's local branch, with temporary development tooling (a test
+database fixture, a demo server, a seed, automated tests and a measurement script) that is no longer in this branch. It
+covered automated tests against MongoDB 8.0, a manual pass in the embedded browser, and one set of query measurements on
+5000 generated articles. It is not verification of the current version after the cleanup, and no integrated-system test
+has been run. The measurements are local and limited (one machine, one client, synthetic data, warm cache); they do not
+show behavior under load. The automated tests are not part of this branch, so the checks in section 3 are the way to
+confirm C after the connection. Detailed history is kept privately by C and is not part of the repository.
 
 Not verified: integration with the real A, B and D code (the interfaces above are proposals); other browsers or real
 phones; a browser with JavaScript fully switched off; a second real device; behavior behind an HTTPS proxy; the limiter
 after a restart or with several processes; the `ArticleRead` lookup with large histories; `sort=popular` above 5000
-articles or with a real `totalViews` counter; any concurrent load. The rolling window of the rate limiter is tested with
+articles or with a real `totalViews` counter; any concurrent load. The rolling window of the rate limiter was tested with
 a fake clock, not by waiting over HTTP.
