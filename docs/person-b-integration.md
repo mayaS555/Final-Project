@@ -6,7 +6,8 @@
 (`approved`) and a working copy (`draft`). The field names inside `approved` are exactly the ones C's
 `services/publicArticleService.js` already reads, so C's code works with this model unchanged.
 
-Not in this step: the service that moves articles between states, the Article API, the reporter area and the seed.
+`services/articleStatus.js` holds the status rules (pure functions, no database). Not done yet: the database
+operations, the Article API, the reporter area and the seed.
 
 ## Fields
 
@@ -65,6 +66,31 @@ Article.publicFilter() // { "approved.publishedAt": { $type: "date" } }, a new o
 
 There is no `totalViews` index. As C's doc suggests, add it only after D settles how the counter is written.
 
+## Status state machine (`services/articleStatus.js`)
+
+Every allowed change is listed below. Any other change is rejected.
+
+| From | To | By | Action |
+| --- | --- | --- | --- |
+| `draft` | `pending` | reporter | submit |
+| `returned` | `pending` | reporter | resubmit |
+| `pending` | `published` | editor | approve |
+| `pending` | `returned` | editor | return |
+| `published` | `draft` | reporter | startRevision |
+
+| Function | Rule |
+| --- | --- |
+| `canTransition(from, to, role)` | `true` only for a row above, done by its own role. |
+| `assertTransition(from, to, role)` | Throws an `Error` with `error.status`: `403` when the change exists but belongs to the other role, `409` when it does not exist. |
+| `canEditWorkingCopy(status, role, isOwner)` | Reporter: their own article in `draft` or `returned`. Editor: any article in `pending`. |
+| `canDelete(article, role, isOwner)` | Editor: any article. Reporter: their own article in `draft` or `returned` that was never published. |
+
+The rules use the role names `"reporter"` and `"editor"`. Callers decide `isOwner` (`String(article.author) === String(userId)`)
+and must check ownership for reporter transitions themselves. A published article stays public while it is in
+`draft`, `pending` or `returned` again, because the public filter reads `approved.publishedAt`, not `status`.
+
+Self-check: `node scripts/check-article-status.js`.
+
 ## Differences from C's doc, and why
 
 - **Working copy is called `draft`, not `pending`.** C never reads it. Note that `draft` (the sub-document) and
@@ -76,6 +102,9 @@ There is no `totalViews` index. As C's doc suggests, add it only after D settles
 
 ## Needed from others
 
+- **A:** errors thrown by `assertTransition` carry the HTTP code in `error.status`, which Express's default handler
+  already reads. A's error middleware should read the same field and send `error.message` for 4xx errors. Roles are
+  expected as the strings `"reporter"` and `"editor"`.
 - **A:** a User model registered as `"User"`. If it gets another name, change `ref` in `models/Article.js`. Approval
   needs the user's display name for `approved.authorName`; tell B which field holds it. At startup, call
   `useArticleModel(Article)` and make sure the indexes exist before the first request (`await Article.init()`).
