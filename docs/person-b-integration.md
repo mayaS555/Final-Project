@@ -131,6 +131,20 @@ by=<user id> (<role>)` until A's logger exists.
   `saveWorkingCopy(article, editor, fields)` before approving.
 - Never set `status`, `approved` or `publishCount` directly.
 
+## Route middleware (`middleware/articleAccess.js`)
+
+Order on a route: `requireLogin` (A) → `loadArticle` → `requireArticleOwnerOrEditor` → controller.
+
+| Function | What it does |
+| --- | --- |
+| `loadArticle` | Checks that `:id` is 24 hex characters (`400` if not), loads the article (`404` if missing) and sets `req.article`. Database errors go to `next(err)`. |
+| `requireArticleOwnerOrEditor` | Lets an editor, or the reporter who wrote `req.article`, continue. Otherwise `403`, or `401` when nobody is logged in. |
+| `getSessionUser(req)` | The logged-in user from the session, or `null`. Controllers pass it to the workflow service. |
+
+Ownership compares `req.article.author` with the session user's `_id`, never with anything in the body, query or
+headers. Until A's auth is merged, the session user is assumed to be `req.session.user`; that is read in
+`getSessionUser` only.
+
 ## Differences from C's doc, and why
 
 - **Working copy is called `draft`, not `pending`.** C never reads it. Note that `draft` (the sub-document) and

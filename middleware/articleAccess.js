@@ -1,0 +1,74 @@
+// Middleware for article routes (owned by B): loads the article named in the URL and checks who may use it.
+// Used by B's Article API and reporter routes and by D's editor routes, after A's login middleware:
+//   router.patch("/api/articles/:id", requireLogin, loadArticle, requireArticleOwnerOrEditor, controller)
+// Errors go to next(err) with error.status, for A's error middleware.
+
+const Article = require("../models/Article");
+const { createHttpError } = require("../services/articleStatus");
+
+const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
+
+/**
+ * Returns the logged-in user from the session, or null.
+ * @param {Object} req The Express request.
+ * @returns {Object|null} { _id, role, name }, set by A's login. Never read from the body, query or headers.
+ * @example const user = getSessionUser(req);
+ */
+function getSessionUser(req) {
+  // Assumption until A's auth is merged: login stores the user in req.session.user. Change only this line if not.
+  return req.session && req.session.user ? req.session.user : null;
+}
+
+/**
+ * Loads the article named by :id and stores it in req.article.
+ * @param {Object} req The Express request; reads req.params.id.
+ * @param {Object} res The Express response (not used).
+ * @param {Function} next Called with no argument on success, with an error otherwise.
+ * @returns {Promise<void>} Passes 400 (not a valid id) or 404 (no such article) to next;
+ *   database errors are passed to next(err) unchanged.
+ * @example router.get("/api/articles/:id", requireLogin, loadArticle, requireArticleOwnerOrEditor, show);
+ */
+async function loadArticle(req, res, next) {
+  const id = req.params.id;
+  if (typeof id !== "string" || !OBJECT_ID_PATTERN.test(id)) {
+    next(createHttpError(400, "Invalid article id."));
+    return;
+  }
+  try {
+    const article = await Article.findById(id);
+    if (!article) {
+      next(createHttpError(404, "Article not found."));
+      return;
+    }
+    req.article = article;
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Lets the request continue only for an editor or for the reporter who wrote req.article.
+ * Must run after loadArticle. The author is compared with the session user's id, on the server.
+ * @param {Object} req The Express request; reads req.article and the session user.
+ * @param {Object} res The Express response (not used).
+ * @param {Function} next Called with no argument when allowed.
+ * @returns {void} Passes 401 (nobody logged in) or 403 (another reporter's article) to next.
+ * @example router.patch("/api/articles/:id", requireLogin, loadArticle, requireArticleOwnerOrEditor, save);
+ */
+function requireArticleOwnerOrEditor(req, res, next) {
+  const user = getSessionUser(req);
+  if (!user) {
+    next(createHttpError(401, "Please log in."));
+    return;
+  }
+  const isEditor = user.role === "editor";
+  const isAuthor = user.role === "reporter" && String(req.article.author) === String(user._id);
+  if (!isEditor && !isAuthor) {
+    next(createHttpError(403, "You can only open your own articles."));
+    return;
+  }
+  next();
+}
+
+module.exports = { loadArticle, requireArticleOwnerOrEditor, getSessionUser };
