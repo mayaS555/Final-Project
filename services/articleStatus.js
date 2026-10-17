@@ -118,4 +118,5 @@ module.exports = {
   assertTransition,
   canEditWorkingCopy,
   canDelete,
+  createHttpError,
 };

@@ -6,14 +6,16 @@
 (`approved`) and a working copy (`draft`). The field names inside `approved` are exactly the ones C's
 `services/publicArticleService.js` already reads, so C's code works with this model unchanged.
 
-`services/articleStatus.js` holds the status rules (pure functions, no database). Not done yet: the database
-operations, the Article API, the reporter area and the seed.
+`services/articleStatus.js` holds the status rules (pure functions, no database). `services/articleService.js` is the
+only code that changes `status` or `approved`; controllers call it and never set those fields themselves. Not done
+yet: the Article API, the reporter area and the seed.
 
 ## Fields
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `author` | ObjectId, `ref: "User"`, required | The reporter who owns the article. |
+| `authorName` | String, required | The author's display name, copied from the user when the draft is created. Approval copies it into `approved.authorName`. |
 | `status` | `draft` \| `pending` \| `returned` \| `published`, default `draft` | State of the working copy. |
 | `draft` | sub-document, see below | Working copy. Edited by the reporter and the editor. Never public. |
 | `approved` | sub-document, see below, absent until the first approval | Public version. Changed only by approval. |
@@ -91,6 +93,44 @@ and must check ownership for reporter transitions themselves. A published articl
 
 Self-check: `node scripts/check-article-status.js`.
 
+## Workflow service (`services/articleService.js`)
+
+Each function takes an article document that the controller has already loaded, plus the acting `user`
+(`{ _id, role, name }` from the session). It saves the change and returns the updated document. Errors are thrown with
+`error.status` (`400` bad input, `403` not allowed, `409` wrong status or changed meanwhile); database errors are
+rethrown as they are.
+
+| Function | What it does |
+| --- | --- |
+| `createDraft(user)` | Reporter only. A new, empty article in `draft`, owned by the user. |
+| `saveWorkingCopy(article, user, fields)` | Saves `title`, `summary`, `content`, `imageUrl`, `category` to `draft` (manual save and autosave). Any other key gives `400`. Allowed by `canEditWorkingCopy`. |
+| `submit(article, user)` | Author only. `draft` or `returned` to `pending`. Needs `title`, `content` and `category`. Clears `editorNote`. |
+| `approve(article, editor)` | `pending` to `published`. Copies `draft` into `approved`, sets `publishedAt` on the first publish and `updatedAt` every time, and adds 1 to `publishCount`. Returns `{ article, isFirstPublish }`. |
+| `returnToReporter(article, editor, note)` | `pending` to `returned`. The note is required, trimmed, at most 1000 characters. |
+| `startRevision(article, user)` | Author only. `published` to `draft`. Copies `approved` into `draft`. The public version stays online and unchanged. |
+| `deleteArticle(article, user)` | Deletes the article if `canDelete` allows it. Returns nothing. |
+
+Every change is written with `findOneAndUpdate({ _id, status: <status when loaded> })`. A second click, or an
+autosave that arrives after submit, finds no match and gets `409` instead of applying twice.
+
+Events (`submit`, `approve`, `return`, `delete`) are written with `console.log` as `[article] <event> article=<id>
+by=<user id> (<role>)` until A's logger exists.
+
+## For Person D
+
+- **Load first, then call.** Load the article (`Article.findById`), answer `404` if it is missing, then call the
+  function with `req.session.user` (or whatever A names it). Let the thrown error reach `next(err)`.
+- **`approve(article, editor)`** returns `{ article, isFirstPublish }`. The hook for your publish event is marked in
+  `approve()` with the comment `// Person D hooks in here`. You can also record the event in your controller from
+  the return value.
+- **`returnToReporter(article, editor, note)`** needs the note from the request body. An empty or too-long note gives
+  `400`, and the article stays `pending`.
+- **`deleteArticle(article, user)`** lets an editor delete any article. It does not delete the article's comments
+  or `ArticleRead` records yet (see the open question below).
+- **Editing while pending.** An editor may change the working copy of a `pending` article with
+  `saveWorkingCopy(article, editor, fields)` before approving.
+- Never set `status`, `approved` or `publishCount` directly.
+
 ## Differences from C's doc, and why
 
 - **Working copy is called `draft`, not `pending`.** C never reads it. Note that `draft` (the sub-document) and
@@ -105,8 +145,9 @@ Self-check: `node scripts/check-article-status.js`.
 - **A:** errors thrown by `assertTransition` carry the HTTP code in `error.status`, which Express's default handler
   already reads. A's error middleware should read the same field and send `error.message` for 4xx errors. Roles are
   expected as the strings `"reporter"` and `"editor"`.
-- **A:** a User model registered as `"User"`. If it gets another name, change `ref` in `models/Article.js`. Approval
-  needs the user's display name for `approved.authorName`; tell B which field holds it. At startup, call
+- **A:** the workflow service expects the logged-in user as `{ _id, role, name }`, where `name` is the display name
+  shown as the byline. If A's session uses other names, the controllers map them before calling the service.
+- **A:** a User model registered as `"User"`. If it gets another name, change `ref` in `models/Article.js`. At startup, call
   `useArticleModel(Article)` and make sure the indexes exist before the first request (`await Article.init()`).
 - **C (optional):** `approvedOnlyFilter` in `services/publicArticleService.js` duplicates `Article.publicFilter()`.
   To keep one definition, C can replace it with `getArticleModel().publicFilter()`. B has not changed C's file.

@@ -61,6 +61,8 @@ const articleSchema = new mongoose.Schema(
   {
     // The reporter who owns the article (Person A's User model).
     author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    // The author's display name, copied from the user at creation. Approval copies it into approved.authorName.
+    authorName: { type: String, trim: true, required: true },
     status: { type: String, enum: ARTICLE_STATUSES, default: "draft", required: true },
     draft: { type: draftSchema, default: () => ({}) },
     approved: { type: approvedSchema, default: undefined },
