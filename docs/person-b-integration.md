@@ -145,6 +145,44 @@ Ownership compares `req.article.author` with the session user's `_id`, never wit
 headers. Until A's auth is merged, the session user is assumed to be `req.session.user`; that is read in
 `getSessionUser` only.
 
+## Article REST API (`routes/articleApiRoutes.js`, `controllers/articleApiController.js`)
+
+All routes answer JSON and need a logged-in reporter or editor. Routes with `:id` also need the article's author or
+an editor. Writes (`POST`, `PATCH`) must be sent as `application/json` (otherwise `415`), so an HTML form on another
+site cannot use the reporter's session cookie. Errors reach A's error middleware with `error.status`.
+
+| Route | Calls | Answer |
+| --- | --- | --- |
+| `POST /api/articles` | `createDraft` | `201` with the article. An editor gets `403`. |
+| `GET /api/articles?status=` | `listArticles` | `200 { items: [{ id, title, publicTitle, status, editorNote, updatedAt, publishedAt }] }`. A reporter sees their own, an editor sees all. `status` is optional, one of the four statuses (`400` otherwise). |
+| `GET /api/articles/:id` | (none) | `200` with the article. |
+| `PATCH /api/articles/:id` | `saveWorkingCopy` | `200 { savedAt }`. The autosave target. |
+| `DELETE /api/articles/:id` | `deleteArticle` | `204`. |
+| `POST /api/articles/:id/submit` | `submit` | `200` with the article. Also used to resubmit after a return. |
+| `POST /api/articles/:id/revise` | `startRevision` | `200` with the article. |
+
+The article in a response: `{ id, status, authorId, authorName, draft: { title, summary, content, imageUrl, category },
+approved: { ...same, authorName, publishedAt, updatedAt } or null, editorNote, publishCount, createdAt, updatedAt }`.
+
+**There are no approve or return routes.** Those belong to Person D, whose controllers call `approve()` and
+`returnToReporter()` from the workflow service (see "For Person D").
+
+### Mounting (for A)
+
+`server.js` has no place for routers yet, so B did not change it. A adds this line after the session middleware,
+and before `express.static` and the error middleware:
+
+```js
+app.use(require("./routes/articleApiRoutes"));
+```
+
+The router has its own JSON parser with a 200 KB limit, because an article can be up to 50000 characters. The global
+`app.use(express.json())` in `server.js` runs first with a 100 KB limit and would answer `413` for a long article.
+Either mount this router before the global parsers (the order C's doc also asks for), or raise the global limit.
+
+Until A's login middleware exists, the router uses `requireStaffLogin` from `middleware/articleAccess.js` (401 when
+nobody is logged in, 403 for other roles). When A's middleware is merged, replace it in the routes file and delete it.
+
 ## Differences from C's doc, and why
 
 - **Working copy is called `draft`, not `pending`.** C never reads it. Note that `draft` (the sub-document) and

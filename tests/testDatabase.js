@@ -1,6 +1,9 @@
 // MongoDB connection for the tests that need a database (owned by B).
-// Those tests run only when MONGODB_TEST_URI is set, and only against a database whose name contains
-// "test", because they delete all articles. Without the variable they are skipped, not failed.
+// Those tests run only when MONGODB_TEST_URI is set, and only when its database name contains "test".
+// node --test runs each test file in its own process, at the same time, so every process uses its own
+// database ("<name>-<process id>") and empties it at the end. Without the variable the tests are skipped.
+// ponytail: the empty databases stay (dropDatabase hung while other test processes were running). Remove them with
+//   mongosh <server> --eval 'db.getMongo().getDBNames().filter((n) => /-test-\d+$/.test(n)).forEach((n) => db.getSiblingDB(n).dropDatabase())'
 
 const mongoose = require("mongoose");
 const Article = require("../models/Article");
@@ -10,24 +13,22 @@ const TEST_DATABASE_URI = process.env.MONGODB_TEST_URI;
 const skipWithoutDatabase = TEST_DATABASE_URI ? false : "MONGODB_TEST_URI is not set";
 
 /**
- * Connects to the test database, builds the Article indexes and removes all articles.
+ * Connects to this process's own test database and builds the Article indexes.
  * @returns {Promise<void>} Resolves when the database is ready.
- * @throws {Error} When the database name does not contain "test" (nothing is deleted then).
+ * @throws {Error} When the database name in MONGODB_TEST_URI does not contain "test" (nothing is touched then).
  * @example before(connectTestDatabase);
  */
 async function connectTestDatabase() {
-  await mongoose.connect(TEST_DATABASE_URI);
-  const name = mongoose.connection.name;
-  if (!name.includes("test")) {
-    await mongoose.disconnect();
-    throw new Error(`Refusing to run: database "${name}" does not contain "test".`);
+  const baseName = new URL(TEST_DATABASE_URI).pathname.slice(1);
+  if (!baseName.includes("test")) {
+    throw new Error(`Refusing to run: database "${baseName}" in MONGODB_TEST_URI does not contain "test".`);
   }
+  await mongoose.connect(TEST_DATABASE_URI, { dbName: `${baseName}-${process.pid}` });
   await Article.init();
-  await Article.deleteMany({});
 }
 
 /**
- * Removes the articles the tests created and closes the connection.
+ * Removes the articles this process created and closes the connection.
  * @returns {Promise<void>} Resolves when disconnected.
  * @example after(disconnectTestDatabase);
  */

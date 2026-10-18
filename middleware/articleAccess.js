@@ -20,6 +20,28 @@ function getSessionUser(req) {
 }
 
 /**
+ * Lets the request continue only for a logged-in reporter or editor.
+ * Stand-in until A's login and role middleware are merged; then use A's and delete this function.
+ * @param {Object} req The Express request; reads the session user.
+ * @param {Object} res The Express response (not used).
+ * @param {Function} next Called with no argument when allowed.
+ * @returns {void} Passes 401 (nobody logged in) or 403 (another role) to next.
+ * @example router.get("/api/articles", requireStaffLogin, listArticles);
+ */
+function requireStaffLogin(req, res, next) {
+  const user = getSessionUser(req);
+  if (!user) {
+    next(createHttpError(401, "Please log in."));
+    return;
+  }
+  if (user.role !== "reporter" && user.role !== "editor") {
+    next(createHttpError(403, "Only reporters and editors can use this page."));
+    return;
+  }
+  next();
+}
+
+/**
  * Loads the article named by :id and stores it in req.article.
  * @param {Object} req The Express request; reads req.params.id.
  * @param {Object} res The Express response (not used).
@@ -71,4 +93,4 @@ function requireArticleOwnerOrEditor(req, res, next) {
   next();
 }
 
-module.exports = { loadArticle, requireArticleOwnerOrEditor, getSessionUser };
+module.exports = { requireStaffLogin, loadArticle, requireArticleOwnerOrEditor, getSessionUser };
