@@ -1,16 +1,15 @@
 // HTTP tests for routes/articleApiRoutes.js and controllers/articleApiController.js (owned by B).
-// A small Express app stands in for A's server: a fake session (the user named in the X-Test-User
-// header; test code only) and a JSON error handler. Checks that fail before the database run without
+// The test app from tests/testServer.js stands in for A's server. Checks that fail before the database run without
 // MongoDB; the rest need MONGODB_TEST_URI (see tests/testDatabase.js).
 // Run: node --test tests/
 
 const { describe, test, before, after, mock } = require("node:test");
 const assert = require("assert");
-const express = require("express");
 const mongoose = require("mongoose");
 const Article = require("../models/Article");
 const articleApiRoutes = require("../routes/articleApiRoutes");
 const { skipWithoutDatabase, connectTestDatabase, disconnectTestDatabase } = require("./testDatabase");
+const { startTestServer } = require("./testServer");
 
 const USERS = {
   noa: { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Noa" },
@@ -19,29 +18,17 @@ const USERS = {
   guest: { _id: new mongoose.Types.ObjectId(), role: "guest", name: "Guest" },
 };
 
-let server;
+let testServer;
 let baseUrl;
 
 /**
- * Starts the test app on a free port.
+ * Starts the test app (tests/testServer.js) on a free port.
  * @returns {Promise<void>} Resolves when it listens; sets baseUrl.
  * @example before(startServer);
  */
 async function startServer() {
-  const app = express();
-  app.use((req, res, next) => {
-    req.session = { user: USERS[req.get("X-Test-User")] };
-    next();
-  });
-  app.use(articleApiRoutes);
-  // Stand-in for A's error middleware.
-  app.use((error, req, res, next) => {
-    res.status(error.status || 500).json({ error: error.message });
-  });
-  await new Promise((resolve) => {
-    server = app.listen(0, resolve);
-  });
-  baseUrl = `http://127.0.0.1:${server.address().port}`;
+  testServer = await startTestServer([articleApiRoutes], USERS);
+  baseUrl = testServer.baseUrl;
 }
 
 /**
@@ -50,7 +37,7 @@ async function startServer() {
  * @example after(stopServer);
  */
 function stopServer() {
-  return new Promise((resolve) => server.close(resolve));
+  return testServer.stop();
 }
 
 /**

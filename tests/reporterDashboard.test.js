@@ -1,19 +1,17 @@
 // Tests for the reporter dashboard: controllers/reporterController.js, routes/reporterRoutes.js and
 // views/reporter/dashboard.ejs (owned by B). The row rules are pure and need no database. The page is
-// requested over HTTP from a small app with a fake session (X-Test-User header; test code only) and EJS set up
-// the way C's doc asks A to; the parts that list articles need MONGODB_TEST_URI (see tests/testDatabase.js).
+// requested over HTTP from the test app in tests/testServer.js; the parts that list articles need MONGODB_TEST_URI (see tests/testDatabase.js).
 // Run: node --test tests/
 
 const { describe, test, before, after, mock } = require("node:test");
 const assert = require("assert");
-const path = require("path");
-const express = require("express");
 const mongoose = require("mongoose");
 const Article = require("../models/Article");
 const articleService = require("../services/articleService");
 const reporterRoutes = require("../routes/reporterRoutes");
 const { toDashboardRow, STATUS_LABELS } = require("../controllers/reporterController");
 const { skipWithoutDatabase, connectTestDatabase, disconnectTestDatabase } = require("./testDatabase");
+const { startTestServer } = require("./testServer");
 
 const USERS = {
   noa: { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Noa" },
@@ -22,31 +20,17 @@ const USERS = {
 };
 const publishedAt = new Date("2026-10-01T09:00:00Z");
 
-let server;
+let testServer;
 let baseUrl;
 
 /**
- * Starts the test app on a free port.
+ * Starts the test app (tests/testServer.js) on a free port.
  * @returns {Promise<void>} Resolves when it listens; sets baseUrl.
  * @example before(startServer);
  */
 async function startServer() {
-  const app = express();
-  app.set("view engine", "ejs");
-  app.set("views", path.join(__dirname, "..", "views"));
-  app.use((req, res, next) => {
-    req.session = { user: USERS[req.get("X-Test-User")] };
-    next();
-  });
-  app.use(reporterRoutes);
-  // Stand-in for A's error middleware.
-  app.use((error, req, res, next) => {
-    res.status(error.status || 500).send(`Error: ${error.message}`);
-  });
-  await new Promise((resolve) => {
-    server = app.listen(0, resolve);
-  });
-  baseUrl = `http://127.0.0.1:${server.address().port}`;
+  testServer = await startTestServer([reporterRoutes], USERS);
+  baseUrl = testServer.baseUrl;
 }
 
 /**
@@ -55,7 +39,7 @@ async function startServer() {
  * @example after(stopServer);
  */
 function stopServer() {
-  return new Promise((resolve) => server.close(resolve));
+  return testServer.stop();
 }
 
 /**

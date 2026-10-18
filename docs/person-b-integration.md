@@ -205,7 +205,26 @@ machine; the API checks them again.
 The buttons use `fetch` with `application/json`, like C's comments, so the API's cross-site form protection
 stays in place. They are disabled until the script has loaded.
 
-The edit page (`/reporter/articles/:id/edit`) is not built yet, so its links answer `404` for now.
+## Edit page (`GET /reporter/articles/:id/edit`)
+
+`views/reporter/edit.ejs`, rendered by `renderEditPage` in `controllers/reporterController.js`. Route:
+`requireStaffLogin → loadArticle → requireArticleOwnerOrEditor`, so the author and editors can open it; another
+reporter gets `403`.
+
+- The form shows the working copy (`draft`): title, summary, article text, image address, and category (a
+  `<select>` from `ARTICLE_CATEGORIES`). It is read from the database on every request and sent with
+  `Cache-Control: private, no-store`, so the reporter always sees the latest saved version, on any computer.
+- When `canEditWorkingCopy` refuses (the author on a `pending` or `published` article, or an editor on anything but
+  `pending`), the page still answers `200`. The fields are disabled and a message explains why.
+- A `returned` article shows the editor's note at the top. An article with a public version shows "Readers still see
+  the published version until an editor approves your changes".
+- "Submit for approval" ("Resubmit" when returned) is shown only to the author, in `draft` or `returned`. It is
+  disabled until the edit script exists (next step). "Back to dashboard" is shown to reporters only, because
+  `/reporter` is reporters only.
+- There is no Save button. Saving will be autosave (`PATCH /api/articles/:id`), and the form is never sent
+  natively.
+- **For D:** editors can use this page to fix a pending article before approving. D's dashboard can link to
+  `/reporter/articles/:id/edit`.
 
 **For A:**
 - Mount the router next to the API router: `app.use(require("./routes/reporterRoutes"));`.

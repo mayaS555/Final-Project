@@ -13,15 +13,23 @@ const skipWithoutDatabase = TEST_DATABASE_URI ? false : "MONGODB_TEST_URI is not
 /**
  * Connects to this process's own test database and builds the Article indexes.
  * @returns {Promise<void>} Resolves when the database is ready.
- * @throws {Error} When the database name in MONGODB_TEST_URI does not contain "test" (nothing is touched then).
+ * @throws {Error} When the database name in MONGODB_TEST_URI does not contain "test" (nothing is touched then),
+ *   or when no MongoDB server answers within a few seconds.
  * @example before(connectTestDatabase);
  */
 async function connectTestDatabase() {
-  const baseName = new URL(TEST_DATABASE_URI).pathname.slice(1);
+  const url = new URL(TEST_DATABASE_URI);
+  const baseName = url.pathname.slice(1);
   if (!baseName.includes("test")) {
     throw new Error(`Refusing to run: database "${baseName}" in MONGODB_TEST_URI does not contain "test".`);
   }
-  await mongoose.connect(TEST_DATABASE_URI, { dbName: `${baseName}-${process.pid}` });
+  try {
+    // Fail after 3 seconds instead of waiting for the test timeout when no server is running.
+    await mongoose.connect(TEST_DATABASE_URI, { dbName: `${baseName}-${process.pid}`, serverSelectionTimeoutMS: 3000 });
+  } catch (error) {
+    // url.host never contains the user name or password.
+    throw new Error(`Cannot reach MongoDB at ${url.host}. Start mongod, or unset MONGODB_TEST_URI to skip these tests.`);
+  }
   await Article.init();
 }
 

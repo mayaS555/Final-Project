@@ -1,0 +1,71 @@
+<%# Edit page (owned by B): the article's working copy, always as saved on the server.
+    Rendered by controllers/reporterController.js. Uses C's temporary partials until A's shared layout exists.
+    The form has no submit button and no action: saving (autosave) and "Submit" are done by JavaScript,
+    and a form without a submit button and with more than one text field is never sent by pressing Enter. %>
+<%- include("../public/partials/top") %>
+    <link rel="stylesheet" href="/css/reporter.css">
+    <main class="pub-main rep-edit">
+        <header class="rep-toolbar">
+            <h1 class="pub-page-title"><%= article.fields.title || "Untitled article" %></h1>
+            <span class="rep-badge rep-badge-<%= article.status %>" lang="he" dir="rtl"><%= article.statusLabel %></span>
+        </header>
+
+        <% if (article.editorNote) { %>
+        <section class="rep-editor-note rep-editor-note-top" aria-labelledby="rep-editor-note-title">
+            <h2 id="rep-editor-note-title">The editor returned this article</h2>
+            <p><%= article.editorNote %></p>
+        </section>
+        <% } %>
+
+        <% if (article.isLive) { %>
+        <p class="rep-banner">
+            Readers still see the published version until an editor approves your changes.
+            <a href="<%= article.liveUrl %>">View the published version</a>
+        </p>
+        <% } %>
+
+        <% if (!article.canEdit) { %>
+        <p class="rep-banner rep-banner-locked" id="rep-read-only"><%= article.readOnlyMessage %></p>
+        <% } %>
+
+        <form class="rep-form" id="rep-edit-form" data-article-id="<%= article.id %>" data-status="<%= article.status %>">
+            <fieldset class="rep-fields"<%= article.canEdit ? "" : " disabled" %>>
+                <legend class="rep-visually-hidden">Article</legend>
+
+                <label for="rep-title">Title</label>
+                <input id="rep-title" name="title" type="text" maxlength="200" value="<%= article.fields.title %>">
+
+                <label for="rep-summary">Summary</label>
+                <textarea id="rep-summary" name="summary" rows="3" maxlength="500"><%= article.fields.summary %></textarea>
+
+                <label for="rep-content">Article text</label>
+                <textarea id="rep-content" name="content" rows="16" maxlength="50000" aria-describedby="rep-content-hint"><%= article.fields.content %></textarea>
+                <p class="rep-hint" id="rep-content-hint">Plain text. Leave an empty line between paragraphs.</p>
+
+                <label for="rep-image">Image address</label>
+                <input id="rep-image" name="imageUrl" type="text" inputmode="url" maxlength="2048" value="<%= article.fields.imageUrl %>" aria-describedby="rep-image-hint">
+                <p class="rep-hint" id="rep-image-hint">Optional. An address starting with https:// or /.</p>
+
+                <label for="rep-category">Category</label>
+                <select id="rep-category" name="category">
+                    <option value="">Choose a category</option>
+                    <% categories.forEach(function (category) { %>
+                    <option value="<%= category %>"<%= category === article.fields.category ? " selected" : "" %>><%= category %></option>
+                    <% }); %>
+                </select>
+            </fieldset>
+
+            <p class="pub-form-status" id="rep-edit-status" role="status" aria-live="polite"></p>
+
+            <div class="rep-form-actions">
+                <% if (article.canSubmit) { %>
+                <%# Disabled until the edit script (next step) attaches its handler. %>
+                <button type="button" class="rep-button" id="rep-submit" disabled><%= article.submitLabel %></button>
+                <% } %>
+                <% if (article.dashboardUrl) { %>
+                <a class="rep-button rep-button-secondary" href="<%= article.dashboardUrl %>">Back to dashboard</a>
+                <% } %>
+            </div>
+        </form>
+    </main>
+<%- include("../public/partials/bottom") %>

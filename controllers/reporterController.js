@@ -1,12 +1,13 @@
 // Reporter area pages (owned by B). The dashboard lists the logged-in reporter's articles with their status
-// and the actions allowed for each one. Which actions are shown comes from the state machine
-// (services/articleStatus.js); the API enforces the same rules again when an action is used.
+// and the actions allowed for each one; the edit page shows one article's working copy. What is shown comes
+// from the state machine (services/articleStatus.js); the API enforces the same rules again when an action is used.
 
 const articleService = require("../services/articleService");
 const { canEditWorkingCopy, canTransition, canDelete } = require("../services/articleStatus");
 const { parseStatusFilter } = require("./articleApiController");
 const { getSessionUser } = require("../middleware/articleAccess");
 const { ARTICLE_STATUSES } = require("../models/Article");
+const { ARTICLE_CATEGORIES } = require("../models/articleCategories");
 
 // Hebrew status labels shown in the badges and the filter tabs.
 const STATUS_LABELS = {
@@ -95,4 +96,79 @@ async function renderDashboard(req, res) {
   });
 }
 
-module.exports = { renderDashboard, toDashboardRow, STATUS_LABELS };
+/**
+ * Explains why the working copy cannot be changed right now.
+ * @param {string} status The article status.
+ * @param {string} role The user's role.
+ * @returns {string} The message shown above a read-only form.
+ * @example readOnlyReason("pending", "reporter")
+ */
+function readOnlyReason(status, role) {
+  if (role === "editor") {
+    return "Editors can change an article only while it is waiting for approval.";
+  }
+  if (status === "pending") {
+    return "This article is waiting for an editor, so it cannot be changed now. You can edit it again if the editor returns it.";
+  }
+  if (status === "published") {
+    return "This article is published. To change it, use \"Edit published article\" on the dashboard; readers keep seeing this version until an editor approves the new one.";
+  }
+  return "This article cannot be changed now.";
+}
+
+/**
+ * Builds what the edit page shows for one article and one user.
+ * @param {Object} article The article document (req.article).
+ * @param {Object} user The logged-in user (the author or an editor; checked by the route).
+ * @returns {Object} { id, status, statusLabel, fields (the working copy), editorNote, isLive, canEdit,
+ *   readOnlyMessage, canSubmit, submitLabel, liveUrl, dashboardUrl }.
+ * @example res.render("reporter/edit", { article: toEditView(req.article, user) });
+ */
+function toEditView(article, user) {
+  const isAuthor = String(article.author) === String(user._id);
+  const canEdit = canEditWorkingCopy(article.status, user.role, isAuthor);
+  const draft = article.draft || {};
+  const id = String(article._id);
+  return {
+    id,
+    status: article.status,
+    statusLabel: STATUS_LABELS[article.status],
+    fields: {
+      title: draft.title || "",
+      summary: draft.summary || "",
+      content: draft.content || "",
+      imageUrl: draft.imageUrl || "",
+      category: draft.category || "",
+    },
+    editorNote: article.status === "returned" ? article.editorNote : "",
+    isLive: Boolean(article.approved && article.approved.publishedAt instanceof Date),
+    canEdit,
+    readOnlyMessage: canEdit ? "" : readOnlyReason(article.status, user.role),
+    // Submitting is the author's action, from draft or returned.
+    canSubmit: isAuthor && canTransition(article.status, "pending", user.role),
+    submitLabel: article.status === "returned" ? "Resubmit" : "Submit for approval",
+    liveUrl: `/articles/${id}`,
+    // The reporter dashboard is for reporters only; the editors' dashboard is D's page.
+    dashboardUrl: user.role === "reporter" ? "/reporter" : null,
+  };
+}
+
+/**
+ * GET /reporter/articles/:id/edit - the edit page, filled from the working copy saved on the server.
+ * Shown read-only (with the reason) when the user cannot change the article in its current status.
+ * @param {Object} req The Express request; reads req.article (loadArticle) and the session user.
+ * @param {Object} res The Express response.
+ * @returns {void} Renders views/reporter/edit.ejs.
+ * @example router.get("/reporter/articles/:id/edit", requireStaffLogin, loadArticle, requireArticleOwnerOrEditor, renderEditPage);
+ */
+function renderEditPage(req, res) {
+  // no-store: the page must always show the latest saved version, also after Back or on another computer.
+  res.set("Cache-Control", "private, no-store");
+  res.render("reporter/edit", {
+    pageTitle: "Edit article - The Daily Web",
+    article: toEditView(req.article, getSessionUser(req)),
+    categories: ARTICLE_CATEGORIES,
+  });
+}
+
+module.exports = { renderDashboard, renderEditPage, toDashboardRow, toEditView, STATUS_LABELS };
