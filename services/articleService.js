@@ -281,7 +281,37 @@ async function deleteArticle(article, user) {
   logArticleEvent("delete", article, user);
 }
 
+/**
+ * Lists articles for the staff dashboards, last changed first: a reporter sees only their own, an editor sees all.
+ * Only the fields of a list row are read. Uses the { author, updatedAt } and { status, updatedAt } indexes.
+ * @param {Object} user The logged-in user.
+ * @param {string} [status] Optional status filter; must already be one of the article statuses.
+ * @returns {Promise<Object[]>} Lean articles with draft.title, approved.title, approved.publishedAt, status,
+ *   editorNote and updatedAt.
+ * @throws {Error} error.status 403 for a role other than reporter or editor.
+ * @example const rows = await listArticles(req.session.user, "pending");
+ */
+async function listArticles(user, status) {
+  let filter;
+  if (user.role === "reporter") {
+    filter = { author: user._id };
+  } else if (user.role === "editor") {
+    filter = {};
+  } else {
+    throw createHttpError(403, "Only reporters and editors can list articles.");
+  }
+  if (status) {
+    filter.status = status;
+  }
+  // ponytail: no paging; an editor listing every status sorts in memory. Add skip/limit when the list grows.
+  return Article.find(filter)
+    .select({ "draft.title": 1, "approved.title": 1, "approved.publishedAt": 1, status: 1, editorNote: 1, updatedAt: 1 })
+    .sort({ updatedAt: -1 })
+    .lean();
+}
+
 module.exports = {
+  listArticles,
   createDraft,
   saveWorkingCopy,
   submit,
