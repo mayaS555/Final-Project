@@ -205,3 +205,43 @@ nobody is logged in, 403 for other roles). When A's middleware is merged, replac
   To keep one definition, C can replace it with `getArticleModel().publicFilter()`. B has not changed C's file.
 - **D:** increase `totalViews` with `$inc`. Use `Article.publicFilter()` wherever "visible to the public" is needed.
 - **Open:** who deletes an article's comments and `ArticleRead` records when the article is deleted.
+
+## Seed data (`scripts/seed.js`)
+
+`npm run seed` replaces all articles with 500 generated ones in about a second. It reads `MONGODB_URI` from `.env`
+(see `.env.example`).
+
+- **Safety.** It refuses to run when `NODE_ENV=production`. It prints a warning, then deletes **only** the
+  `articles` collection. Comments, read history (C), views and publish events (D) are not touched.
+- **Repeatable.** Every run builds the same 500 articles (fixed random seed); only the dates move with the current
+  time.
+- **Shape.** The documents have the same fields `articleService` gives real articles (checked by
+  `tests/seed.test.js` against an article published by the service). They are inserted with
+  `insertMany(..., { timestamps: false })`, which validates every document and keeps the seed's dates.
+- **Mix.** 275 published, 75 pending (new), 50 pending revisions of published articles (still public with their
+  old version), 50 drafts (half of them half written, some without a category yet), 50 returned with an
+  `editorNote`.
+- **Spread.** Categories and the 5 reporters are combined evenly, so every category has articles of every reporter
+  and of every state. Published dates are spread over the last 60 days.
+- **Text and images.** English titles, summaries and text, built from small word lists in the script. English,
+  because C's title search uses MongoDB's English text index. `imageUrl` is empty, so C's feed shows its grey
+  placeholder block.
+- **Views.** `totalViews` is 0 everywhere; views belong to D.
+
+**Users (waiting for A).** A's User model and password hashing do not exist yet, so the seed creates no users. The
+articles use 5 fixed reporter ids and names (`REPORTERS` in the script, printed at the end):
+`665000000000000000000001` to `…005`. When A merges, the seed will create these reporters and one editor through
+A's model (so the hashing runs), with the passwords taken from `.env`, and use A's connection module.
+
+**For D (analytics).** 15 published articles were approved 2 to 5 times. Find them with
+`{ publishCount: { $gte: 2 } }`. For each article, `approved.publishedAt` is the first approval and
+`approved.updatedAt` is the latest (they are equal when `publishCount` is 1). The model keeps no history of the
+approvals in between, so D's seed can spread those publish events between the two dates. The 50 pending
+revisions have `publishCount: 1` and a newer working copy.
+
+**Order.** C and D have no seed scripts yet. Run `npm run seed` first; their seeds should then read the existing
+articles (for example `Article.find(Article.publicFilter())`) instead of creating their own.
+
+**Files outside B's folders.** `package.json` gets one line (`"seed": "node scripts/seed.js"`). `.env.example` is
+new, with `MONGODB_URI` and `NODE_ENV` only. A can rename the variable or add to the file; the seed reads only
+these two.
