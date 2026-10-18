@@ -228,6 +228,18 @@ describe("GET /reporter/articles/:id/edit with MongoDB", { skip: skipWithoutData
     assert.ok(!html.includes("Readers still see the published version"));
   });
 
+  test("an editable page loads autosave and shows the save status", async () => {
+    const { html } = await getEditPage(String(articles.draft._id), "noa");
+    assert.ok(html.includes('<script src="/js/reporter-autosave.js" defer></script>'));
+    assert.ok(html.includes('id="rep-save-status"'));
+  });
+
+  test("a read-only page has no autosave", async () => {
+    const { html } = await getEditPage(String(articles.pending._id), "noa");
+    assert.ok(!html.includes("reporter-autosave.js"));
+    assert.ok(!html.includes('id="rep-save-status"'));
+  });
+
   test("a returned article shows the editor's note at the top and Resubmit", async () => {
     const { html } = await getEditPage(String(articles.returned._id), "noa");
     assert.ok(html.includes("The editor returned this article"));

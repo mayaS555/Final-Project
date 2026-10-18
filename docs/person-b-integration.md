@@ -221,8 +221,25 @@ reporter gets `403`.
 - "Submit for approval" ("Resubmit" when returned) is shown only to the author, in `draft` or `returned`. It is
   disabled until the edit script exists (next step). "Back to dashboard" is shown to reporters only, because
   `/reporter` is reporters only.
-- There is no Save button. Saving will be autosave (`PATCH /api/articles/:id`), and the form is never sent
-  natively.
+- There is no Save button, and the form is never sent natively. Saving is autosave (below).
+
+### Autosave (`public/js/reporter-autosave.js`)
+
+Loaded only when the article can be edited. Each change is sent with `PATCH /api/articles/:id`, containing only
+the changed fields, 1.5 seconds after the last keystroke. The status line next to the title shows "Saving…",
+"Saved at HH:MM" (browser time) or "Offline – will retry".
+
+- **One save at a time.** Changes made while a save is running are sent right after it.
+- **Network failure or 5xx.** The data stays in the page and is retried after 2, 4, 8, then every 15 seconds,
+  and at once when the browser comes back online.
+- **400.** The server's message is shown ("Not saved: …"). The next change tries again.
+- **401, 403, 409.** Autosave stops, the fields are locked, and the user is asked to reload. For example, the
+  article was submitted from another tab, or an editor took it.
+- **Hiding or closing the page** (`visibilitychange` to hidden, `pagehide`). Pending changes are sent at once with
+  `fetch(..., { keepalive: true })`. A body over about 60 KB cannot use keepalive and is sent normally.
+- **`beforeunload`** asks "Leave site?" only when changes could not be sent: autosave stopped, or the last save
+  failed.
+- **No localStorage copy.** The server is the only copy, so the latest text appears on any computer.
 - **For D:** editors can use this page to fix a pending article before approving. D's dashboard can link to
   `/reporter/articles/:id/edit`.
 
