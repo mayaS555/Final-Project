@@ -183,6 +183,40 @@ Either mount this router before the global parsers (the order C's doc also asks 
 Until A's login middleware exists, the router uses `requireStaffLogin` from `middleware/articleAccess.js` (401 when
 nobody is logged in, 403 for other roles). When A's middleware is merged, replace it in the routes file and delete it.
 
+## Reporter dashboard (`GET /reporter`)
+
+`routes/reporterRoutes.js`, `controllers/reporterController.js`, `views/reporter/dashboard.ejs`,
+`public/js/reporter-dashboard.js`, `public/css/reporter.css`. Reporters only (`requireReporterLogin`, the same
+stand-in as above). The list is rendered on the server; `?status=` filters it (tabs at the top).
+
+Each row shows the working title (or the public title, or "Untitled"), the category, a status badge with the Hebrew
+label (בהכנה, ממתינה לאישור עורך, פורסמה, הוחזרה לתיקונים), the last change, the editor's note for a returned
+article, and a note when a published article has a newer version in progress. The actions shown come from the state
+machine; the API checks them again.
+
+| Action | Shown when | Does |
+| --- | --- | --- |
+| Edit | `draft` or `returned` | Link to `/reporter/articles/:id/edit`. |
+| View live | the article has a public version | Link to C's page `/articles/:id`. |
+| Edit published article | `published` | `POST /api/articles/:id/revise`, then opens the edit page. |
+| Delete | never-published `draft` or `returned` | Asks for confirmation, then `DELETE /api/articles/:id`. |
+| New article | always | `POST /api/articles`, then opens the edit page. |
+
+The buttons use `fetch` with `application/json`, like C's comments, so the API's cross-site form protection
+stays in place. They are disabled until the script has loaded.
+
+The edit page (`/reporter/articles/:id/edit`) is not built yet, so its links answer `404` for now.
+
+**For A:**
+- Mount the router next to the API router: `app.use(require("./routes/reporterRoutes"));`.
+- After login, send reporters to `/reporter`.
+- The view needs EJS with the project's `views` folder as the template root, as C's doc already asks.
+- Until A's shared layout exists, the page includes C's temporary partials (`views/public/partials/top` and
+  `bottom`) and adds its own stylesheet inside the page. When A's layout arrives, switch the two includes and move
+  `/css/reporter.css` into the head. C's files were not changed.
+- 401 and 403 reach A's error middleware like the API errors. For this page, redirecting a 401 to the login page
+  would be friendlier than an error page.
+
 ## Differences from C's doc, and why
 
 - **Working copy is called `draft`, not `pending`.** C never reads it. Note that `draft` (the sub-document) and

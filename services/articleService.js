@@ -286,8 +286,8 @@ async function deleteArticle(article, user) {
  * Only the fields of a list row are read. Uses the { author, updatedAt } and { status, updatedAt } indexes.
  * @param {Object} user The logged-in user.
  * @param {string} [status] Optional status filter; must already be one of the article statuses.
- * @returns {Promise<Object[]>} Lean articles with draft.title, approved.title, approved.publishedAt, status,
- *   editorNote and updatedAt.
+ * @returns {Promise<Object[]>} Lean articles with the title and category of draft and approved, approved.publishedAt,
+ *   status, editorNote and updatedAt.
  * @throws {Error} error.status 403 for a role other than reporter or editor.
  * @example const rows = await listArticles(req.session.user, "pending");
  */
@@ -305,7 +305,16 @@ async function listArticles(user, status) {
   }
   // ponytail: no paging; an editor listing every status sorts in memory. Add skip/limit when the list grows.
   return Article.find(filter)
-    .select({ "draft.title": 1, "approved.title": 1, "approved.publishedAt": 1, status: 1, editorNote: 1, updatedAt: 1 })
+    .select({
+      "draft.title": 1,
+      "draft.category": 1,
+      "approved.title": 1,
+      "approved.category": 1,
+      "approved.publishedAt": 1,
+      status: 1,
+      editorNote: 1,
+      updatedAt: 1,
+    })
     .sort({ updatedAt: -1 })
     .lean();
 }

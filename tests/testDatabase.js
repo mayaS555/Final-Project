@@ -1,9 +1,7 @@
 // MongoDB connection for the tests that need a database (owned by B).
 // Those tests run only when MONGODB_TEST_URI is set, and only when its database name contains "test".
 // node --test runs each test file in its own process, at the same time, so every process uses its own
-// database ("<name>-<process id>") and empties it at the end. Without the variable the tests are skipped.
-// ponytail: the empty databases stay (dropDatabase hung while other test processes were running). Remove them with
-//   mongosh <server> --eval 'db.getMongo().getDBNames().filter((n) => /-test-\d+$/.test(n)).forEach((n) => db.getSiblingDB(n).dropDatabase())'
+// database ("<name>-<process id>") and drops it at the end. Without the variable the tests are skipped.
 
 const mongoose = require("mongoose");
 const Article = require("../models/Article");
@@ -28,12 +26,15 @@ async function connectTestDatabase() {
 }
 
 /**
- * Removes the articles this process created and closes the connection.
+ * Drops this process's test database and closes the connection. Does nothing when connectTestDatabase refused.
  * @returns {Promise<void>} Resolves when disconnected.
  * @example after(disconnectTestDatabase);
  */
 async function disconnectTestDatabase() {
-  await Article.deleteMany({});
+  if (mongoose.connection.readyState !== mongoose.ConnectionStates.connected) {
+    return;
+  }
+  await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
 }
 
