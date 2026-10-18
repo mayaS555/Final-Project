@@ -2,6 +2,7 @@
 // Every change is sent to PATCH /api/articles/:id about 1.5 seconds after the last keystroke. The server is the
 // only copy (no localStorage), so the latest text is there on any computer. One save runs at a time; changes made
 // meanwhile are sent right after it. When the page is hidden or closed, pending changes are sent at once.
+// public/js/reporter-edit.js (loaded after this file) calls saveAllNow() before submitting.
 
 const form = document.getElementById("rep-edit-form");
 const fieldset = form.querySelector(".rep-fields");
@@ -19,6 +20,8 @@ const MAX_KEEPALIVE_BYTES = 60000;
 const changedFields = new Set();
 let saveTimer = null;
 let savesInFlight = 0;
+// Resolves when the running save (not a keepalive one) has finished; null when none is running.
+let currentSave = null;
 let failedAttempts = 0;
 // true when the last save did not reach the server (offline, error or stopped).
 let lastSaveFailed = false;
@@ -127,6 +130,11 @@ async function saveNow({ keepalive = false } = {}) {
   const body = JSON.stringify(readFields(names));
 
   savesInFlight += 1;
+  let markSaveDone;
+  const thisSave = new Promise((resolve) => (markSaveDone = resolve));
+  if (!keepalive) {
+    currentSave = thisSave;
+  }
   setStatus("saving");
   let response = null;
   try {
@@ -152,9 +160,43 @@ async function saveNow({ keepalive = false } = {}) {
     await handleFailedSave(names, response);
   }
 
+  if (currentSave === thisSave) {
+    currentSave = null;
+  }
   // Changes made while this save was running are sent right after it. After a failure the retry timer does it.
+  // This runs before anyone waiting on thisSave continues, so saveAllNow sees the follow-up save.
   if (!isStopped && !lastSaveFailed && changedFields.size > 0 && savesInFlight === 0) {
     saveNow();
+  }
+  markSaveDone();
+}
+
+/**
+ * Saves every pending change and waits until nothing is left to save, including a save already running.
+ * Used before submitting, so the editor gets exactly what is on the screen.
+ * @returns {Promise<boolean>} true when everything is saved; false when a save failed or autosave stopped
+ *   (the status line then says why).
+ * @example if (await saveAllNow()) { submit(); }
+ */
+async function saveAllNow() {
+  clearTimeout(saveTimer);
+  for (;;) {
+    if (isStopped) {
+      return false;
+    }
+    if (currentSave) {
+      await currentSave;
+    } else if (savesInFlight > 0) {
+      // Only a keepalive save (page was hidden) is running; give it a moment.
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    } else if (changedFields.size === 0) {
+      return !lastSaveFailed;
+    } else {
+      await saveNow();
+      if (lastSaveFailed) {
+        return false;
+      }
+    }
   }
 }
 

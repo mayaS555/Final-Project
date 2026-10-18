@@ -31,7 +31,8 @@
         <p class="rep-banner rep-banner-locked" id="rep-read-only"><%= article.readOnlyMessage %></p>
         <% } %>
 
-        <form class="rep-form" id="rep-edit-form" data-article-id="<%= article.id %>" data-status="<%= article.status %>">
+        <form class="rep-form" id="rep-edit-form" data-article-id="<%= article.id %>" data-status="<%= article.status %>"
+              data-required-fields="<%= requiredFields.join(",") %>">
             <fieldset class="rep-fields"<%= article.canEdit ? "" : " disabled" %>>
                 <legend class="rep-visually-hidden">Article</legend>
 
@@ -62,7 +63,7 @@
 
             <div class="rep-form-actions">
                 <% if (article.canSubmit) { %>
-                <%# Disabled until the edit script (next step) attaches its handler. %>
+                <%# Disabled until public/js/reporter-edit.js attaches its handler. %>
                 <button type="button" class="rep-button" id="rep-submit" disabled><%= article.submitLabel %></button>
                 <% } %>
                 <% if (article.dashboardUrl) { %>
@@ -73,5 +74,9 @@
     </main>
     <% if (article.canEdit) { %>
     <script src="/js/reporter-autosave.js" defer></script>
+    <% } %>
+    <% if (article.canSubmit) { %>
+    <%# Uses saveAllNow() from reporter-autosave.js, so it must come after it. %>
+    <script src="/js/reporter-edit.js" defer></script>
     <% } %>
 <%- include("../public/partials/bottom") %>

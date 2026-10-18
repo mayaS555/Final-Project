@@ -17,6 +17,13 @@ const STATUS_LABELS = {
   returned: "הוחזרה לתיקונים",
 };
 
+// Messages the dashboard shows after an action, chosen by ?msg=<key>. Only these keys are shown; the text in
+// the address is never displayed, so a link cannot put its own words on the page.
+const DASHBOARD_MESSAGES = {
+  submitted: "Your article was sent to the editors for approval.",
+  resubmitted: "Your corrected article was sent to the editors again.",
+};
+
 /**
  * Formats a date like C's comment dates, so the whole site shows times the same way.
  * @param {Date} date The date.
@@ -74,8 +81,18 @@ function toDashboardRow(article) {
 }
 
 /**
- * GET /reporter - the reporter's dashboard, optionally filtered with ?status=.
- * @param {Object} req The Express request; reads the session user and req.query.status.
+ * Picks the message to show after an action.
+ * @param {*} key req.query.msg.
+ * @returns {string} The message for a known key, otherwise "".
+ * @example dashboardMessage("submitted")
+ */
+function dashboardMessage(key) {
+  return typeof key === "string" && Object.hasOwn(DASHBOARD_MESSAGES, key) ? DASHBOARD_MESSAGES[key] : "";
+}
+
+/**
+ * GET /reporter - the reporter's dashboard, optionally filtered with ?status=, with an optional ?msg= message.
+ * @param {Object} req The Express request; reads the session user, req.query.status and req.query.msg.
  * @param {Object} res The Express response.
  * @returns {Promise<void>} Renders views/reporter/dashboard.ejs. An invalid status is thrown as 400;
  *   Express 5 passes it, and database errors, to next(err).
@@ -93,6 +110,7 @@ async function renderDashboard(req, res) {
     rows: articles.map(toDashboardRow),
     activeStatus: status,
     statusTabs: ARTICLE_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] })),
+    message: dashboardMessage(req.query.msg),
   });
 }
 
@@ -168,7 +186,9 @@ function renderEditPage(req, res) {
     pageTitle: "Edit article - The Daily Web",
     article: toEditView(req.article, getSessionUser(req)),
     categories: ARTICLE_CATEGORIES,
+    // The service's list, so the page highlights the same fields the server checks on submit.
+    requiredFields: articleService.REQUIRED_FOR_REVIEW,
   });
 }
 
-module.exports = { renderDashboard, renderEditPage, toDashboardRow, toEditView, STATUS_LABELS };
+module.exports = { renderDashboard, renderEditPage, toDashboardRow, toEditView, dashboardMessage, STATUS_LABELS };

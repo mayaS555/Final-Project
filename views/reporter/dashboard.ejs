@@ -10,7 +10,7 @@
         </div>
         <p class="pub-meta">Logged in as <%= reporterName %></p>
         <noscript><p class="pub-status-error">JavaScript is needed to create, revise and delete articles.</p></noscript>
-        <p class="pub-form-status" id="rep-status" role="status" aria-live="polite"></p>
+        <p class="pub-form-status" id="rep-status" role="status" aria-live="polite"><%= message %></p>
 
         <nav class="rep-tabs" aria-label="Filter by status">
             <a href="/reporter"<%- activeStatus === "" ? ' aria-current="page"' : "" %>>All</a>

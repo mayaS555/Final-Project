@@ -320,6 +320,7 @@ async function listArticles(user, status) {
 }
 
 module.exports = {
+  REQUIRED_FOR_REVIEW,
   listArticles,
   createDraft,
   saveWorkingCopy,

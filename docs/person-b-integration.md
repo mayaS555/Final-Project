@@ -203,7 +203,22 @@ machine; the API checks them again.
 | New article | always | `POST /api/articles`, then opens the edit page. |
 
 The buttons use `fetch` with `application/json`, like C's comments, so the API's cross-site form protection
-stays in place. They are disabled until the script has loaded.
+stays in place. They are disabled until the script has loaded and while their request runs, so a double click sends
+one request. A failed action shows the server's message above the list.
+
+After a submit, the edit page opens `/reporter?msg=submitted` (or `resubmitted`). The dashboard shows the matching
+message from a fixed list in `reporterController.js`; unknown keys show nothing, and text from the address is never
+displayed. The script then removes `msg` from the address, so a reload does not repeat it.
+
+**For A:**
+- Mount the router next to the API router: `app.use(require("./routes/reporterRoutes"));`.
+- After login, send reporters to `/reporter`.
+- The view needs EJS with the project's `views` folder as the template root, as C's doc already asks.
+- Until A's shared layout exists, the page includes C's temporary partials (`views/public/partials/top` and
+  `bottom`) and adds its own stylesheet inside the page. When A's layout arrives, switch the two includes and move
+  `/css/reporter.css` into the head. C's files were not changed.
+- 401 and 403 reach A's error middleware like the API errors. For this page, redirecting a 401 to the login page
+  would be friendlier than an error page.
 
 ## Edit page (`GET /reporter/articles/:id/edit`)
 
@@ -218,10 +233,11 @@ reporter gets `403`.
   `pending`), the page still answers `200`. The fields are disabled and a message explains why.
 - A `returned` article shows the editor's note at the top. An article with a public version shows "Readers still see
   the published version until an editor approves your changes".
-- "Submit for approval" ("Resubmit" when returned) is shown only to the author, in `draft` or `returned`. It is
-  disabled until the edit script exists (next step). "Back to dashboard" is shown to reporters only, because
-  `/reporter` is reporters only.
+- "Submit for approval" ("Resubmit" when returned) is shown only to the author, in `draft` or `returned`
+  (see "Submit" below). "Back to dashboard" is shown to reporters only, because `/reporter` is reporters only.
 - There is no Save button, and the form is never sent natively. Saving is autosave (below).
+- **For D:** editors can use this page to fix a pending article before approving. D's dashboard can link to
+  `/reporter/articles/:id/edit`.
 
 ### Autosave (`public/js/reporter-autosave.js`)
 
@@ -240,18 +256,104 @@ the changed fields, 1.5 seconds after the last keystroke. The status line next t
 - **`beforeunload`** asks "Leave site?" only when changes could not be sent: autosave stopped, or the last save
   failed.
 - **No localStorage copy.** The server is the only copy, so the latest text appears on any computer.
-- **For D:** editors can use this page to fix a pending article before approving. D's dashboard can link to
-  `/reporter/articles/:id/edit`.
+- `saveAllNow()` saves every pending change and waits for a save that is already running. Submit uses it.
 
-**For A:**
-- Mount the router next to the API router: `app.use(require("./routes/reporterRoutes"));`.
-- After login, send reporters to `/reporter`.
-- The view needs EJS with the project's `views` folder as the template root, as C's doc already asks.
-- Until A's shared layout exists, the page includes C's temporary partials (`views/public/partials/top` and
-  `bottom`) and adds its own stylesheet inside the page. When A's layout arrives, switch the two includes and move
-  `/css/reporter.css` into the head. C's files were not changed.
-- 401 and 403 reach A's error middleware like the API errors. For this page, redirecting a 401 to the login page
-  would be friendlier than an error page.
+### Submit (`public/js/reporter-edit.js`)
+
+Loaded after the autosave script, only when the author may submit. It shares that script's `form`, `fieldset` and
+`saveAllNow()`; both are classic scripts.
+
+1. The button and the fields are disabled while it runs, so it cannot be sent twice.
+2. `await saveAllNow()`, so the editor gets exactly what is on the screen. If saving fails, nothing is submitted and
+   the form is usable again.
+3. `POST /api/articles/:id/submit`, then:
+   - **200:** opens the dashboard with `?msg=submitted` or `?msg=resubmitted`.
+   - **400:** names the empty required fields by their labels ("Please fill in: Title, Category."), marks them with
+     `aria-invalid` and focuses the first. The list of required fields comes from the service
+     (`REQUIRED_FOR_REVIEW`, passed to the form as `data-required-fields`), so the page and the server agree.
+   - **403 / 409:** shows the server's message and asks to reload. The form stays locked.
+   - **Network failure:** a message, and the form is usable again.
+
+## How to demo Person B
+
+The full reporter flow, from a new article to a second published version on C's public page.
+
+**Before you start**
+- A's server runs with B's two routers mounted (see "Mounting" above), and a reporter account can log in.
+- MongoDB runs, and `MONGODB_URI` names the app's database.
+- D's editor UI is not merged yet, so the editor's two steps (return, approve) use the temporary commands below.
+  They call the same `returnToReporter()` and `approve()` that D's UI will call. Run them from the project folder.
+  The article id is the long part of the edit page address: `/reporter/articles/<ARTICLE_ID>/edit`.
+
+Editor returns the article with a note:
+
+```bash
+MONGODB_URI="mongodb://127.0.0.1:27017/<database>" node -e '
+const mongoose = require("mongoose");
+const Article = require("./models/Article");
+const { returnToReporter } = require("./services/articleService");
+const [id, note] = process.argv.slice(1);
+const editor = { _id: new mongoose.Types.ObjectId(), role: "editor", name: "Demo editor" };
+mongoose.connect(process.env.MONGODB_URI)
+  .then(async () => console.log("status:", (await returnToReporter(await Article.findById(id), editor, note)).status))
+  .catch((error) => console.error("Failed:", error.message))
+  .finally(() => mongoose.disconnect());
+' <ARTICLE_ID> "Please add the vote count."
+```
+
+Editor approves the article:
+
+```bash
+MONGODB_URI="mongodb://127.0.0.1:27017/<database>" node -e '
+const mongoose = require("mongoose");
+const Article = require("./models/Article");
+const { approve } = require("./services/articleService");
+const [id] = process.argv.slice(1);
+const editor = { _id: new mongoose.Types.ObjectId(), role: "editor", name: "Demo editor" };
+mongoose.connect(process.env.MONGODB_URI)
+  .then(async () => {
+    const { article, isFirstPublish } = await approve(await Article.findById(id), editor);
+    console.log("status:", article.status, "| first publish:", isFirstPublish, "| publishCount:", article.publishCount);
+  })
+  .catch((error) => console.error("Failed:", error.message))
+  .finally(() => mongoose.disconnect());
+' <ARTICLE_ID>
+```
+
+When it works, each command prints `status: returned` or `status: published | first publish: …`. A wrong state
+prints the state machine's message, for example `Failed: An article cannot go from returned to published.`
+
+**The walkthrough** (expected result after each arrow)
+
+| # | Do | Expect |
+| --- | --- | --- |
+| 1 | Log in as a reporter. | `/reporter`: "You have no articles yet". |
+| 2 | Click **New article**. | The edit page of an empty draft, badge "בהכנה", status "Changes are saved automatically." |
+| 3 | Type a title. Wait about 2 seconds, then reload the page. | "Saving…", then "Saved at HH:MM". After reload the title is still there. |
+| 4 | Click **Submit for approval** with the text and category empty. | "Please fill in: Article text, Category.", with both fields outlined in red. Nothing is submitted. |
+| 5 | Fill in a summary, the text (blank line between paragraphs) and a category. Click **Submit for approval** right away. | The latest typing is saved first. Then the dashboard says "Your article was sent to the editors for approval." with badge "ממתינה לאישור עורך". |
+| 6 | Open the article again. Open `/articles/<ARTICLE_ID>`. | The edit page is read-only: "waiting for an editor". C's public page answers "Article not found". |
+| 7 | Run **Editor returns** with a note. Reload the dashboard. | Badge "הוחזרה לתיקונים", and the note in the row. |
+| 8 | Click **Edit**. | The note at the top ("The editor returned this article"), and the button now says **Resubmit**. |
+| 9 | Fix the text, then click **Resubmit**. | "Your corrected article was sent to the editors again." |
+| 10 | Run **Editor approves**. | `first publish: true`. The dashboard shows "פורסמה" with **View live** and **Edit published article**. |
+| 11 | Click **View live**, and open the home page and a title search (`/?q=<a word of the title>`). | C's page shows the article, "By <reporter name>". It is in the feed and the search results. |
+| 12 | Back on the dashboard, click **Edit published article**. Change the title. | The edit page opens as "בהכנה", with the banner "Readers still see the published version until an editor approves your changes". |
+| 13 | Reload C's article page. | It still shows the **old** title. |
+| 14 | Click **Submit for approval**, then run **Editor approves**. | `first publish: false`, `publishCount: 2`. |
+| 15 | Reload C's article page. | It shows the **new** title. The publish date is unchanged. |
+
+Worth showing too:
+- **Autosave on close:** type, then close the tab within a second, and reopen. The text is there.
+- **Another browser:** log in as the same reporter in another browser. Same text.
+- **Offline:** devtools → Network → Offline, then type. "Offline – will retry"; closing the tab asks "Leave site?".
+  Back online, it saves within seconds.
+- **Locked out:** another reporter opening the edit URL gets `403`.
+
+Checked by B before handing over: steps 1–15 were run against a stand-in for A's server, mounting C's real public
+routes, B's routers, EJS and the static files, with an in-memory MongoDB. Each page's HTML and each API answer
+matched the table. The button scripts (autosave, submit, dashboard actions) are covered by the `vm` tests in `tests/`.
+They have not been clicked in a real browser yet; do that once A's login exists.
 
 ## Differences from C's doc, and why
 

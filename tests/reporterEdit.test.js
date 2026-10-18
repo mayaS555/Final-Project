@@ -234,6 +234,20 @@ describe("GET /reporter/articles/:id/edit with MongoDB", { skip: skipWithoutData
     assert.ok(html.includes('id="rep-save-status"'));
   });
 
+  test("the author's editable page loads the submit script after autosave, with the required fields", async () => {
+    const { html } = await getEditPage(String(articles.draft._id), "noa");
+    assert.ok(html.includes('data-required-fields="title,content,category"'));
+    const autosaveAt = html.indexOf("reporter-autosave.js");
+    const submitAt = html.indexOf('<script src="/js/reporter-edit.js" defer></script>');
+    assert.ok(submitAt > autosaveAt && autosaveAt > 0);
+  });
+
+  test("an editor's page (no Submit) does not load the submit script", async () => {
+    const { html } = await getEditPage(String(articles.pending._id), "ed");
+    assert.ok(html.includes("reporter-autosave.js"));
+    assert.ok(!html.includes("reporter-edit.js"));
+  });
+
   test("a read-only page has no autosave", async () => {
     const { html } = await getEditPage(String(articles.pending._id), "noa");
     assert.ok(!html.includes("reporter-autosave.js"));

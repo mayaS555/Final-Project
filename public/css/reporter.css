@@ -236,6 +236,11 @@
     resize: vertical;
 }
 
+/* A required field left empty on submit (set by reporter-edit.js). */
+.pub-site .rep-fields [aria-invalid="true"] {
+    border: 2px solid #b00020;
+}
+
 .pub-site .rep-fields:disabled input,
 .pub-site .rep-fields:disabled textarea,
 .pub-site .rep-fields:disabled select {

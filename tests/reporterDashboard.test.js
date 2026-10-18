@@ -9,7 +9,7 @@ const mongoose = require("mongoose");
 const Article = require("../models/Article");
 const articleService = require("../services/articleService");
 const reporterRoutes = require("../routes/reporterRoutes");
-const { toDashboardRow, STATUS_LABELS } = require("../controllers/reporterController");
+const { toDashboardRow, dashboardMessage, STATUS_LABELS } = require("../controllers/reporterController");
 const { skipWithoutDatabase, connectTestDatabase, disconnectTestDatabase } = require("./testDatabase");
 const { startTestServer } = require("./testServer");
 
@@ -127,6 +127,16 @@ describe("toDashboardRow (no MongoDB needed)", () => {
     const row = toDashboardRow(leanArticle({}));
     assert.equal(row.editUrl, `/reporter/articles/${id}/edit`);
     assert.equal(row.liveUrl, `/articles/${id}`);
+  });
+});
+
+describe("dashboardMessage (no MongoDB needed)", () => {
+  test("shows only the known messages, never text from the address", () => {
+    assert.equal(dashboardMessage("submitted"), "Your article was sent to the editors for approval.");
+    assert.equal(dashboardMessage("resubmitted"), "Your corrected article was sent to the editors again.");
+    for (const key of ["<script>", "toString", "__proto__", ["submitted"], undefined, ""]) {
+      assert.equal(dashboardMessage(key), "", String(key));
+    }
   });
 });
 
@@ -257,6 +267,14 @@ describe("GET /reporter with MongoDB", { skip: skipWithoutDatabase }, () => {
     assert.ok(findRow(html, String(articles.returned._id)));
     assert.equal(findRow(html, String(articles.draft._id)), "");
     assert.ok(html.includes('href="/reporter?status=returned" lang="he" dir="rtl" aria-current="page"'));
+  });
+
+  test("?msg= shows the success message in the status line; unknown keys show nothing", async () => {
+    const shown = await getDashboard("noa", "?msg=submitted");
+    assert.ok(shown.html.includes('role="status" aria-live="polite">Your article was sent to the editors for approval.</p>'));
+    const unknown = await getDashboard("noa", "?msg=%3Cb%3Ehello%3C%2Fb%3E");
+    assert.ok(unknown.html.includes('id="rep-status" role="status" aria-live="polite"></p>'));
+    assert.ok(!unknown.html.includes("hello"));
   });
 
   test("an empty filter result shows the empty message", async () => {

@@ -117,3 +117,10 @@ newArticleButton.disabled = false;
 for (const button of listElement.querySelectorAll("button[data-action]")) {
   button.disabled = false;
 }
+
+// The message after submitting (?msg=) is shown once: remove it from the address, so a reload does not repeat it.
+const pageUrl = new URL(window.location.href);
+if (pageUrl.searchParams.has("msg")) {
+  pageUrl.searchParams.delete("msg");
+  window.history.replaceState(null, "", pageUrl);
+}
