@@ -185,6 +185,7 @@ async function reviseArticle(req, res) {
 }
 
 module.exports = {
+  parseStatusFilter,
   createArticle,
   listArticles,
   getArticle,

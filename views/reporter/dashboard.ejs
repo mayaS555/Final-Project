@@ -1,0 +1,65 @@
+<%# Reporter dashboard (owned by B): the logged-in reporter's articles with their status.
+    Rendered by controllers/reporterController.js. Uses C's temporary partials until A's shared layout exists.
+    The action buttons are disabled until public/js/reporter-dashboard.js attaches their handlers. %>
+<%- include("../public/partials/top") %>
+    <link rel="stylesheet" href="/css/reporter.css">
+    <main class="pub-main rep-dashboard" id="rep-dashboard">
+        <div class="rep-toolbar">
+            <h1 class="pub-page-title">My articles</h1>
+            <button type="button" class="rep-button" id="rep-new-article" disabled>New article</button>
+        </div>
+        <p class="pub-meta">Logged in as <%= reporterName %></p>
+        <noscript><p class="pub-status-error">JavaScript is needed to create, revise and delete articles.</p></noscript>
+        <p class="pub-form-status" id="rep-status" role="status" aria-live="polite"><%= message %></p>
+
+        <nav class="rep-tabs" aria-label="Filter by status">
+            <a href="/reporter"<%- activeStatus === "" ? ' aria-current="page"' : "" %>>All</a>
+            <% statusTabs.forEach(function (tab) { %>
+            <a href="/reporter?status=<%= tab.value %>" lang="he" dir="rtl"<%- activeStatus === tab.value ? ' aria-current="page"' : "" %>><%= tab.label %></a>
+            <% }); %>
+        </nav>
+
+        <p class="pub-empty" id="rep-empty"<%= rows.length > 0 ? " hidden" : "" %>>
+            <%= activeStatus ? "No articles with this status." : "You have no articles yet. Start with \"New article\"." %>
+        </p>
+
+        <ul class="rep-list" id="rep-list">
+            <% rows.forEach(function (row) { %>
+            <li class="rep-row" data-article-id="<%= row.id %>" data-edit-url="<%= row.editUrl %>">
+                <div class="rep-row-main">
+                    <span class="rep-badge rep-badge-<%= row.status %>" lang="he" dir="rtl"><%= row.statusLabel %></span>
+                    <h2 class="rep-row-title"><%= row.title %></h2>
+                    <p class="pub-meta">
+                        <% if (row.category) { %><span class="rep-category"><%= row.category %></span> · <% } %>
+                        Updated <time datetime="<%= row.updatedAt %>"><%= row.updatedAtText %></time>
+                    </p>
+                    <% if (row.hasPendingRevision) { %>
+                    <p class="rep-note">A new version is in progress. Readers see the published version until an editor approves the new one.</p>
+                    <% } %>
+                    <% if (row.status === "returned" && row.editorNote) { %>
+                    <div class="rep-editor-note">
+                        <strong>Editor's note:</strong>
+                        <p><%= row.editorNote %></p>
+                    </div>
+                    <% } %>
+                </div>
+                <div class="rep-actions">
+                    <% if (row.canEdit) { %>
+                    <a class="rep-button" href="<%= row.editUrl %>">Edit</a>
+                    <% } %>
+                    <% if (row.isLive) { %>
+                    <a class="rep-button rep-button-secondary" href="<%= row.liveUrl %>">View live</a>
+                    <% } %>
+                    <% if (row.canRevise) { %>
+                    <button type="button" class="rep-button" data-action="revise" disabled>Edit published article</button>
+                    <% } %>
+                    <% if (row.canDelete) { %>
+                    <button type="button" class="rep-button rep-button-danger" data-action="delete" disabled>Delete</button>
+                    <% } %>
+                </div>
+            </li>
+            <% }); %>
+        </ul>
+    </main>
+    <script src="/js/reporter-dashboard.js" defer></script>
+<%- include("../public/partials/bottom") %>
