@@ -1,8 +1,7 @@
-// Autosave for the article edit page (owned by B). Used by views/reporter/edit.ejs, only when the article can be edited.
-// Every change is sent to PATCH /api/articles/:id about 1.5 seconds after the last keystroke. The server is the
-// only copy (no localStorage), so the latest text is there on any computer. One save runs at a time; changes made
-// meanwhile are sent right after it. When the page is hidden or closed, pending changes are sent at once.
-// public/js/reporter-edit.js (loaded after this file) calls saveAllNow() before submitting.
+// Autosave for the article edit page (owned by B). Used by views/reporter/edit.ejs when the article can be edited,
+// and by public/js/reporter-edit.js (saveAllNow before submitting). Changes go to PATCH /api/articles/:id 1.5 s
+// after the last keystroke, one save at a time; the server is the only copy (no localStorage). When the page is
+// hidden or closed, pending changes are sent at once.
 
 const form = document.getElementById("rep-edit-form");
 const fieldset = form.querySelector(".rep-fields");

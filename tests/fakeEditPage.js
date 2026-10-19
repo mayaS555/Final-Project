@@ -109,6 +109,12 @@ function fakeElement(properties = {}) {
  */
 function loadEditPage(fetchAnswers = [], { withSubmit = false, status = "draft" } = {}) {
   const listeners = { form: {}, document: {}, window: {}, submit: {} };
+  /**
+   * Gives a fake element addEventListener, recording handlers under its owner name.
+   * @param {string} owner "form", "document", "window" or "submit".
+   * @returns {Object} { addEventListener } to spread into the fake element.
+   * @example const form = { ...eventTarget("form") };
+   */
   const eventTarget = (owner) => ({
     addEventListener(type, handler) {
       (listeners[owner][type] = listeners[owner][type] || []).push(handler);
@@ -155,6 +161,13 @@ function loadEditPage(fetchAnswers = [], { withSubmit = false, status = "draft" 
   const window = { ...eventTarget("window"), location: { href: "/reporter/articles/a1/edit" } };
   const requests = [];
 
+  /**
+   * Stands in for fetch: records the request and returns the next prepared answer.
+   * @param {string} url The requested address.
+   * @param {Object} options The fetch options (method, headers, body, keepalive).
+   * @returns {Promise<Object>} The next answer from fetchAnswers, or "saved" when none is left.
+   * @example Passed to the scripts as their global fetch.
+   */
   const fakeFetch = (url, options) => {
     requests.push({
       url,
@@ -182,6 +195,7 @@ function loadEditPage(fetchAnswers = [], { withSubmit = false, status = "draft" 
    * @param {string} type The event type.
    * @param {Object} [event] The event object.
    * @returns {Object} The event object (to check preventDefault).
+   * @example page.fire("window", "pagehide");
    */
   function fire(owner, type, event = {}) {
     // Like a browser: a disabled button gets no click.
@@ -199,6 +213,7 @@ function loadEditPage(fetchAnswers = [], { withSubmit = false, status = "draft" 
    * @param {string} name The field name.
    * @param {string} value The new value.
    * @returns {void}
+   * @example page.type("title", "Storm");
    */
   function type(name, value) {
     fields[name].value = value;

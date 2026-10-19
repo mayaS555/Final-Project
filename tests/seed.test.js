@@ -158,6 +158,12 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
 
     const realDocument = await Article.findById(real._id).lean();
     const seeded = await Article.findOne({ status: "published", publishCount: 1, _id: { $ne: real._id } }).lean();
+    /**
+     * The field names of an article, at the top level and inside draft and approved.
+     * @param {Object} document A lean article.
+     * @returns {{ top: string[], draft: string[], approved: string[] }} Sorted field names.
+     * @example fieldsOf(seeded)
+     */
     const fieldsOf = (document) => ({
       top: Object.keys(document).sort(),
       draft: Object.keys(document.draft).sort(),
