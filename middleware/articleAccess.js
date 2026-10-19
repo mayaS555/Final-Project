@@ -20,26 +20,30 @@ function getSessionUser(req) {
 }
 
 /**
- * Lets the request continue only for a logged-in reporter or editor.
+ * Builds a middleware that lets the request continue only for a logged-in user with one of the roles.
  * Stand-in until A's login and role middleware are merged; then use A's and delete this function.
- * @param {Object} req The Express request; reads the session user.
- * @param {Object} res The Express response (not used).
- * @param {Function} next Called with no argument when allowed.
- * @returns {void} Passes 401 (nobody logged in) or 403 (another role) to next.
- * @example router.get("/api/articles", requireStaffLogin, listArticles);
+ * @param {string[]} roles The allowed roles, for example ["reporter", "editor"].
+ * @returns {Function} Express middleware that passes 401 (nobody logged in) or 403 (another role) to next.
+ * @example const requireReporterLogin = requireLoginWithRole(["reporter"]);
  */
-function requireStaffLogin(req, res, next) {
-  const user = getSessionUser(req);
-  if (!user) {
-    next(createHttpError(401, "Please log in."));
-    return;
-  }
-  if (user.role !== "reporter" && user.role !== "editor") {
-    next(createHttpError(403, "Only reporters and editors can use this page."));
-    return;
-  }
-  next();
+function requireLoginWithRole(roles) {
+  return function requireRole(req, res, next) {
+    const user = getSessionUser(req);
+    if (!user) {
+      next(createHttpError(401, "Please log in."));
+      return;
+    }
+    if (!roles.includes(user.role)) {
+      next(createHttpError(403, `Only ${roles.map((role) => `${role}s`).join(" and ")} can use this page.`));
+      return;
+    }
+    next();
+  };
 }
+
+// Article API: reporters and editors. Reporter area: reporters only.
+const requireStaffLogin = requireLoginWithRole(["reporter", "editor"]);
+const requireReporterLogin = requireLoginWithRole(["reporter"]);
 
 /**
  * Loads the article named by :id and stores it in req.article.
@@ -93,4 +97,4 @@ function requireArticleOwnerOrEditor(req, res, next) {
   next();
 }
 
-module.exports = { requireStaffLogin, loadArticle, requireArticleOwnerOrEditor, getSessionUser };
+module.exports = { requireStaffLogin, requireReporterLogin, loadArticle, requireArticleOwnerOrEditor, getSessionUser };
