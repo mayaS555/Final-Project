@@ -1,6 +1,7 @@
 <%# Reporter dashboard (owned by B): the logged-in reporter's articles with their status.
     Rendered by controllers/reporterController.js. Uses C's temporary partials until A's shared layout exists.
     The action buttons are disabled until public/js/reporter-dashboard.js attaches their handlers. %>
+<%# TODO(B): switch to A's shared layout/partials when merged, and move /css/reporter.css into the head. %>
 <%- include("../public/partials/top") %>
     <link rel="stylesheet" href="/css/reporter.css">
     <main class="pub-main rep-dashboard" id="rep-dashboard">

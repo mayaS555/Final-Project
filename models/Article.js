@@ -60,6 +60,7 @@ const approvedSchema = new mongoose.Schema(
 const articleSchema = new mongoose.Schema(
   {
     // The reporter who owns the article (Person A's User model).
+    // TODO(B): confirm the model name once A's User model exists (and which field holds the display name).
     author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     // The author's display name, copied from the user at creation. Approval copies it into approved.authorName.
     authorName: { type: String, trim: true, required: true },

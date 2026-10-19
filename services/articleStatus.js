@@ -14,12 +14,15 @@ const ARTICLE_TRANSITIONS = [
 // Who may change the working copy (article.draft) in which status.
 // A reporter edits only their own article, and only while it is a draft or was returned.
 // An editor edits while reviewing (pending), for example to fix a typo before approving.
+// TODO(B): person-b-plan.md says editors may edit the working copy in ANY status; this allows only pending.
+// Decide with D (editing a draft the reporter is typing in makes the two autosaves overwrite each other).
 const EDITABLE_STATUSES = {
   reporter: ["draft", "returned"],
   editor: ["pending"],
 };
 
 // A reporter may delete only their own article that was never public and is not under review.
+// TODO(B): person-b-plan.md allows reporters to delete only never-published drafts; this also allows returned.
 const REPORTER_DELETABLE_STATUSES = ["draft", "returned"];
 
 /**

@@ -3,7 +3,8 @@
 What B built, how A, C and D connect to it, and how to demo it. Sections: [checklist for C](#what-c-asked-of-b) ·
 [files](#files) · [data model](#data-model) · [workflow](#workflow) · [for D](#for-person-d) ·
 [HTTP](#http-api-and-pages) · [for A](#for-person-a) · [seed](#seed-data) · [tests](#tests) ·
-[demo](#how-to-demo-person-b) · [open points](#differences-from-cs-doc-and-open-points) · [README text](#readme-section-for-a).
+[demo](#how-to-demo-person-b) · [open points](#differences-from-cs-doc-and-open-points) · [TODOs](#open-todos-for-b) ·
+[README text](#readme-section-for-a).
 
 ## What C asked of B
 
@@ -349,6 +350,34 @@ real browser when A's login exists.
 - **Open:** deleting an article leaves its comments and read history (B, C, D to decide who cleans up).
 - **Open:** if an editor edits a pending article in one tab while approving it in another at the same moment,
   the edit made in that instant may not reach the approved version.
+
+## Open TODOs for B
+
+In the code, each one is marked `TODO(B):` next to where the change goes. List them with `git grep -n "TODO(B)"`.
+
+| When | TODO | Where |
+| --- | --- | --- |
+| A merges auth | Read the session user from A's session shape | `getSessionUser` in `middleware/articleAccess.js` |
+| A merges auth | Swap `requireStaffLogin` / `requireReporterLogin` for A's middleware; redirect a 401 on the reporter pages to the login page | `middleware/articleAccess.js`, both routes files |
+| A merges the User model | Confirm the `ref: "User"` name and the display-name field | `models/Article.js` |
+| A merges the User model | Seed 5 reporters and 1 editor through A's model with passwords from `.env`; add the variables to `.env.example`; print the login usernames | `scripts/seed.js`, `.env.example` |
+| A merges the DB module | Use A's connection module in the seed | `scripts/seed.js` |
+| A merges the logger | Log article events with A's logger | `logArticleEvent` in `services/articleService.js` |
+| A merges the layout | Switch the reporter pages to A's layout; move `reporter.css` into the head | `views/reporter/*.ejs` |
+| Decide with D | Editor edit rule: the plan says any status, the code allows only `pending` | `services/articleStatus.js` |
+| Decide | Reporter delete rule: the plan says drafts only, the code also allows `returned` | `services/articleStatus.js` |
+| Decide with C and D | Who deletes an article's comments and read history | `deleteArticle` in `services/articleService.js` |
+| Optional | Close the approve race with an `updatedAt` condition | `approve` in `services/articleService.js` |
+| Cleanup | Replace the deprecated `validateSync()` in the model tests | `tests/articleModel.test.js` |
+| Cleanup | Delete the old self-check script | `scripts/check-article-status.js` |
+
+Not in the code:
+- **First real-browser run.** Do it once A's login exists, following "How to demo Person B".
+- **Empty PR descriptions.** PRs #3, #4 and #5 have none. Add the short descriptions from `person-b-plan.md`, with the
+  @PersonC and @PersonD notes.
+- **Two commit messages say more than the code does.** `930aa13` says "Top-level fields hold the approved version";
+  they are nested under `approved`. `9a7f9fd` says users are created with hashed passwords; no users are created
+  yet. Mention this in a PR description, and do not rewrite the merged history.
 
 ## README section for A
 

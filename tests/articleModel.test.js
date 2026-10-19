@@ -52,6 +52,7 @@ function approvedVersion(overrides = {}) {
  * @example invalidPaths(buildArticle({ status: "live" })) // ["status"]
  */
 function invalidPaths(article) {
+  // TODO(B): validateSync() is deprecated in Mongoose 9 (removed in 10); switch these checks to await validate().
   const error = article.validateSync();
   return error ? Object.keys(error.errors) : [];
 }

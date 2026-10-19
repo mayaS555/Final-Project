@@ -15,6 +15,8 @@ const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
  * @example const user = getSessionUser(req);
  */
 function getSessionUser(req) {
+  // TODO(B): when A's auth is merged, read the user where A stores it (req.session.user or req.user) and map it to
+  // { _id, role, name }; only this function reads it.
   // Assumption until A's auth is merged: login stores the user in req.session.user. Change only this line if not.
   return req.session && req.session.user ? req.session.user : null;
 }
@@ -41,6 +43,8 @@ function requireLoginWithRole(roles) {
   };
 }
 
+// TODO(B): replace these two stand-ins with A's login/role middleware in routes/articleApiRoutes.js and
+// routes/reporterRoutes.js, then delete requireLoginWithRole. On the reporter pages, let a 401 redirect to A's login.
 // Article API: reporters and editors. Reporter area: reporters only.
 const requireStaffLogin = requireLoginWithRole(["reporter", "editor"]);
 const requireReporterLogin = requireLoginWithRole(["reporter"]);

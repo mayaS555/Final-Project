@@ -23,6 +23,7 @@ const MAX_EDITOR_NOTE_LENGTH = 1000;
  */
 function logArticleEvent(event, article, user) {
   // ponytail: console.log until A's logger exists; then replace this one line.
+  // TODO(B): use A's logger here once it is merged.
   console.log(`[article] ${event} article=${article._id} by=${user._id} (${user.role})`);
 }
 
@@ -195,6 +196,8 @@ async function approve(article, editor) {
 
   const now = new Date();
   const isFirstPublish = !(article.approved && article.approved.publishedAt);
+  // TODO(B): this copies the working copy as loaded. An editor edit in another tab at the same instant can be
+  // missed; adding updatedAt to the update's condition (409 on change) would close that gap.
   const { title, summary, content, imageUrl, category } = article.draft;
   const updated = await updateIfStatusUnchanged(article, {
     $set: {
@@ -272,6 +275,8 @@ async function deleteArticle(article, user) {
     throw createHttpError(403, "You cannot delete this article.");
   }
   // Open question (B/C/D): the article's comments and read history are not deleted here.
+  // TODO(B): once B, C and D agree who cleans up, delete the article's comments and ArticleRead records too
+  // (or move the delete to a service that owns them).
   const result = await Article.deleteOne({ _id: article._id, status: article.status });
   if (result.deletedCount !== 1) {
     throw createHttpError(409, "The article was changed meanwhile. Reload the page and try again.");

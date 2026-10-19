@@ -1,6 +1,7 @@
 // Self-check for the article state machine in services/articleStatus.js (owned by B).
 // Run: node scripts/check-article-status.js
 // Prints "article status checks passed" or stops at the first failed assertion.
+// TODO(B): tests/articleStatus.test.js covers all of this; delete this script once the team no longer uses it.
 
 const assert = require("assert");
 const {

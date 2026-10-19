@@ -16,6 +16,9 @@ const PUBLISHED_DAYS = 60;
 // How many published articles get 2-5 approvals, for D's before/after analytics.
 const MULTI_UPDATE_COUNT = 15;
 
+// TODO(B): when A's User model and hashing exist, create these 5 reporters and 1 editor through A's model
+// (so the hashing runs), with passwords from .env (add SEED_* variables to .env.example), clear the seeded users
+// too, and print the login usernames in printSummary.
 // ponytail: fixed reporter ids and names until A's User model exists; then create these users through A's model
 // (so password hashing runs) and use their real ids here.
 const REPORTERS = [
@@ -353,6 +356,7 @@ async function seed() {
   if (!process.env.MONGODB_URI) {
     throw new Error("MONGODB_URI is not set. Add it to .env (see .env.example).");
   }
+  // TODO(B): use A's DB connection module and .env names once they exist.
   await mongoose.connect(process.env.MONGODB_URI);
   console.warn(`WARNING: deleting ALL articles in database "${mongoose.connection.name}" and creating ${ARTICLE_COUNT} new ones.`);
   console.warn("Comments, read history, views and publish events are not touched.");
