@@ -1,7 +1,6 @@
-// Tests for the edit page: toEditView and renderEditPage in controllers/reporterController.js, its route in
-// routes/reporterRoutes.js and views/reporter/edit.ejs (owned by B). toEditView is pure and needs no database;
-// the page is requested over HTTP from the test app in tests/testServer.js, and the parts that load
-// articles need MONGODB_TEST_URI (see tests/testDatabase.js).
+// Tests for the edit page (owned by B): toEditView and renderEditPage in controllers/reporterController.js, the route
+// and views/reporter/edit.ejs. toEditView needs no database; the page is requested from tests/testServer.js, and
+// the parts that load articles need MONGODB_TEST_URI (see tests/testDatabase.js).
 // Run: node --test tests/
 
 const { describe, test, before, after, mock } = require("node:test");

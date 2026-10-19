@@ -124,6 +124,13 @@ function loadDashboard({ answers = [], rows = ["a1"], href = "http://localhost/r
     },
   };
   const requests = [];
+  /**
+   * Stands in for fetch: records the request and returns the next prepared answer.
+   * @param {string} url The requested address.
+   * @param {Object} options The fetch options.
+   * @returns {Promise<Object>} The next answer, or a 200 answer when none is left.
+   * @example Passed to the script as its global fetch.
+   */
   const fakeFetch = (url, options) => {
     requests.push({ url, method: options.method, headers: options.headers });
     const next = answers.shift();

@@ -1,9 +1,7 @@
-// Article workflow (owned by B): the ONLY place that changes an article's status or its public
-// (approved) fields. B's reporter controllers and D's editor controllers call these functions;
-// they never set status or approved themselves. Every check uses services/articleStatus.js.
-// Errors are thrown with error.status (400, 403, 409) for the error middleware; database errors are rethrown.
-//
-// `user` is the logged-in user from A's session: { _id, role, name } with role "reporter" or "editor".
+// Article workflow (owned by B): the ONLY place that changes an article's status or its public (approved) fields.
+// Called by B's reporter controllers and D's editor controllers, which never set status or approved themselves.
+// Every check uses services/articleStatus.js. Errors are thrown with error.status (400, 403, 409); database errors
+// are rethrown. `user` is the logged-in user from A's session: { _id, role: "reporter" | "editor", name }.
 
 const Article = require("../models/Article");
 const { toSafeImageUrl } = require("./publicArticleService");

@@ -1,7 +1,6 @@
-// Article API under /api/articles (owned by B), used by the reporter area (autosave, dashboard) and
-// by editors. Thin by design: parse the input, call services/articleService.js, send JSON. Every rule
-// lives in the service and the state machine. Errors are thrown with error.status; Express 5 passes
-// them, and any rejected promise, to next(err) for A's error middleware.
+// Article API under /api/articles (owned by B), used by the reporter area (autosave, dashboard) and by editors.
+// Thin by design: parse the input, call services/articleService.js, send JSON; every rule lives in the service.
+// Errors are thrown with error.status; Express 5 passes them to next(err) for A's error middleware.
 // Approve and return are NOT here: Person D's controllers call the service for those.
 
 const articleService = require("../services/articleService");
