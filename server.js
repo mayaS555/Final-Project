@@ -16,6 +16,7 @@ const publicRoutes = require("./routes/publicRoutes");
 const authRoutes = require("./routes/authRoutes");
 const articleApiRoutes = require("./routes/articleApiRoutes");
 const reporterRoutes = require("./routes/reporterRoutes");
+const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 
 const app = express();
 
@@ -60,26 +61,37 @@ app.use(authRoutes);
 app.use(articleApiRoutes);
 app.use(reporterRoutes);
 
+// Protect editor area pages from unauthorized visitors
+app.get(["/editor.html", "/editor-article.html"], (req, res, next) => {
+  if (!req.session?.user) {
+    const err = new Error("Please log in as an editor.");
+    err.status = 401;
+    return next(err);
+  }
+  if (req.session.user.role !== "editor" && req.session.user.role !== "admin") {
+    const err = new Error("Only editors can access this page.");
+    err.status = 403;
+    return next(err);
+  }
+  next();
+});
+
+// Serve static assets from public folder
 app.use(express.static(path.join(__dirname, "public")));
 
-// Centralized error handler
-app.use((err, req, res, next) => {
-  const status = err.status || 500;
-  if (req.path.startsWith("/api/")) {
-    return res.status(status).json({ error: err.message || "Internal server error" });
-  }
+// 404 handler for unmatched routes
+app.use(notFoundHandler);
 
-  // Redirect unauthenticated visitors trying to open staff/reporter pages to login
-  if (status === 401) {
-    const returnTo = encodeURIComponent(req.originalUrl || "/reporter");
-    return res.redirect(`/login.html?returnTo=${returnTo}`);
-  }
+// Centralized error-handling middleware
+app.use(errorHandler);
 
-  res.status(status).render("public/message", {
-    pageTitle: `Error ${status}`,
-    title: `Error ${status}`,
-    message: err.message || "Something went wrong. Please try again later.",
-  });
+// Global safety net for unhandled async rejections and unexpected exceptions
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception thrown:", error);
 });
 
 const PORT = process.env.PORT || 3000;
@@ -113,4 +125,8 @@ async function startServer() {
   }
 }
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;
