@@ -1,6 +1,7 @@
 const publicArticleService = require("../services/publicArticleService");
 const articleReadService = require("../services/articleReadService");
 const commentService = require("../services/commentService");
+const weatherService = require("../services/weatherService");
 
 const MAX_PAGE = 1000;
 const MAX_SEARCH_LENGTH = 100;
@@ -197,9 +198,17 @@ async function renderHome(req, res) {
 
   try {
     // The category list ignores the active filters, so it stays usable during a search.
-    const [feed, categories] = await Promise.all([
+    // Weather is fetched in parallel; a failure never blocks the page render.
+    const [feed, categories, weather] = await Promise.all([
       loadFeed(feedQuery, req.deviceId),
       publicArticleService.getPublishedCategories(),
+      process.env.OPENWEATHERMAP_API_KEY
+        ? weatherService.getWeather(
+            process.env.WEATHER_DEFAULT_CITY || "Tel Aviv",
+            process.env.OPENWEATHERMAP_API_KEY,
+            "metric"
+          )
+        : Promise.resolve(null),
     ]);
     // The result depends on the device cookie, so shared caches must not store it.
     res.set("Cache-Control", "private, no-cache");
@@ -208,6 +217,7 @@ async function renderHome(req, res) {
       feed,
       categories,
       filters,
+      weather,
       feedHref: (page) => buildFeedHref(filters, page),
       formatDate,
     });
@@ -260,6 +270,20 @@ async function renderArticle(req, res) {
       commentsFailed = true;
     }
 
+    // Weather for the header widget; a failure never blocks the article render.
+    let weather = null;
+    if (process.env.OPENWEATHERMAP_API_KEY) {
+      try {
+        weather = await weatherService.getWeather(
+          process.env.WEATHER_DEFAULT_CITY || "Tel Aviv",
+          process.env.OPENWEATHERMAP_API_KEY,
+          "metric"
+        );
+      } catch (_err) {
+        // intentionally ignored – widget will show "unavailable"
+      }
+    }
+
     // The comment controls (edit, delete) depend on the device cookie, so shared caches must not store the page.
     res.set("Cache-Control", "private, no-cache");
     res.render("public/article", {
@@ -268,6 +292,7 @@ async function renderArticle(req, res) {
       paragraphs: splitParagraphs(article.content),
       comments,
       commentsFailed,
+      weather,
       formatDate,
       formatDateTime,
     });

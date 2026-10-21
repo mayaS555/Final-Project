@@ -16,6 +16,7 @@ const publicRoutes = require("./routes/publicRoutes");
 const authRoutes = require("./routes/authRoutes");
 const articleApiRoutes = require("./routes/articleApiRoutes");
 const reporterRoutes = require("./routes/reporterRoutes");
+const weatherRoutes = require("./routes/weatherRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 const logger = require("./services/logger");
 
@@ -64,6 +65,8 @@ app.use(authRoutes);
 // Reporter routes and Article REST API
 app.use(articleApiRoutes);
 app.use(reporterRoutes);
+// Weather proxy (cached, no auth required)
+app.use(weatherRoutes);
 
 // Protect editor area pages from unauthorized visitors
 app.get(["/editor.html", "/editor-article.html"], (req, res, next) => {
