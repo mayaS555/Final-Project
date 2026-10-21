@@ -2,6 +2,8 @@
 // Catches syntax errors, bad input, validation errors, and unauthorized requests,
 // ensuring the server never crashes on unexpected or invalid input.
 
+const logger = require("../services/logger");
+
 /**
  * Determines whether a request expects a JSON response.
  * @param {import("express").Request} req The incoming Express request.
@@ -100,9 +102,18 @@ function errorHandler(err, req, res, next) {
 
   const { status, message } = normalizeError(err);
 
-  // Log 5xx server errors on the server console for debugging
+  const context = {
+    status,
+    ip: req.ip,
+    user: req.session?.user ? req.session.user._id : undefined,
+  };
+
   if (status >= 500) {
-    console.error(`[ServerError] ${req.method} ${req.originalUrl || req.url}:`, err);
+    logger.error(`[HTTP ${status}] ${req.method} ${req.originalUrl || req.url} - ${message}`, err, context);
+  } else if (status === 401 || status === 403) {
+    logger.warn(`[AUTH ${status}] ${req.method} ${req.originalUrl || req.url} - ${message}`, context);
+  } else {
+    logger.warn(`[HTTP ${status}] ${req.method} ${req.originalUrl || req.url} - ${message}`, context);
   }
 
   // API or JSON clients receive structured JSON error payloads

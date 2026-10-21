@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const logger = require("../services/logger");
 
 /**
  * Handles user login.
@@ -11,6 +12,7 @@ async function login(req, res) {
     const isHtmlForm = req.headers["content-type"]?.includes("application/x-www-form-urlencoded");
 
     if (!email || !password) {
+      logger.logAuthEvent("login_failed_missing_credentials", { ip: req.ip });
       if (isHtmlForm) {
         const query = returnTo ? `?error=missing&returnTo=${encodeURIComponent(returnTo)}` : "?error=missing";
         return res.redirect(`/login.html${query}`);
@@ -18,8 +20,10 @@ async function login(req, res) {
       return res.status(400).json({ error: "Email and password are required." });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const cleanEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: cleanEmail });
     if (!user) {
+      logger.logAuthEvent("login_failed_user_not_found", { email: cleanEmail, ip: req.ip });
       if (isHtmlForm) {
         const query = returnTo ? `?error=invalid&returnTo=${encodeURIComponent(returnTo)}` : "?error=invalid";
         return res.redirect(`/login.html${query}`);
@@ -29,6 +33,7 @@ async function login(req, res) {
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      logger.logAuthEvent("login_failed_bad_password", { email: cleanEmail, ip: req.ip });
       if (isHtmlForm) {
         const query = returnTo ? `?error=invalid&returnTo=${encodeURIComponent(returnTo)}` : "?error=invalid";
         return res.redirect(`/login.html${query}`);
@@ -44,6 +49,13 @@ async function login(req, res) {
       role: user.role,
     };
 
+    logger.logAuthEvent("login_success", {
+      userId: String(user._id),
+      email: user.email,
+      role: user.role,
+      ip: req.ip,
+    });
+
     const targetUrl = returnTo || (user.role === "editor" ? "/editor.html" : "/reporter");
 
     if (isHtmlForm) {
@@ -56,7 +68,7 @@ async function login(req, res) {
       redirectUrl: targetUrl,
     });
   } catch (error) {
-    console.error("Login error:", error);
+    logger.error("Login error:", error);
     if (req.headers["content-type"]?.includes("application/x-www-form-urlencoded")) {
       return res.redirect("/login.html?error=server");
     }
@@ -69,9 +81,12 @@ async function login(req, res) {
  */
 function logout(req, res) {
   if (req.session) {
+    const userId = req.session.user?._id;
     req.session.destroy((err) => {
       if (err) {
-        console.error("Error destroying session:", err);
+        logger.error("Error destroying session:", err);
+      } else if (userId) {
+        logger.logAuthEvent("logout", { userId });
       }
       res.clearCookie("connect.sid");
       if (req.headers.accept?.includes("text/html")) {

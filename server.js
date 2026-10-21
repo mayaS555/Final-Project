@@ -17,6 +17,7 @@ const authRoutes = require("./routes/authRoutes");
 const articleApiRoutes = require("./routes/articleApiRoutes");
 const reporterRoutes = require("./routes/reporterRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
+const logger = require("./services/logger");
 
 const app = express();
 
@@ -46,6 +47,9 @@ app.use((req, res, next) => {
 
 // Connect Article model to publicArticleService
 useArticleModel(Article);
+
+// HTTP request logger – mounted early so all application routes are covered
+app.use(logger.requestLogger());
 
 // Public routes must be mounted before express.static so GET / serves the dynamic EJS feed
 app.use(publicRoutes);
@@ -87,11 +91,11 @@ app.use(errorHandler);
 
 // Global safety net for unhandled async rejections and unexpected exceptions
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  logger.error("Unhandled promise rejection", reason instanceof Error ? reason : new Error(String(reason)));
 });
 
 process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception thrown:", error);
+  logger.error("Uncaught exception – server may be in an unstable state", error);
 });
 
 const PORT = process.env.PORT || 3000;
@@ -99,14 +103,14 @@ const PORT = process.env.PORT || 3000;
 async function startServer() {
   try {
     if (!process.env.MONGODB_URI) {
-      console.error("MONGODB_URI is not set in .env");
+      logger.error("MONGODB_URI is not set in .env – cannot start.");
       process.exit(1);
     }
 
-    console.log("Connecting to MongoDB Atlas...");
+    logger.logServerEvent("db_connecting", { uri: process.env.MONGODB_URI.replace(/\/\/[^@]+@/, "//***@") });
     const connectOptions = process.env.DB_NAME ? { dbName: process.env.DB_NAME } : {};
     await mongoose.connect(process.env.MONGODB_URI, connectOptions);
-    console.log(`Connected to database: ${mongoose.connection.name}`);
+    logger.logServerEvent("db_connected", { db: mongoose.connection.name });
 
     // Ensure database indexes exist
     await Promise.all([
@@ -114,13 +118,13 @@ async function startServer() {
       ArticleRead.init(),
       Comment.init(),
     ]);
-    console.log("Database indexes initialized.");
+    logger.logServerEvent("indexes_ready");
 
     app.listen(PORT, () => {
-      console.log(`Server is running on http://localhost:${PORT}`);
+      logger.logServerEvent("start", { port: PORT, env: process.env.NODE_ENV || "development" });
     });
   } catch (error) {
-    console.error("Failed to start server:", error.message);
+    logger.error("Failed to start server:", error);
     process.exit(1);
   }
 }
