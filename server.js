@@ -57,7 +57,8 @@ async function startServer() {
     }
 
     console.log("Connecting to MongoDB Atlas...");
-    await mongoose.connect(process.env.MONGODB_URI);
+    const connectOptions = process.env.DB_NAME ? { dbName: process.env.DB_NAME } : {};
+    await mongoose.connect(process.env.MONGODB_URI, connectOptions);
     console.log(`Connected to database: ${mongoose.connection.name}`);
 
     // Ensure database indexes exist

@@ -353,7 +353,8 @@ async function seed() {
   if (!process.env.MONGODB_URI) {
     throw new Error("MONGODB_URI is not set. Add it to .env (see .env.example).");
   }
-  await mongoose.connect(process.env.MONGODB_URI);
+  const connectOptions = process.env.DB_NAME ? { dbName: process.env.DB_NAME } : {};
+  await mongoose.connect(process.env.MONGODB_URI, connectOptions);
   console.warn(`WARNING: deleting ALL articles in database "${mongoose.connection.name}" and creating ${ARTICLE_COUNT} new ones.`);
   console.warn("Comments, read history, views and publish events are not touched.");
 
