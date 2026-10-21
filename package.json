@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/mayaS555/Final-Project#readme",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.1",
     "ejs": "^6.0.1",
     "express": "^5.2.1",
