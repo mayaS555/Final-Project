@@ -219,6 +219,72 @@
     margin: 20px auto 0;
 }
 
+/* ── Weather widget ─────────────────────────────────────────────────────── */
+
+.pub-site .weather-widget {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #ffffff;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.pub-site .weather-icon--img {
+    display: block;
+    width: 40px;
+    height: 40px;
+    /* Trim the transparent padding OWM adds around its icons. */
+    margin: -6px -4px;
+    flex-shrink: 0;
+}
+
+.pub-site .weather-icon--unavail {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.pub-site .weather-temp {
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: -0.5px;
+}
+
+.pub-site .weather-desc {
+    text-transform: capitalize;
+    opacity: 0.85;
+}
+
+/* Separator dot between description and city name. */
+.pub-site .weather-city::before {
+    content: "·";
+    margin-right: 6px;
+    opacity: 0.5;
+}
+
+.pub-site .weather-stale {
+    font-size: 11px;
+    opacity: 0.65;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 4px;
+}
+
+.pub-site .weather-text--unavail {
+    opacity: 0.7;
+    font-style: italic;
+}
+
+/* ── Responsive: hide description and city on narrow screens ─────────────── */
+@media (max-width: 600px) {
+    .pub-site .weather-desc,
+    .pub-site .weather-city {
+        display: none;
+    }
+}
+
+/* ── Responsive: general header adjustments ──────────────────────────────── */
 @media (max-width: 600px) {
     .pub-site .pub-header {
         padding: 12px 16px;

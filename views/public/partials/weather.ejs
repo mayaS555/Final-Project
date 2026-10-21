@@ -1,0 +1,46 @@
+<%#
+  Weather widget partial.
+  Rendered server-side with the initial weather data so the page looks correct
+  even before JavaScript runs.  The client-side script (weather-widget.js) then
+  refreshes the data periodically without a full page reload.
+
+  Expected locals:
+    weather  – { data, fromCache, stale, unavailable }  (may be null when the
+                API key is not set)
+%>
+<%
+  const w         = (typeof weather !== 'undefined' && weather) ? weather : null;
+  const data      = w ? w.data   : null;
+  const stale     = w ? w.stale  : false;
+  const unavail   = !w || w.unavailable;
+
+  // Icon URL helper (OpenWeatherMap CDN).
+  function iconUrl(icon) {
+    return `https://openweathermap.org/img/wn/${icon}@2x.png`;
+  }
+%>
+<div class="weather-widget" id="weather-widget"
+     data-city="<%= (data && data.city) ? data.city : (process.env.WEATHER_DEFAULT_CITY || 'Tel Aviv') %>"
+     aria-label="Current weather">
+
+  <% if (unavail) { %>
+    <span class="weather-icon weather-icon--unavail" aria-hidden="true">🌫️</span>
+    <span class="weather-text weather-text--unavail">Weather unavailable</span>
+
+  <% } else { %>
+    <% if (data.icon) { %>
+      <img class="weather-icon weather-icon--img"
+           src="<%= iconUrl(data.icon) %>"
+           alt="<%= data.description %>"
+           width="40" height="40">
+    <% } %>
+    <span class="weather-temp">
+      <%= data.temp !== null ? data.temp + '°C' : '—' %>
+    </span>
+    <span class="weather-desc"><%= data.description %></span>
+    <span class="weather-city"><%= data.city %><% if (data.country) { %>, <%= data.country %><% } %></span>
+    <% if (stale) { %>
+      <span class="weather-stale" title="Live data is temporarily unavailable; showing cached reading">Cached</span>
+    <% } %>
+  <% } %>
+</div>
