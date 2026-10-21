@@ -13,6 +13,16 @@
     <header class="pub-header">
         <a class="pub-brand" href="/">The Daily Web</a>
         <nav aria-label="Staff">
-            <a href="/login.html">Staff Login</a>
+            <% if (locals.user) { %>
+                <span style="margin-right: 0.75rem; color: #4b5563; font-size: 0.95rem;">Hello, <%= user.name %></span>
+                <% if (user.role === 'reporter') { %>
+                    <a href="/reporter" style="margin-right: 0.5rem;">Reporter Dashboard</a>
+                <% } else if (user.role === 'editor') { %>
+                    <a href="/editor.html" style="margin-right: 0.5rem;">Editor Dashboard</a>
+                <% } %>
+                <a href="/logout">Logout</a>
+            <% } else { %>
+                <a href="/login.html">Staff Login</a>
+            <% } %>
         </nav>
     </header>

@@ -22,7 +22,10 @@
             <h2>Staff Login</h2>
             <h3>For reporters and editors</h3>
 
-            <form>
+            <div id="error-message" style="display: none; background: #fee2e2; border: 1px solid #f87171; color: #991b1b; padding: 0.65rem 1rem; border-radius: 6px; margin-bottom: 1.25rem; font-size: 0.9rem; text-align: center;"></div>
+
+            <form id="login-form" action="/login" method="POST">
+                <input type="hidden" id="returnTo" name="returnTo" value="">
 
                 <div class="form-group">
                     <label for="email">Email</label>
@@ -46,7 +49,7 @@
                     >
                 </div>
 
-                <button type="submit">Login</button>
+                <button type="submit" id="submit-btn">Login</button>
 
             </form>
 
@@ -57,6 +60,62 @@
 
     </main>
 
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const returnTo = params.get('returnTo') || '';
+        if (returnTo) {
+            document.getElementById('returnTo').value = returnTo;
+        }
+
+        const errorParam = params.get('error');
+        const errorDiv = document.getElementById('error-message');
+        if (errorParam === 'invalid') {
+            errorDiv.textContent = 'Invalid email or password.';
+            errorDiv.style.display = 'block';
+        } else if (errorParam === 'missing') {
+            errorDiv.textContent = 'Please enter both email and password.';
+            errorDiv.style.display = 'block';
+        } else if (errorParam === 'server') {
+            errorDiv.textContent = 'Server error. Please try again.';
+            errorDiv.style.display = 'block';
+        }
+
+        const form = document.getElementById('login-form');
+        const submitBtn = document.getElementById('submit-btn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorDiv.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging in...';
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, returnTo }),
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    errorDiv.textContent = data.error || 'Login failed. Please check your credentials.';
+                    errorDiv.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Login';
+                } else {
+                    window.location.href = data.redirectUrl || '/reporter';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Login';
+            }
+        });
+    </script>
 </body>
 
 </html>
