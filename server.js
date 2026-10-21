@@ -16,6 +16,8 @@ const publicRoutes = require("./routes/publicRoutes");
 const authRoutes = require("./routes/authRoutes");
 const articleApiRoutes = require("./routes/articleApiRoutes");
 const reporterRoutes = require("./routes/reporterRoutes");
+const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
+const logger = require("./services/logger");
 
 const app = express();
 
@@ -46,6 +48,9 @@ app.use((req, res, next) => {
 // Connect Article model to publicArticleService
 useArticleModel(Article);
 
+// HTTP request logger – mounted early so all application routes are covered
+app.use(logger.requestLogger());
+
 // Public routes must be mounted before express.static so GET / serves the dynamic EJS feed
 app.use(publicRoutes);
 
@@ -60,26 +65,37 @@ app.use(authRoutes);
 app.use(articleApiRoutes);
 app.use(reporterRoutes);
 
+// Protect editor area pages from unauthorized visitors
+app.get(["/editor.html", "/editor-article.html"], (req, res, next) => {
+  if (!req.session?.user) {
+    const err = new Error("Please log in as an editor.");
+    err.status = 401;
+    return next(err);
+  }
+  if (req.session.user.role !== "editor" && req.session.user.role !== "admin") {
+    const err = new Error("Only editors can access this page.");
+    err.status = 403;
+    return next(err);
+  }
+  next();
+});
+
+// Serve static assets from public folder
 app.use(express.static(path.join(__dirname, "public")));
 
-// Centralized error handler
-app.use((err, req, res, next) => {
-  const status = err.status || 500;
-  if (req.path.startsWith("/api/")) {
-    return res.status(status).json({ error: err.message || "Internal server error" });
-  }
+// 404 handler for unmatched routes
+app.use(notFoundHandler);
 
-  // Redirect unauthenticated visitors trying to open staff/reporter pages to login
-  if (status === 401) {
-    const returnTo = encodeURIComponent(req.originalUrl || "/reporter");
-    return res.redirect(`/login.html?returnTo=${returnTo}`);
-  }
+// Centralized error-handling middleware
+app.use(errorHandler);
 
-  res.status(status).render("public/message", {
-    pageTitle: `Error ${status}`,
-    title: `Error ${status}`,
-    message: err.message || "Something went wrong. Please try again later.",
-  });
+// Global safety net for unhandled async rejections and unexpected exceptions
+process.on("unhandledRejection", (reason, promise) => {
+  logger.error("Unhandled promise rejection", reason instanceof Error ? reason : new Error(String(reason)));
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught exception – server may be in an unstable state", error);
 });
 
 const PORT = process.env.PORT || 3000;
@@ -87,14 +103,14 @@ const PORT = process.env.PORT || 3000;
 async function startServer() {
   try {
     if (!process.env.MONGODB_URI) {
-      console.error("MONGODB_URI is not set in .env");
+      logger.error("MONGODB_URI is not set in .env – cannot start.");
       process.exit(1);
     }
 
-    console.log("Connecting to MongoDB Atlas...");
+    logger.logServerEvent("db_connecting", { uri: process.env.MONGODB_URI.replace(/\/\/[^@]+@/, "//***@") });
     const connectOptions = process.env.DB_NAME ? { dbName: process.env.DB_NAME } : {};
     await mongoose.connect(process.env.MONGODB_URI, connectOptions);
-    console.log(`Connected to database: ${mongoose.connection.name}`);
+    logger.logServerEvent("db_connected", { db: mongoose.connection.name });
 
     // Ensure database indexes exist
     await Promise.all([
@@ -102,15 +118,19 @@ async function startServer() {
       ArticleRead.init(),
       Comment.init(),
     ]);
-    console.log("Database indexes initialized.");
+    logger.logServerEvent("indexes_ready");
 
     app.listen(PORT, () => {
-      console.log(`Server is running on http://localhost:${PORT}`);
+      logger.logServerEvent("start", { port: PORT, env: process.env.NODE_ENV || "development" });
     });
   } catch (error) {
-    console.error("Failed to start server:", error.message);
+    logger.error("Failed to start server:", error);
     process.exit(1);
   }
 }
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;

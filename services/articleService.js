@@ -4,6 +4,7 @@
 // are rethrown. `user` is the logged-in user from A's session: { _id, role: "reporter" | "editor", name }.
 
 const Article = require("../models/Article");
+const logger = require("./logger");
 const { toSafeImageUrl } = require("./publicArticleService");
 const { assertTransition, canEditWorkingCopy, canDelete, createHttpError } = require("./articleStatus");
 
@@ -22,8 +23,7 @@ const MAX_EDITOR_NOTE_LENGTH = 1000;
  * @example logArticleEvent("approve", article, editor);
  */
 function logArticleEvent(event, article, user) {
-  // ponytail: console.log until A's logger exists; then replace this one line.
-  console.log(`[article] ${event} article=${article._id} by=${user._id} (${user.role})`);
+  logger.logArticleEvent(event, article._id, user._id, user.role);
 }
 
 /**
