@@ -8,7 +8,8 @@ A small news platform built as a final project. Reporters write and submit artic
 - **MongoDB* – data storage
 - **EJS** – server-side templating
 - **bcryptjs** – password hashing
-- **express-session** – session management
+- **express-session + connect-mongo** – session management, stored in MongoDB so logins survive a restart
+- No frontend framework – plain HTML/CSS/JS on the client
 
 ## Getting started
 
@@ -21,7 +22,8 @@ A small news platform built as a final project. Reporters write and submit artic
    ```bash
    cp .env.example .env
    ```
-   The only thing that's strictly required to run is `MONGODB_URI`. Everything else has a fallback.
+   `MONGODB_URI` and `SESSION_SECRET` are required. Generate the session secret with
+   `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and keep it unchanged between restarts.
 
 3. (Optional) Seed the database with 500 generated articles:
    ```bash
@@ -41,7 +43,7 @@ A small news platform built as a final project. Reporters write and submit artic
 |---|---|---|---|
 | `MONGODB_URI` | yes | — | Full connection string |
 | `DB_NAME` | no | from URI | Override the database name |
-| `SESSION_SECRET` | no | hardcoded fallback | Change this in production |
+| `SESSION_SECRET` | yes | — | Signs session cookies. Generate a long random value and keep it stable across restarts |
 | `PORT` | no | `3000` | |
 | `NODE_ENV` | no | `development` | Set to `production` to hide error details; seed script refuses to run |
 | `LOG_LEVEL` | no | `info` | `debug` / `info` / `warn` / `error` / `silent` |
