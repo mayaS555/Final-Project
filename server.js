@@ -11,6 +11,7 @@ const Comment = require("./models/Comment");
 const { useArticleModel } = require("./services/publicArticleService");
 
 const session = require("express-session");
+const { MongoStore } = require("connect-mongo");
 
 const publicRoutes = require("./routes/publicRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -26,15 +27,36 @@ const app = express();
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-// Session configuration
+// Session configuration. Sessions are stored in MongoDB so they survive a server restart.
+const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 1 day
+const SESSION_SECRET = process.env.SESSION_SECRET;
+
+if (!SESSION_SECRET) {
+  throw new Error(
+    "SESSION_SECRET is not set. Add a long random value to .env (see .env.example). " +
+      "Without it, session cookies cannot be signed safely."
+  );
+}
+
+// Reuse Mongoose's MongoDB connection. The store waits for the connection before its first operation,
+// so the session middleware can be registered before startServer() connects.
+const sessionStore = MongoStore.create({
+  clientPromise: mongoose.connection.asPromise().then(() => mongoose.connection.getClient()),
+  dbName: process.env.DB_NAME || undefined,
+  collectionName: "sessions",
+  ttl: SESSION_MAX_AGE_MS / 1000,
+  autoRemove: "native",
+});
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "daily-web-secret-key-2026",
+    secret: SESSION_SECRET,
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: SESSION_MAX_AGE_MS,
       sameSite: "lax",
     },
   })
