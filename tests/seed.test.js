@@ -9,15 +9,29 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const mongoose = require("mongoose");
 const Article = require("../models/Article");
+const ArticleView = require("../models/ArticleView");
+const Comment = require("../models/Comment");
+const PublishEvent = require("../models/PublishEvent");
+const User = require("../models/User");
 const { ARTICLE_CATEGORIES } = require("../models/articleCategories");
 const articleService = require("../services/articleService");
 const publicArticleService = require("../services/publicArticleService");
-const { buildSeedArticles, REPORTERS, ARTICLE_COUNT, MULTI_UPDATE_COUNT } = require("../scripts/seed");
+const {
+  buildSeedArticles,
+  buildSeedAnalytics,
+  buildSeedComments,
+  createSeedUsers,
+  REPORTERS,
+  ARTICLE_COUNT,
+  MULTI_UPDATE_COUNT,
+} = require("../scripts/seed");
 const { skipWithoutDatabase, connectTestDatabase, disconnectTestDatabase } = require("./testDatabase");
 
 const NOW = new Date("2026-10-19T12:00:00Z");
 const DAY_MS = 24 * 60 * 60 * 1000;
 const articles = buildSeedArticles({ now: NOW });
+const analytics = buildSeedAnalytics({ articles, now: NOW });
+const comments = buildSeedComments({ articles, now: NOW });
 
 /**
  * The kind of a seeded article: its status, or "revision" for a pending new version of a published article.
@@ -114,10 +128,70 @@ describe("seed documents (no MongoDB needed)", () => {
     }
   });
 
-  test("no views, no image addresses (C's placeholder), and the same seed gives the same articles", () => {
+  test("no image addresses (C's placeholder), and the same seed gives the same articles", () => {
     assert.ok(articles.every((article) => article.totalViews === 0 && article.draft.imageUrl === ""));
     const again = buildSeedArticles({ now: NOW });
     assert.deepEqual(again.map((article) => article.draft.title), articles.map((article) => article.draft.title));
+  });
+
+  test("articles can be assigned to the real ids of the users the seed creates", () => {
+    const reporters = [
+      { id: "665000000000000000000101", name: "First Reporter" },
+      { id: "665000000000000000000102", name: "Second Reporter" },
+    ];
+    const generated = buildSeedArticles({ now: NOW, reporters });
+    assert.ok(generated.every((article) => reporters.some((reporter) => reporter.id === String(article.author))));
+    assert.deepEqual(new Set(generated.map((article) => article.authorName)).size, reporters.length);
+  });
+
+  test("comments are seeded on public articles, after publication and before now", () => {
+    const articlesById = new Map(articles.map((article) => [String(article._id), article]));
+    assert.ok(comments.length > 0);
+    for (const comment of comments) {
+      const article = articlesById.get(String(comment.articleId));
+      assert.ok(article && article.approved, "comment belongs to a public article");
+      assert.ok(comment.displayName && comment.body && comment.deviceId);
+      assert.ok(comment.createdAt >= article.approved.publishedAt);
+      assert.ok(comment.createdAt <= NOW);
+    }
+  });
+
+  test("view data covers every public article and totalViews is the sum of its buckets", () => {
+    const publicIds = new Set(articles.filter((article) => article.approved).map((article) => String(article._id)));
+    const viewsByArticle = new Map();
+    for (const view of analytics.views) {
+      const id = String(view.articleId);
+      assert.ok(publicIds.has(id), "only public articles have views");
+      assert.ok(view.count >= 1);
+      assert.ok(view.bucketStart <= NOW);
+      viewsByArticle.set(id, (viewsByArticle.get(id) || 0) + view.count);
+    }
+    assert.equal(viewsByArticle.size, publicIds.size);
+    for (const id of publicIds) {
+      assert.equal(analytics.totalViews.get(id), viewsByArticle.get(id));
+      assert.ok(analytics.totalViews.get(id) > 0);
+    }
+    assert.ok(!analytics.totalViews.has(String(articles.find((article) => !article.approved)._id)));
+  });
+
+  test("every approval has a publish marker between the first and last approval", () => {
+    const eventsByArticle = new Map();
+    for (const event of analytics.publishEvents) {
+      const id = String(event.articleId);
+      if (!eventsByArticle.has(id)) {
+        eventsByArticle.set(id, []);
+      }
+      eventsByArticle.get(id).push(event);
+    }
+    for (const article of articles.filter((item) => item.approved)) {
+      const events = eventsByArticle.get(String(article._id));
+      assert.equal(events.length, article.publishCount);
+      assert.equal(events[0].isFirstPublish, true);
+      assert.equal(events[0].publishedAt.getTime(), article.approved.publishedAt.getTime());
+      assert.equal(events.at(-1).publishedAt.getTime(), article.approved.updatedAt.getTime());
+      assert.deepEqual(events.map((event) => event.publishCount), article.publishCount === 1 ? [1] : [1, 2, 3, 4, 5].slice(0, article.publishCount));
+      assert.ok(events.every((event) => event.publishedAt >= article.approved.publishedAt && event.publishedAt <= article.approved.updatedAt));
+    }
   });
 
   test("refuses to run with NODE_ENV=production, before connecting", () => {
@@ -132,10 +206,27 @@ describe("seed documents (no MongoDB needed)", () => {
 });
 
 describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
+  let seededUsers;
+  let seededArticles;
+  let seededComments;
+  let seededAnalytics;
+
   before(async () => {
     await connectTestDatabase();
     publicArticleService.useArticleModel(Article);
-    await Article.insertMany(buildSeedArticles(), { timestamps: false });
+    await User.init();
+    seededUsers = await createSeedUsers();
+    const reporters = seededUsers.reporters.map((user) => ({ id: String(user._id), name: user.name }));
+    seededArticles = buildSeedArticles({ reporters });
+    seededAnalytics = buildSeedAnalytics({ articles: seededArticles });
+    for (const article of seededArticles) {
+      article.totalViews = seededAnalytics.totalViews.get(String(article._id)) || 0;
+    }
+    seededComments = buildSeedComments({ articles: seededArticles });
+    await Article.insertMany(seededArticles, { timestamps: false });
+    await Comment.insertMany(seededComments, { timestamps: false });
+    await ArticleView.insertMany(seededAnalytics.views);
+    await PublishEvent.insertMany(seededAnalytics.publishEvents);
   });
 
   after(disconnectTestDatabase);
@@ -145,6 +236,49 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
     const multi = await Article.findOne({ publishCount: { $gte: 2 } }).lean();
     assert.ok(multi.approved.updatedAt > multi.approved.publishedAt);
     assert.ok(multi.createdAt < multi.approved.publishedAt);
+  });
+
+  test("demo users are real accounts with hashed passwords and own the seeded articles", async () => {
+    assert.equal(seededUsers.reporters.length, 5);
+    assert.equal(seededUsers.editor.role, "editor");
+    assert.deepEqual(seededUsers.reporters.map((user) => String(user._id)).sort(), REPORTERS.map((reporter) => reporter.id).sort());
+    const reporterPassword = process.env.SEED_REPORTER_PASSWORD || "reporter123";
+    const editorPassword = process.env.SEED_EDITOR_PASSWORD || "editor123";
+    for (const user of seededUsers.reporters) {
+      assert.match(user.password, /^\$2[aby]\$10\$/);
+      assert.equal(await user.comparePassword(reporterPassword), true);
+    }
+    assert.match(seededUsers.editor.password, /^\$2[aby]\$10\$/);
+    assert.equal(await seededUsers.editor.comparePassword(editorPassword), true);
+
+    const usersById = new Map([...seededUsers.reporters, seededUsers.editor].map((user) => [String(user._id), user]));
+    for (const article of seededArticles) {
+      const author = usersById.get(String(article.author));
+      assert.ok(author, "the article author is a real user");
+      assert.equal(article.authorName, author.name);
+    }
+  });
+
+  test("comments, views and publish events are stored and point at public articles", async () => {
+    const publicIds = new Set(seededArticles.filter((article) => article.approved).map((article) => String(article._id)));
+    const [comments, views, events] = await Promise.all([Comment.find().lean(), ArticleView.find().lean(), PublishEvent.find().lean()]);
+    assert.equal(comments.length, seededComments.length);
+    assert.equal(views.length, seededAnalytics.views.length);
+    assert.equal(events.length, seededAnalytics.publishEvents.length);
+    assert.ok(comments.every((comment) => publicIds.has(String(comment.articleId))));
+    assert.ok(views.every((view) => publicIds.has(String(view.articleId)) && view.count >= 1));
+    assert.ok(events.every((event) => publicIds.has(String(event.articleId))));
+
+    const totals = new Map();
+    for (const view of views) {
+      const id = String(view.articleId);
+      totals.set(id, (totals.get(id) || 0) + view.count);
+    }
+    for (const article of seededArticles.filter((item) => item.approved)) {
+      assert.equal(totals.get(String(article._id)), article.totalViews);
+    }
+    const storedUsers = await User.countDocuments();
+    assert.equal(storedUsers, 6);
   });
 
   test("a seeded published article has the same fields as one published by the real service", async () => {

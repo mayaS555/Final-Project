@@ -34,7 +34,7 @@ section 4):
 | `routes/articleApiRoutes.js`, `controllers/articleApiController.js` | REST API under `/api/articles`. |
 | `routes/reporterRoutes.js`, `controllers/reporterController.js`, `views/reporter/*.ejs` | Dashboard and edit page. |
 | `public/js/reporter-*.js`, `public/css/reporter.css` | Dashboard actions, autosave, submit; styles. |
-| `scripts/seed.js` | `npm run seed`: 500 articles. |
+| `scripts/seed.js` | `npm run seed`: 500 articles, demo users, comments, views and publish events. |
 | `tests/*.test.js` (B's), `tests/testDatabase.js`, `tests/testServer.js`, `tests/fakeEditPage.js` | Tests and their helpers. |
 
 ## Data model
@@ -226,10 +226,15 @@ app.use(require("./routes/reporterRoutes"));
 
 ## Seed data
 
-`npm run seed` (`scripts/seed.js`) replaces all articles with 500 generated ones in about a second.
+`npm run seed` (`scripts/seed.js`) replaces all articles with 500 generated ones and fills the demo data around them.
 
 - **Safety.** It reads `MONGODB_URI` from `.env` and refuses to run with `NODE_ENV=production`. It warns, then
-  deletes **only** `articles`; comments, read history, views and publish events are not touched.
+  deletes the `articles` collection and the demo collections that point at those articles: `comments`,
+  `article_reads`, `article_views` and `publish_events`. It creates or updates the demo staff accounts through the
+  User model; other users are not touched.
+- **Users.** Five reporters and one editor, with hashed passwords from `SEED_REPORTER_PASSWORD` /
+  `SEED_EDITOR_PASSWORD` (defaults are in `.env.example`). The seeded articles use their real `_id`s, so a reporter
+  who logs in sees a populated dashboard. The accounts are listed in `README.md`.
 - **Repeatable and real-shaped.**
   - A fixed random seed builds the same articles every run; only the dates follow the current time.
   - The documents have the same fields as articles published through the service (a test checks this).
@@ -238,15 +243,14 @@ app.use(require("./routes/reporterRoutes"));
   50 drafts (half of them half written) and 50 returned with a note.
 - **Spread.** Every category has every reporter and every state; published dates cover the last 60 days.
 - **Text and images.** English text (C's search uses the English text index). `imageUrl` is empty, so C's feed
-  shows its placeholder. `totalViews` is 0.
-- **For D.** 15 articles were approved 2–5 times: `{ publishCount: { $gte: 2 } }`. For each, `approved.publishedAt`
-  is the first approval and `approved.updatedAt` the latest. The approvals in between are not stored, so D's seed
-  can spread its publish events between the two dates.
-- **Users.** None yet, because A has no User model or hashing. The articles use 5 fixed reporters (ids
-  `665000000000000000000001`–`…005`, printed at the end). When A merges, the seed will create them and one editor
-  through A's model, with passwords from `.env`.
-- **Order.** Run B's seed first. C and D have no seeds yet; theirs should read the existing articles
-  (`Article.find(Article.publicFilter())`).
+  shows its placeholder.
+- **Comments.** One to four comments on most public articles, with dates after publication.
+- **Views.** Daily `ArticleView` buckets from publication to today, with a spike on update days. Each article's
+  `totalViews` is the sum of its buckets, so C's popular sort sees real numbers too.
+- **Publish markers.** One `PublishEvent` per approval. The 15 multi-update articles (`publishCount >= 2`) have
+  events spread between `approved.publishedAt` and `approved.updatedAt`, so D's graph can show views before and
+  after each update.
+- **Order.** Run B's seed first. C and D's seeds are not needed: this seed fills the collections they read.
 
 ## Tests
 
@@ -378,7 +382,8 @@ npm run seed
 ```
 
 Replaces all articles with 500 sample articles in every state (275 published, spread over the last 60 days, in all
-categories). It deletes only the articles collection and refuses to run when `NODE_ENV=production`.
+categories), creates the demo users, comments, view buckets and publish events, and refuses to run when
+`NODE_ENV=production`.
 
 ## Tests
 
