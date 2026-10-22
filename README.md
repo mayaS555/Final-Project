@@ -25,11 +25,13 @@ A small news platform built as a final project. Reporters write and submit artic
    `MONGODB_URI` and `SESSION_SECRET` are required. Generate the session secret with
    `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and keep it unchanged between restarts.
 
-3. (Optional) Seed the database with 500 generated articles:
+3. (Optional) Seed the demo database:
    ```bash
    npm run seed
    ```
-   This will wipe the `articles` collection and replace it. It won't touch users, comments, or read history.
+   This replaces the articles and the demo data attached to them (comments, read history, article views and
+   publish events), and creates or updates the five demo reporters and one demo editor listed below. Other user
+   accounts are not touched.
 
 4. Start the server:
    ```bash
@@ -46,6 +48,8 @@ A small news platform built as a final project. Reporters write and submit artic
 | `SESSION_SECRET` | yes | — | Signs session cookies. Generate a long random value and keep it stable across restarts |
 | `PORT` | no | `3000` | |
 | `NODE_ENV` | no | `development` | Set to `production` to hide error details; seed script refuses to run |
+| `SEED_REPORTER_PASSWORD` | no | `reporter123` | Password for the demo reporter accounts created by `npm run seed` |
+| `SEED_EDITOR_PASSWORD` | no | `editor123` | Password for the demo editor account created by `npm run seed` |
 | `LOG_LEVEL` | no | `info` | `debug` / `info` / `warn` / `error` / `silent` |
 | `LOG_TO_FILE` | no | `false` | Write logs to `logs/` in addition to stdout |
 | `OPENWEATHERMAP_API_KEY` | no | — | Get one free at openweathermap.org. Widget shows "unavailable" without it |
@@ -63,6 +67,23 @@ To create a user, either use the helper script or connect directly to MongoDB:
 ```bash
 node scripts/create-user.js
 ```
+
+### Demo accounts created by the seed
+
+`npm run seed` creates (or updates) these accounts with hashed passwords. The passwords can be changed with
+`SEED_REPORTER_PASSWORD` and `SEED_EDITOR_PASSWORD`.
+
+| Role | Email | Default password |
+|---|---|---|
+| reporter | `noa.levi@dailyweb.test` | `reporter123` |
+| reporter | `daniel.cohen@dailyweb.test` | `reporter123` |
+| reporter | `yael.mizrahi@dailyweb.test` | `reporter123` |
+| reporter | `omer.friedman@dailyweb.test` | `reporter123` |
+| reporter | `maya.shapiro@dailyweb.test` | `reporter123` |
+| editor | `editor@dailyweb.test` | `editor123` |
+
+The 500 seeded articles are owned by these reporters, so logging in as one of them shows a populated dashboard.
+The seed also adds comments, per-day view data and publish-event markers for the Impact Analytics demo.
 
 ## Article workflow
 
@@ -105,7 +126,7 @@ All the routes that return JSON live under `/api/`:
 ```
 controllers/   – request handlers (public site, reporter dashboard, article API, auth)
 middleware/    – session auth checks, device identity cookie, error handler
-models/        – Mongoose schemas (Article, User, Comment, ArticleRead)
+models/        – Mongoose schemas (Article, User, Comment, ArticleRead, ArticleView, PublishEvent)
 routes/        – Express routers
 services/      – business logic and shared utilities (article state machine, caching, logging, weather)
 views/         – EJS templates
