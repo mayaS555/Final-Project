@@ -5,11 +5,10 @@ A small news platform built as a final project. Reporters write and submit artic
 ## Stack
 
 - **Node.js / Express 5** – server and routing
-- **MongoDB / Mongoose** – data storage
+- **MongoDB* – data storage
 - **EJS** – server-side templating
 - **bcryptjs** – password hashing
 - **express-session** – session management
-- No frontend framework – plain HTML/CSS/JS on the client
 
 ## Getting started
 
@@ -98,13 +97,6 @@ All the routes that return JSON live under `/api/`:
 | `GET/POST` | `/api/articles/:id/comments` | anyone |
 | `PATCH/DELETE` | `/api/articles/:id/comments/:cid` | comment author (device cookie) |
 
-## Running tests
-
-```bash
-npm test
-```
-
-Tests use Node's built-in test runner. They need a running MongoDB instance – either a local one or set `MONGODB_URI` to a test Atlas cluster. The test files set `NODE_ENV=test` automatically, which silences most log output.
 
 ## Project structure
 
@@ -120,13 +112,5 @@ views/         – EJS templates
 public/        – static assets (CSS, client-side JS)
 scripts/       – one-off utilities (seed, create-user)
 tests/         – test files and test helpers
-docs/          – integration notes between team members
 ```
 
-## Known gaps / things we didn't get to
-
-- No email notifications when an article is returned or approved
-- Comment moderation is purely by device cookie – the same device owns the comment, no account needed
-- `totalViews` exists on the article model but the increment endpoint wasn't connected in this version
-- No rate limiting on the weather proxy (the upstream cache keeps it from being a real problem, but still)
-- The seed script always uses English text; the MongoDB text index is English too, so Hebrew searches won't stem correctly
