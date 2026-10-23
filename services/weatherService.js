@@ -135,6 +135,15 @@ async function getWeather(city, apiKey, units = "metric") {
   }
 }
 
+/** Weather for the header widget, or null when no API key is configured. */
+async function getWeatherForWidget() {
+  const apiKey = process.env.OPENWEATHERMAP_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+  return getWeather(process.env.WEATHER_DEFAULT_CITY || "Tel Aviv", apiKey, "metric");
+}
+
 /**
  * Clears the entire weather cache.  Exposed for unit tests.
  */
@@ -142,4 +151,4 @@ function clearCache() {
   cache.clear();
 }
 
-module.exports = { getWeather, clearCache };
+module.exports = { getWeather, getWeatherForWidget, clearCache };
