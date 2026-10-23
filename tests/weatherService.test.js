@@ -153,4 +153,42 @@ describe("weatherService", () => {
 
     assert.equal(result.unavailable, true);
   });
+
+  test("getWeatherForWidget returns null when no API key is configured", async () => {
+    const previousKey = process.env.OPENWEATHERMAP_API_KEY;
+    delete process.env.OPENWEATHERMAP_API_KEY;
+    try {
+      assert.equal(await weatherService.getWeatherForWidget(), null);
+    } finally {
+      if (previousKey === undefined) {
+        delete process.env.OPENWEATHERMAP_API_KEY;
+      } else {
+        process.env.OPENWEATHERMAP_API_KEY = previousKey;
+      }
+    }
+  });
+
+  test("getWeatherForWidget uses WEATHER_DEFAULT_CITY and the configured key", async () => {
+    stubHttps(makeSuccessStub({ name: "Haifa" }));
+    const previousKey = process.env.OPENWEATHERMAP_API_KEY;
+    const previousCity = process.env.WEATHER_DEFAULT_CITY;
+    process.env.OPENWEATHERMAP_API_KEY = "test-key";
+    process.env.WEATHER_DEFAULT_CITY = "Haifa";
+    try {
+      const result = await weatherService.getWeatherForWidget();
+      assert.equal(result.unavailable, false);
+      assert.equal(result.data.city, "Haifa");
+    } finally {
+      if (previousKey === undefined) {
+        delete process.env.OPENWEATHERMAP_API_KEY;
+      } else {
+        process.env.OPENWEATHERMAP_API_KEY = previousKey;
+      }
+      if (previousCity === undefined) {
+        delete process.env.WEATHER_DEFAULT_CITY;
+      } else {
+        process.env.WEATHER_DEFAULT_CITY = previousCity;
+      }
+    }
+  });
 });
