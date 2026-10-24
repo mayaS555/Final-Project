@@ -48,7 +48,10 @@ function normalizeError(err) {
   let message = err.message || "An unexpected error occurred.";
 
   // JSON parsing error (SyntaxError from express.json / body-parser)
-  if (err.type === "entity.parse.failed" || (err instanceof SyntaxError && status === 400 && "body" in err)) {
+  if (
+    err.type === "entity.parse.failed" ||
+    (err instanceof SyntaxError && status === 400 && "body" in err)
+  ) {
     status = 400;
     message = "The request body is not valid JSON.";
   } else if (err.type === "entity.too.large") {
@@ -109,11 +112,21 @@ function errorHandler(err, req, res, next) {
   };
 
   if (status >= 500) {
-    logger.error(`[HTTP ${status}] ${req.method} ${req.originalUrl || req.url} - ${message}`, err, context);
+    logger.error(
+      `[HTTP ${status}] ${req.method} ${req.originalUrl || req.url} - ${message}`,
+      err,
+      context,
+    );
   } else if (status === 401 || status === 403) {
-    logger.warn(`[AUTH ${status}] ${req.method} ${req.originalUrl || req.url} - ${message}`, context);
+    logger.warn(
+      `[AUTH ${status}] ${req.method} ${req.originalUrl || req.url} - ${message}`,
+      context,
+    );
   } else {
-    logger.warn(`[HTTP ${status}] ${req.method} ${req.originalUrl || req.url} - ${message}`, context);
+    logger.warn(
+      `[HTTP ${status}] ${req.method} ${req.originalUrl || req.url} - ${message}`,
+      context,
+    );
   }
 
   // API or JSON clients receive structured JSON error payloads
@@ -125,8 +138,11 @@ function errorHandler(err, req, res, next) {
   if (status === 401) {
     // Prevent open-redirect vulnerability: ensure returnTo is a relative path
     const rawUrl = req.originalUrl || "/";
-    const safeReturnTo = rawUrl.startsWith("/") && !rawUrl.startsWith("//") ? rawUrl : "/";
-    return res.redirect(`/login.html?returnTo=${encodeURIComponent(safeReturnTo)}`);
+    const safeReturnTo =
+      rawUrl.startsWith("/") && !rawUrl.startsWith("//") ? rawUrl : "/";
+    return res.redirect(
+      `/login.html?returnTo=${encodeURIComponent(safeReturnTo)}`,
+    );
   }
 
   // User-facing HTML error page rendered via EJS
@@ -134,18 +150,32 @@ function errorHandler(err, req, res, next) {
     status === 403
       ? "Access Denied"
       : status === 404
-      ? "Page Not Found"
-      : status === 400
-      ? "Bad Request"
-      : `Error ${status}`;
+        ? "Page Not Found"
+        : status === 400
+          ? "Bad Request"
+          : `Error ${status}`;
 
-  res.status(status).render("public/message", { pageTitle: title, title, message }, (renderError, html) => {
-    if (renderError) {
-      console.error("[RenderError] Failed to render error page:", renderError);
-      return res.status(status).type("text/html").send(`<!DOCTYPE html><html><head><title>${title}</title></head><body><h1>${title}</h1><p>${message}</p></body></html>`);
-    }
-    res.send(html);
-  });
+  res
+    .status(status)
+    .render(
+      "public/message",
+      { pageTitle: title, title, message },
+      (renderError, html) => {
+        if (renderError) {
+          console.error(
+            "[RenderError] Failed to render error page:",
+            renderError,
+          );
+          return res
+            .status(status)
+            .type("text/html")
+            .send(
+              `<!DOCTYPE html><html><head><title>${title}</title></head><body><h1>${title}</h1><p>${message}</p></body></html>`,
+            );
+        }
+        res.send(html);
+      },
+    );
 }
 
 /**

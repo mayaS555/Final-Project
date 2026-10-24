@@ -1,91 +1,91 @@
 /* Login page. Loaded after public.css and reuses its colors, fonts and masthead. */
 
 .pub-site .login-section {
-    display: flex;
-    justify-content: center;
-    padding: 48px 16px;
+  display: flex;
+  justify-content: center;
+  padding: 48px 16px;
 }
 
 .pub-site .login-box {
-    width: 100%;
-    max-width: 420px;
-    padding: 32px;
-    background: var(--card);
-    border-top: 3px solid var(--ink);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 420px;
+  padding: 32px;
+  background: var(--card);
+  border-top: 3px solid var(--ink);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
 
 .pub-site .login-box h2 {
-    margin: 0 0 4px;
-    font-size: 30px;
-    text-align: center;
+  margin: 0 0 4px;
+  font-size: 30px;
+  text-align: center;
 }
 
 /* Small red uppercase line, like the category labels on articles. */
 .pub-site .login-box h3 {
-    margin: 0 0 28px;
-    font-size: 12px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    text-align: center;
-    color: var(--accent);
+  margin: 0 0 28px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--accent);
 }
 
 .pub-site .form-group {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
 }
 
 .pub-site .form-group label {
-    margin-bottom: 6px;
-    font-weight: bold;
+  margin-bottom: 6px;
+  font-weight: bold;
 }
 
 .pub-site .form-group input {
-    padding: 12px;
-    font: inherit;
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-    background: var(--paper);
-    color: var(--ink);
+  padding: 12px;
+  font: inherit;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--ink);
 }
 
 .pub-site .form-group input:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: -1px;
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
 }
 
 .pub-site .login-box button {
-    width: 100%;
-    padding: 13px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    border: none;
-    border-radius: 2px;
-    background: var(--ink);
-    color: var(--card);
+  width: 100%;
+  padding: 13px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  border-radius: 2px;
+  background: var(--ink);
+  color: var(--card);
 }
 
 .pub-site .login-box button:hover {
-    background: var(--accent);
+  background: var(--accent);
 }
 
 .pub-site .login-box button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .pub-site .back-link {
-    display: block;
-    margin-top: 24px;
-    text-align: center;
-    font-weight: bold;
-    color: var(--accent);
-    text-decoration: none;
+  display: block;
+  margin-top: 24px;
+  text-align: center;
+  font-weight: bold;
+  color: var(--accent);
+  text-decoration: none;
 }
 
 .pub-site .back-link:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }

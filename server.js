@@ -34,14 +34,16 @@ const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET) {
   throw new Error(
     "SESSION_SECRET is not set. Add a long random value to .env (see .env.example). " +
-      "Without it, session cookies cannot be signed safely."
+      "Without it, session cookies cannot be signed safely.",
   );
 }
 
 // Reuse Mongoose's MongoDB connection. The store waits for the connection before its first operation,
 // so the session middleware can be registered before startServer() connects.
 const sessionStore = MongoStore.create({
-  clientPromise: mongoose.connection.asPromise().then(() => mongoose.connection.getClient()),
+  clientPromise: mongoose.connection
+    .asPromise()
+    .then(() => mongoose.connection.getClient()),
   dbName: process.env.DB_NAME || undefined,
   collectionName: "sessions",
   ttl: SESSION_MAX_AGE_MS / 1000,
@@ -59,7 +61,7 @@ app.use(
       maxAge: SESSION_MAX_AGE_MS,
       sameSite: "lax",
     },
-  })
+  }),
 );
 
 // Pass logged-in user to all EJS templates
@@ -102,11 +104,17 @@ app.use(errorHandler);
 
 // Global safety net for unhandled async rejections and unexpected exceptions
 process.on("unhandledRejection", (reason, promise) => {
-  logger.error("Unhandled promise rejection", reason instanceof Error ? reason : new Error(String(reason)));
+  logger.error(
+    "Unhandled promise rejection",
+    reason instanceof Error ? reason : new Error(String(reason)),
+  );
 });
 
 process.on("uncaughtException", (error) => {
-  logger.error("Uncaught exception – server may be in an unstable state", error);
+  logger.error(
+    "Uncaught exception – server may be in an unstable state",
+    error,
+  );
 });
 
 const PORT = process.env.PORT || 3000;
@@ -118,20 +126,24 @@ async function startServer() {
       process.exit(1);
     }
 
-    logger.logServerEvent("db_connecting", { uri: process.env.MONGODB_URI.replace(/\/\/[^@]+@/, "//***@") });
-    const connectOptions = process.env.DB_NAME ? { dbName: process.env.DB_NAME } : {};
+    logger.logServerEvent("db_connecting", {
+      uri: process.env.MONGODB_URI.replace(/\/\/[^@]+@/, "//***@"),
+    });
+    const connectOptions = process.env.DB_NAME
+      ? { dbName: process.env.DB_NAME }
+      : {};
     await mongoose.connect(process.env.MONGODB_URI, connectOptions);
     logger.logServerEvent("db_connected", { db: mongoose.connection.name });
 
     // Ensure database indexes exist
-    await Promise.all([
-      Article.init(),
-      ArticleRead.init(),
-    ]);
+    await Promise.all([Article.init(), ArticleRead.init()]);
     logger.logServerEvent("indexes_ready");
 
     app.listen(PORT, () => {
-      logger.logServerEvent("start", { port: PORT, env: process.env.NODE_ENV || "development" });
+      logger.logServerEvent("start", {
+        port: PORT,
+        env: process.env.NODE_ENV || "development",
+      });
     });
   } catch (error) {
     logger.error("Failed to start server:", error);

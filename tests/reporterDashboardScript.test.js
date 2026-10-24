@@ -9,7 +9,10 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const SCRIPT = fs.readFileSync(path.join(__dirname, "..", "public", "js", "reporter-dashboard.js"), "utf8");
+const SCRIPT = fs.readFileSync(
+  path.join(__dirname, "..", "public", "js", "reporter-dashboard.js"),
+  "utf8",
+);
 
 /**
  * Lets pending promises finish.
@@ -75,7 +78,12 @@ function fakeButton(action) {
  * @returns {Object} { requests, rows, list, newArticleButton, statusLine, emptyMessage, window, history }.
  * @example const page = loadDashboard({ rows: ["a1"] });
  */
-function loadDashboard({ answers = [], rows = ["a1"], href = "http://localhost/reporter", confirmAnswer = true } = {}) {
+function loadDashboard({
+  answers = [],
+  rows = ["a1"],
+  href = "http://localhost/reporter",
+  confirmAnswer = true,
+} = {}) {
   const clickListeners = [];
   const list = {
     children: [],
@@ -83,7 +91,10 @@ function loadDashboard({ answers = [], rows = ["a1"], href = "http://localhost/r
       clickListeners.push(handler);
     },
     querySelectorAll() {
-      return list.children.flatMap((row) => [row.reviseButton, row.deleteButton]);
+      return list.children.flatMap((row) => [
+        row.reviseButton,
+        row.deleteButton,
+      ]);
     },
     fireClick(button) {
       for (const handler of clickListeners) {
@@ -97,7 +108,9 @@ function loadDashboard({ answers = [], rows = ["a1"], href = "http://localhost/r
       reviseButton: fakeButton("revise"),
       deleteButton: fakeButton("delete"),
       querySelector(selector) {
-        return selector === ".rep-row-title" ? { textContent: `Title ${id}` } : row.deleteButton;
+        return selector === ".rep-row-title"
+          ? { textContent: `Title ${id}` }
+          : row.deleteButton;
       },
       remove() {
         list.children.splice(list.children.indexOf(row), 1);
@@ -108,10 +121,19 @@ function loadDashboard({ answers = [], rows = ["a1"], href = "http://localhost/r
     list.children.push(row);
   }
 
-  const statusLine = { textContent: "", hasErrorClass: false, classList: { toggle: (name, on) => (statusLine.hasErrorClass = on) } };
+  const statusLine = {
+    textContent: "",
+    hasErrorClass: false,
+    classList: { toggle: (name, on) => (statusLine.hasErrorClass = on) },
+  };
   const emptyMessage = { hidden: true };
   const newArticleButton = fakeButton();
-  const elements = { "rep-new-article": newArticleButton, "rep-list": list, "rep-empty": emptyMessage, "rep-status": statusLine };
+  const elements = {
+    "rep-new-article": newArticleButton,
+    "rep-list": list,
+    "rep-empty": emptyMessage,
+    "rep-status": statusLine,
+  };
   const history = { calls: [] };
   history.replaceState = (state, title, url) => history.calls.push(String(url));
   const window = {
@@ -137,15 +159,36 @@ function loadDashboard({ answers = [], rows = ["a1"], href = "http://localhost/r
     return typeof next === "function" ? next() : next || answer(200);
   };
 
-  vm.runInContext(SCRIPT, vm.createContext({ document: { getElementById: (id) => elements[id] }, window, fetch: fakeFetch, URL }));
-  return { requests, rows: list.children.slice(), list, newArticleButton, statusLine, emptyMessage, window, history };
+  vm.runInContext(
+    SCRIPT,
+    vm.createContext({
+      document: { getElementById: (id) => elements[id] },
+      window,
+      fetch: fakeFetch,
+      URL,
+    }),
+  );
+  return {
+    requests,
+    rows: list.children.slice(),
+    list,
+    newArticleButton,
+    statusLine,
+    emptyMessage,
+    window,
+    history,
+  };
 }
 
 describe("reporter dashboard script", () => {
   test("enables the buttons once loaded", () => {
     const page = loadDashboard({ rows: ["a1", "a2"] });
     assert.equal(page.newArticleButton.disabled, false);
-    assert.ok(page.rows.every((row) => !row.reviseButton.disabled && !row.deleteButton.disabled));
+    assert.ok(
+      page.rows.every(
+        (row) => !row.reviseButton.disabled && !row.deleteButton.disabled,
+      ),
+    );
   });
 
   test("New article creates a draft and opens its edit page", async () => {
@@ -154,14 +197,20 @@ describe("reporter dashboard script", () => {
     assert.equal(page.newArticleButton.disabled, true);
     await settle();
     assert.deepEqual(page.requests, [
-      { url: "/api/articles", method: "POST", headers: { "Content-Type": "application/json" } },
+      {
+        url: "/api/articles",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
     ]);
     assert.equal(page.window.location.href, "/reporter/articles/new1/edit");
   });
 
   test("Edit published article calls revise, then opens the edit page; disabled while it runs", async () => {
     let finish;
-    const page = loadDashboard({ answers: [() => new Promise((resolve) => (finish = resolve))] });
+    const page = loadDashboard({
+      answers: [() => new Promise((resolve) => (finish = resolve))],
+    });
     const button = page.rows[0].reviseButton;
     button.click(page.list);
     assert.equal(button.disabled, true);
@@ -178,10 +227,17 @@ describe("reporter dashboard script", () => {
   });
 
   test("a failed revise shows the server's message and enables the button again", async () => {
-    const page = loadDashboard({ answers: [answer(409, { error: "An article cannot go from draft to draft." })] });
+    const page = loadDashboard({
+      answers: [
+        answer(409, { error: "An article cannot go from draft to draft." }),
+      ],
+    });
     page.rows[0].reviseButton.click(page.list);
     await settle();
-    assert.equal(page.statusLine.textContent, "An article cannot go from draft to draft.");
+    assert.equal(
+      page.statusLine.textContent,
+      "An article cannot go from draft to draft.",
+    );
     assert.equal(page.statusLine.hasErrorClass, true);
     assert.equal(page.rows[0].reviseButton.disabled, false);
     assert.equal(page.window.location.href, "http://localhost/reporter");
@@ -198,10 +254,17 @@ describe("reporter dashboard script", () => {
   });
 
   test("Delete removes the row without reloading; the empty message shows after the last one", async () => {
-    const page = loadDashboard({ rows: ["a1", "a2"], answers: [answer(204), answer(204)] });
+    const page = loadDashboard({
+      rows: ["a1", "a2"],
+      answers: [answer(204), answer(204)],
+    });
     page.rows[0].deleteButton.click(page.list);
     await settle();
-    assert.deepEqual(page.requests[0], { url: "/api/articles/a1", method: "DELETE", headers: { "Content-Type": "application/json" } });
+    assert.deepEqual(page.requests[0], {
+      url: "/api/articles/a1",
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
     assert.equal(page.list.children.length, 1);
     assert.equal(page.emptyMessage.hidden, true);
     assert.equal(page.statusLine.textContent, "Article deleted.");
@@ -210,21 +273,34 @@ describe("reporter dashboard script", () => {
     await settle();
     assert.equal(page.list.children.length, 0);
     assert.equal(page.emptyMessage.hidden, false);
-    assert.equal(page.window.location.href, "http://localhost/reporter", "no reload");
+    assert.equal(
+      page.window.location.href,
+      "http://localhost/reporter",
+      "no reload",
+    );
   });
 
   test("a failed delete keeps the row and shows the message", async () => {
-    const page = loadDashboard({ answers: [answer(403, { error: "You cannot delete this article." })] });
+    const page = loadDashboard({
+      answers: [answer(403, { error: "You cannot delete this article." })],
+    });
     page.rows[0].deleteButton.click(page.list);
     await settle();
     assert.equal(page.list.children.length, 1);
-    assert.equal(page.statusLine.textContent, "You cannot delete this article.");
+    assert.equal(
+      page.statusLine.textContent,
+      "You cannot delete this article.",
+    );
     assert.equal(page.rows[0].deleteButton.disabled, false);
   });
 
   test("removes ?msg= from the address, keeping other parameters", () => {
-    const page = loadDashboard({ href: "http://localhost/reporter?status=pending&msg=submitted" });
-    assert.deepEqual(page.history.calls, ["http://localhost/reporter?status=pending"]);
+    const page = loadDashboard({
+      href: "http://localhost/reporter?status=pending&msg=submitted",
+    });
+    assert.deepEqual(page.history.calls, [
+      "http://localhost/reporter?status=pending",
+    ]);
     assert.deepEqual(loadDashboard().history.calls, []);
   });
 });

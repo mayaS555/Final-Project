@@ -36,12 +36,13 @@ const draftSchema = new mongoose.Schema(
       type: String,
       default: "",
       validate: {
-        validator: (value) => value === "" || ARTICLE_CATEGORIES.includes(value),
+        validator: (value) =>
+          value === "" || ARTICLE_CATEGORIES.includes(value),
         message: "Unknown category.",
       },
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 // Public version. Not set until the first approval.
@@ -55,7 +56,7 @@ const approvedSchema = new mongoose.Schema(
     publishedAt: { type: Date, required: true },
     updatedAt: { type: Date, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 // Guest comments on the public version (C). Fields are a proposal from C: the course requirements do not define them.
@@ -83,7 +84,7 @@ const viewBucketSchema = new mongoose.Schema(
     // UTC minute offsets 0..1439. Seed daily totals have no minute breakdown.
     minuteCounts: { type: Map, of: Number, default: () => ({}) },
   },
-  { _id: false }
+  { _id: false },
 );
 
 // One record for every time the article went live (D). The Impact Analytics graph draws these as markers,
@@ -97,16 +98,25 @@ const publishEventSchema = new mongoose.Schema(
     // True only for the first publish; the analytics page can label it differently from later updates.
     isFirstPublish: { type: Boolean, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const articleSchema = new mongoose.Schema(
   {
     // The reporter who owns the article (Person A's User model).
-    author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     // The author's display name, copied from the user at creation. Approval copies it into approved.authorName.
     authorName: { type: String, trim: true, required: true },
-    status: { type: String, enum: ARTICLE_STATUSES, default: "draft", required: true },
+    status: {
+      type: String,
+      enum: ARTICLE_STATUSES,
+      default: "draft",
+      required: true,
+    },
     draft: { type: draftSchema, default: () => ({}) },
     approved: { type: approvedSchema, default: undefined },
     // The editor's reason when the article was returned.
@@ -121,7 +131,7 @@ const articleSchema = new mongoose.Schema(
     views: { type: [viewBucketSchema], default: [] },
     publishEvents: { type: [publishEventSchema], default: [] },
   },
-  { collection: "articles", timestamps: true }
+  { collection: "articles", timestamps: true },
 );
 
 /**
@@ -137,9 +147,16 @@ articleSchema.statics.publicFilter = function publicFilter() {
 // Public feed, newest first (C). Also serves the public filter, which tests approved.publishedAt.
 articleSchema.index({ "approved.publishedAt": -1, _id: -1 });
 // Public feed filtered by category (C).
-articleSchema.index({ "approved.category": 1, "approved.publishedAt": -1, _id: -1 });
+articleSchema.index({
+  "approved.category": 1,
+  "approved.publishedAt": -1,
+  _id: -1,
+});
 // Title search on the public title (C). A $text query fails without it; MongoDB allows one per collection.
-articleSchema.index({ "approved.title": "text" }, { default_language: "english" });
+articleSchema.index(
+  { "approved.title": "text" },
+  { default_language: "english" },
+);
 // Reporter dashboard: one author's articles, last changed first.
 articleSchema.index({ author: 1, updatedAt: -1 });
 // Editor dashboard: articles in one status, last changed first.

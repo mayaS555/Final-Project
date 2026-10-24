@@ -41,7 +41,13 @@ function formatDateTime(date) {
   if (!(date instanceof Date)) {
     return "";
   }
-  return date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }) + " UTC";
+  return (
+    date.toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "UTC",
+    }) + " UTC"
+  );
 }
 
 /**
@@ -76,7 +82,8 @@ function toDashboardRow(article, user = { role: "reporter" }) {
     status: article.status,
     statusLabel: STATUS_LABELS[article.status],
     editorNote: article.editorNote,
-    updatedAt: article.updatedAt instanceof Date ? article.updatedAt.toISOString() : "",
+    updatedAt:
+      article.updatedAt instanceof Date ? article.updatedAt.toISOString() : "",
     updatedAtText: formatDateTime(article.updatedAt),
     isLive,
     // A published article that is being changed again: readers still see the approved version.
@@ -96,7 +103,9 @@ function toDashboardRow(article, user = { role: "reporter" }) {
  * @example dashboardMessage("submitted")
  */
 function dashboardMessage(key) {
-  return typeof key === "string" && Object.hasOwn(DASHBOARD_MESSAGES, key) ? DASHBOARD_MESSAGES[key] : "";
+  return typeof key === "string" && Object.hasOwn(DASHBOARD_MESSAGES, key)
+    ? DASHBOARD_MESSAGES[key]
+    : "";
 }
 
 /**
@@ -121,13 +130,16 @@ async function renderDashboard(req, res) {
     reporterName: user.name,
     rows: articles.map((article) => toDashboardRow(article, user)),
     activeStatus: status,
-    statusTabs: ARTICLE_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] })),
+    statusTabs: ARTICLE_STATUSES.map((value) => ({
+      value,
+      label: STATUS_LABELS[value],
+    })),
     message: dashboardMessage(req.query.msg),
     emptyText: status
       ? "No articles with this status."
       : isAdmin
         ? "There are no articles yet."
-        : "You have no articles yet. Start with \"New article\".",
+        : 'You have no articles yet. Start with "New article".',
   });
 }
 
@@ -147,7 +159,7 @@ function readOnlyReason(status, role, isOwner) {
     return "This article is waiting for an editor, so it cannot be changed now. You can edit it again if the editor returns it.";
   }
   if (status === "published") {
-    return "This article is published. To change it, use \"Edit published article\" on the dashboard; readers keep seeing this version until an editor approves the new one.";
+    return 'This article is published. To change it, use "Edit published article" on the dashboard; readers keep seeing this version until an editor approves the new one.';
   }
   return "This article cannot be changed now.";
 }
@@ -177,12 +189,17 @@ function toEditView(article, user) {
       category: draft.category || "",
     },
     editorNote: article.status === "returned" ? article.editorNote : "",
-    isLive: Boolean(article.approved && article.approved.publishedAt instanceof Date),
+    isLive: Boolean(
+      article.approved && article.approved.publishedAt instanceof Date,
+    ),
     canEdit,
-    readOnlyMessage: canEdit ? "" : readOnlyReason(article.status, user.role, isAuthor),
+    readOnlyMessage: canEdit
+      ? ""
+      : readOnlyReason(article.status, user.role, isAuthor),
     // Submitting is the author's action, from draft or returned.
     canSubmit: isAuthor && canTransition(article.status, "pending", user.role),
-    submitLabel: article.status === "returned" ? "Resubmit" : "Submit for approval",
+    submitLabel:
+      article.status === "returned" ? "Resubmit" : "Submit for approval",
     liveUrl: `/articles/${id}`,
     // Reporters and admins have the dashboard; editors still have no dashboard of their own.
     dashboardUrl: hasReporterRole(user.role) ? "/reporter" : null,
@@ -209,4 +226,11 @@ function renderEditPage(req, res) {
   });
 }
 
-module.exports = { renderDashboard, renderEditPage, toDashboardRow, toEditView, dashboardMessage, STATUS_LABELS };
+module.exports = {
+  renderDashboard,
+  renderEditPage,
+  toDashboardRow,
+  toEditView,
+  dashboardMessage,
+  STATUS_LABELS,
+};

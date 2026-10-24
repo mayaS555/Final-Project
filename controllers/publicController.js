@@ -81,7 +81,9 @@ function parseSort(rawValue) {
 // Express's default parser turns q[$ne]=x into a key named "q[$ne]" and leaves q unset,
 // so a structured form of a recognized parameter has to be detected by its key.
 function findStructuredParameter(query) {
-  return FEED_PARAMETERS.find((name) => Object.keys(query).some((key) => key.startsWith(`${name}[`)));
+  return FEED_PARAMETERS.find((name) =>
+    Object.keys(query).some((key) => key.startsWith(`${name}[`)),
+  );
 }
 
 // Shared by the HTML feed and the JSON feed so both validate and query the same way.
@@ -89,7 +91,9 @@ function findStructuredParameter(query) {
 function parseFeedQuery(query) {
   const structuredName = findStructuredParameter(query);
   if (structuredName) {
-    return { error: `${structuredName} must be a single value, not a structured parameter.` };
+    return {
+      error: `${structuredName} must be a single value, not a structured parameter.`,
+    };
   }
 
   const page = parsePage(query.page);
@@ -100,7 +104,11 @@ function parseFeedQuery(query) {
   if (search.error) {
     return { error: search.error };
   }
-  const category = parseOptionalText(query.category, "category", MAX_CATEGORY_LENGTH);
+  const category = parseOptionalText(
+    query.category,
+    "category",
+    MAX_CATEGORY_LENGTH,
+  );
   if (category.error) {
     return { error: category.error };
   }
@@ -112,7 +120,13 @@ function parseFeedQuery(query) {
   if (sort.error) {
     return { error: sort.error };
   }
-  return { page: page.page, q: search.value, category: category.value, viewed: viewed.value, sort: sort.value };
+  return {
+    page: page.page,
+    q: search.value,
+    category: category.value,
+    viewed: viewed.value,
+    sort: sort.value,
+  };
 }
 
 // Link to a feed page that keeps the active filters (used by the no-JavaScript pager).
@@ -154,11 +168,13 @@ function formatDateTime(isoString) {
   if (!isoString) {
     return "";
   }
-  return new Date(isoString).toLocaleString("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }) + " UTC";
+  return (
+    new Date(isoString).toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "UTC",
+    }) + " UTC"
+  );
 }
 
 // Plain-text article body: blank lines separate paragraphs, the view escapes the text.
@@ -170,23 +186,38 @@ function splitParagraphs(text) {
 }
 
 function renderMessagePage(res, status, title, message) {
-  res.status(status).render("public/message", { pageTitle: title, title, message });
+  res
+    .status(status)
+    .render("public/message", { pageTitle: title, title, message });
 }
 
 function handleUnexpectedError(error, res, wantsJson) {
   console.error("Public site error:", error);
   if (wantsJson) {
-    res.status(500).json({ error: "Something went wrong. Please try again later." });
+    res
+      .status(500)
+      .json({ error: "Something went wrong. Please try again later." });
     return;
   }
-  renderMessagePage(res, 500, "Something went wrong", "Please try again later.");
+  renderMessagePage(
+    res,
+    500,
+    "Something went wrong",
+    "Please try again later.",
+  );
 }
 
 // Shared by the HTML feed and the JSON feed. The device history is read only when it is needed,
 // and a failure there is not caught: a viewed filter must not silently return the unfiltered feed.
 async function loadFeed(feedQuery, deviceId) {
-  const readArticleIds = feedQuery.viewed === "all" ? undefined : await articleReadService.getReadArticleIds(deviceId);
-  return publicArticleService.getPublishedArticles({ ...feedQuery, readArticleIds });
+  const readArticleIds =
+    feedQuery.viewed === "all"
+      ? undefined
+      : await articleReadService.getReadArticleIds(deviceId);
+  return publicArticleService.getPublishedArticles({
+    ...feedQuery,
+    readArticleIds,
+  });
 }
 
 async function renderHome(req, res) {
@@ -196,7 +227,12 @@ async function renderHome(req, res) {
     return;
   }
 
-  const filters = { q: feedQuery.q, category: feedQuery.category, viewed: feedQuery.viewed, sort: feedQuery.sort };
+  const filters = {
+    q: feedQuery.q,
+    category: feedQuery.category,
+    viewed: feedQuery.viewed,
+    sort: feedQuery.sort,
+  };
 
   try {
     // The category list ignores the active filters, so it stays usable during a search.
@@ -208,7 +244,7 @@ async function renderHome(req, res) {
         ? weatherService.getWeather(
             process.env.WEATHER_DEFAULT_CITY || "Tel Aviv",
             process.env.OPENWEATHERMAP_API_KEY,
-            "metric"
+            "metric",
           )
         : Promise.resolve(null),
     ]);
@@ -246,9 +282,16 @@ async function getFeed(req, res) {
 
 async function renderArticle(req, res) {
   try {
-    const article = await publicArticleService.getPublishedArticleById(req.params.id);
+    const article = await publicArticleService.getPublishedArticleById(
+      req.params.id,
+    );
     if (!article) {
-      renderMessagePage(res, 404, "Article not found", "This article does not exist or is not published.");
+      renderMessagePage(
+        res,
+        404,
+        "Article not found",
+        "This article does not exist or is not published.",
+      );
       return;
     }
 
@@ -266,7 +309,9 @@ async function renderArticle(req, res) {
     let comments = { items: [], hasMore: false, nextBefore: null };
     let commentsFailed = false;
     try {
-      comments = await commentService.listComments(article.id, { viewerDeviceId: req.deviceId });
+      comments = await commentService.listComments(article.id, {
+        viewerDeviceId: req.deviceId,
+      });
     } catch (error) {
       console.error("Could not load comments:", error);
       commentsFailed = true;
@@ -279,7 +324,7 @@ async function renderArticle(req, res) {
         weather = await weatherService.getWeather(
           process.env.WEATHER_DEFAULT_CITY || "Tel Aviv",
           process.env.OPENWEATHERMAP_API_KEY,
-          "metric"
+          "metric",
         );
       } catch (_err) {
         // intentionally ignored – widget will show "unavailable"
@@ -288,26 +333,42 @@ async function renderArticle(req, res) {
 
     // The comment controls (edit, delete) depend on the device cookie, so shared caches must not store the page.
     res.set("Cache-Control", "private, no-cache");
-    res.render("public/article", {
-      pageTitle: article.title,
-      article,
-      paragraphs: splitParagraphs(article.content),
-      comments,
-      commentsFailed,
-      weather,
-      formatDate,
-      formatDateTime,
-    }, async (renderError, html) => {
-      if (renderError) return handleUnexpectedError(renderError, res, false);
-      if (req.method === "GET") {
-        try { await recordArticleView(article.id); }
-        catch (error) { logger.warn("Could not record article view", { articleId: article.id, code: error.code }); }
-      }
-      res.send(html);
-    });
+    res.render(
+      "public/article",
+      {
+        pageTitle: article.title,
+        article,
+        paragraphs: splitParagraphs(article.content),
+        comments,
+        commentsFailed,
+        weather,
+        formatDate,
+        formatDateTime,
+      },
+      async (renderError, html) => {
+        if (renderError) return handleUnexpectedError(renderError, res, false);
+        if (req.method === "GET") {
+          try {
+            await recordArticleView(article.id);
+          } catch (error) {
+            logger.warn("Could not record article view", {
+              articleId: article.id,
+              code: error.code,
+            });
+          }
+        }
+        res.send(html);
+      },
+    );
   } catch (error) {
     handleUnexpectedError(error, res, false);
   }
 }
 
-module.exports = { renderHome, getFeed, renderArticle, parseFeedQuery, buildFeedHref };
+module.exports = {
+  renderHome,
+  getFeed,
+  renderArticle,
+  parseFeedQuery,
+  buildFeedHref,
+};

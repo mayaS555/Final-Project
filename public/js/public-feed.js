@@ -79,7 +79,9 @@ function createCard(article) {
     image.loading = "lazy";
     link.appendChild(image);
   } else {
-    link.appendChild(createElement("div", "pub-card-image pub-card-image-empty"));
+    link.appendChild(
+      createElement("div", "pub-card-image pub-card-image-empty"),
+    );
   }
 
   const time = createElement("time", "", formatDate(article.publishedAt));
@@ -92,7 +94,7 @@ function createCard(article) {
     createElement("p", "pub-category", article.category),
     createElement("h2", "pub-card-title", article.title),
     createElement("p", "pub-card-summary", article.summary),
-    meta
+    meta,
   );
 
   link.appendChild(body);
@@ -115,7 +117,11 @@ function appendArticles(items) {
 function setStatus(message, showRetry) {
   statusElement.textContent = message;
   if (showRetry) {
-    const retryButton = createElement("button", "pub-retry-button", "Try again");
+    const retryButton = createElement(
+      "button",
+      "pub-retry-button",
+      "Try again",
+    );
     retryButton.type = "button";
     retryButton.addEventListener("click", retryLoading);
     statusElement.appendChild(retryButton);
@@ -124,8 +130,17 @@ function setStatus(message, showRetry) {
 
 function showResultStatus() {
   if (feedElement.children.length === 0) {
-    const hasFilters = Boolean(appliedFilters.q || appliedFilters.category || appliedFilters.viewed !== "all");
-    setStatus(hasFilters ? "No articles match your filters." : "No published articles yet.", false);
+    const hasFilters = Boolean(
+      appliedFilters.q ||
+        appliedFilters.category ||
+        appliedFilters.viewed !== "all",
+    );
+    setStatus(
+      hasFilters
+        ? "No articles match your filters."
+        : "No published articles yet.",
+      false,
+    );
   } else if (!hasMore) {
     setStatus("You have reached the end of the results.", false);
   } else {
@@ -180,7 +195,9 @@ function loadMoreIfNeeded() {
   if (isLoading || hasFailed || !hasMore) {
     return;
   }
-  const distanceToBottom = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+  const distanceToBottom =
+    document.documentElement.scrollHeight -
+    (window.scrollY + window.innerHeight);
   if (distanceToBottom < SCROLL_THRESHOLD_PX) {
     loadNextPage();
   }

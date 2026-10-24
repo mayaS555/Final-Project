@@ -1,124 +1,132 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login | The Daily Web</title>
-    <link rel="stylesheet" href="/css/public.css">
-    <link rel="stylesheet" href="/css/login.css">
+    <link rel="stylesheet" href="/css/public.css" />
+    <link rel="stylesheet" href="/css/login.css" />
     <script src="/js/theme-toggle.js"></script>
-</head>
+  </head>
 
-<body class="pub-site">
-
+  <body class="pub-site">
     <header class="pub-header">
-        <a class="pub-brand" href="/">The Daily Web</a>
-        <button type="button" class="theme-toggle" id="theme-toggle" hidden>🌙 Dark</button>
+      <a class="pub-brand" href="/">The Daily Web</a>
+      <button type="button" class="theme-toggle" id="theme-toggle" hidden>
+        🌙 Dark
+      </button>
     </header>
 
-    <main >
+    <main>
+      <section class="login-section">
+        <div class="login-box">
+          <h2>Staff Login</h2>
+          <h3>For reporters and editors</h3>
 
-        <section class="login-section">
-            <div class="login-box">
+          <div
+            id="error-message"
+            style="
+              display: none;
+              background: #fee2e2;
+              border: 1px solid #f87171;
+              color: #991b1b;
+              padding: 0.65rem 1rem;
+              border-radius: 6px;
+              margin-bottom: 1.25rem;
+              font-size: 0.9rem;
+              text-align: center;
+            "
+          ></div>
 
-            <h2>Staff Login</h2>
-            <h3>For reporters and editors</h3>
+          <form id="login-form" action="/login" method="POST">
+            <input type="hidden" id="returnTo" name="returnTo" value="" />
 
-            <div id="error-message" style="display: none; background: #fee2e2; border: 1px solid #f87171; color: #991b1b; padding: 0.65rem 1rem; border-radius: 6px; margin-bottom: 1.25rem; font-size: 0.9rem; text-align: center;"></div>
-
-            <form id="login-form" action="/login" method="POST">
-                <input type="hidden" id="returnTo" name="returnTo" value="">
-
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        name="email"
-                        placeholder="Enter your email"
-                        required
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password"
-                        placeholder="Enter your password"
-                        required
-                    >
-                </div>
-
-                <button type="submit" id="submit-btn">Login</button>
-
-            </form>
-
-                    <a class="back-link" href="/">Back to The Daily Web</a>
-
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="Enter your email"
+                required
+              />
             </div>
-        </section>
 
+            <div class="form-group">
+              <label for="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+
+            <button type="submit" id="submit-btn">Login</button>
+          </form>
+
+          <a class="back-link" href="/">Back to The Daily Web</a>
+        </div>
+      </section>
     </main>
 
     <script>
-        const params = new URLSearchParams(window.location.search);
-        const returnTo = params.get('returnTo') || '';
-        if (returnTo) {
-            document.getElementById('returnTo').value = returnTo;
+      const params = new URLSearchParams(window.location.search);
+      const returnTo = params.get("returnTo") || "";
+      if (returnTo) {
+        document.getElementById("returnTo").value = returnTo;
+      }
+
+      const errorParam = params.get("error");
+      const errorDiv = document.getElementById("error-message");
+      if (errorParam === "invalid") {
+        errorDiv.textContent = "Invalid email or password.";
+        errorDiv.style.display = "block";
+      } else if (errorParam === "missing") {
+        errorDiv.textContent = "Please enter both email and password.";
+        errorDiv.style.display = "block";
+      } else if (errorParam === "server") {
+        errorDiv.textContent = "Server error. Please try again.";
+        errorDiv.style.display = "block";
+      }
+
+      const form = document.getElementById("login-form");
+      const submitBtn = document.getElementById("submit-btn");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorDiv.style.display = "none";
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Logging in...";
+
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+
+        try {
+          const res = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, returnTo }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            errorDiv.textContent =
+              data.error || "Login failed. Please check your credentials.";
+            errorDiv.style.display = "block";
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Login";
+          } else {
+            window.location.href = data.redirectUrl || "/reporter";
+          }
+        } catch (err) {
+          errorDiv.textContent = "Network error. Please try again.";
+          errorDiv.style.display = "block";
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Login";
         }
-
-        const errorParam = params.get('error');
-        const errorDiv = document.getElementById('error-message');
-        if (errorParam === 'invalid') {
-            errorDiv.textContent = 'Invalid email or password.';
-            errorDiv.style.display = 'block';
-        } else if (errorParam === 'missing') {
-            errorDiv.textContent = 'Please enter both email and password.';
-            errorDiv.style.display = 'block';
-        } else if (errorParam === 'server') {
-            errorDiv.textContent = 'Server error. Please try again.';
-            errorDiv.style.display = 'block';
-        }
-
-        const form = document.getElementById('login-form');
-        const submitBtn = document.getElementById('submit-btn');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            errorDiv.style.display = 'none';
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Logging in...';
-
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-
-            try {
-                const res = await fetch('/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, returnTo }),
-                });
-
-                const data = await res.json();
-                if (!res.ok) {
-                    errorDiv.textContent = data.error || 'Login failed. Please check your credentials.';
-                    errorDiv.style.display = 'block';
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Login';
-                } else {
-                    window.location.href = data.redirectUrl || '/reporter';
-                }
-            } catch (err) {
-                errorDiv.textContent = 'Network error. Please try again.';
-                errorDiv.style.display = 'block';
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Login';
-            }
-        });
+      });
     </script>
-</body>
-
+  </body>
 </html>

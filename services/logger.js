@@ -14,8 +14,13 @@ const LOG_LEVELS = {
 };
 
 // Default log level: "error" in test environments to keep test runs clean; "info" otherwise.
-let currentLevelName = (process.env.LOG_LEVEL || (process.env.NODE_ENV === "test" ? "error" : "info")).toLowerCase();
-let currentLevel = LOG_LEVELS[currentLevelName] !== undefined ? LOG_LEVELS[currentLevelName] : LOG_LEVELS.info;
+let currentLevelName = (
+  process.env.LOG_LEVEL || (process.env.NODE_ENV === "test" ? "error" : "info")
+).toLowerCase();
+let currentLevel =
+  LOG_LEVELS[currentLevelName] !== undefined
+    ? LOG_LEVELS[currentLevelName]
+    : LOG_LEVELS.info;
 
 // Optional file logging configuration
 const LOG_TO_FILE = process.env.LOG_TO_FILE === "true";
@@ -28,10 +33,17 @@ if (LOG_TO_FILE) {
     if (!fs.existsSync(LOG_DIR)) {
       fs.mkdirSync(LOG_DIR, { recursive: true });
     }
-    logStream = fs.createWriteStream(path.join(LOG_DIR, "app.log"), { flags: "a" });
-    errorStream = fs.createWriteStream(path.join(LOG_DIR, "error.log"), { flags: "a" });
+    logStream = fs.createWriteStream(path.join(LOG_DIR, "app.log"), {
+      flags: "a",
+    });
+    errorStream = fs.createWriteStream(path.join(LOG_DIR, "error.log"), {
+      flags: "a",
+    });
   } catch (err) {
-    console.error("[Logger] Could not initialize file logging streams:", err.message);
+    console.error(
+      "[Logger] Could not initialize file logging streams:",
+      err.message,
+    );
   }
 }
 
@@ -207,7 +219,10 @@ function logArticleEvent(event, articleId, userId, role, extra) {
  * @param {Object} [meta] Relevant metadata (email, userId, role, ip, path, reason).
  */
 function logAuthEvent(event, meta) {
-  const isFailure = event.includes("fail") || event.includes("unauthorized") || event.includes("forbidden");
+  const isFailure =
+    event.includes("fail") ||
+    event.includes("unauthorized") ||
+    event.includes("forbidden");
   const msg = `[AUTH] ${event}`;
   if (isFailure) {
     warn(msg, meta);
@@ -234,7 +249,10 @@ function logServerEvent(event, meta) {
 function requestLogger() {
   return function (req, res, next) {
     // Skip noisy static asset requests (.css, .js, .ico, .png, .jpg) unless level is debug
-    const isStatic = req.path.startsWith("/css/") || req.path.startsWith("/js/") || /\.(css|js|ico|png|jpg|svg)$/.test(req.path);
+    const isStatic =
+      req.path.startsWith("/css/") ||
+      req.path.startsWith("/js/") ||
+      /\.(css|js|ico|png|jpg|svg)$/.test(req.path);
     if (isStatic && currentLevel > LOG_LEVELS.debug) {
       return next();
     }
@@ -246,7 +264,10 @@ function requestLogger() {
       const durationMs = (Number(durationNs) / 1e6).toFixed(2);
       const status = res.statusCode;
 
-      const user = req.session && req.session.user ? ` user=${req.session.user._id}(${req.session.user.role})` : "";
+      const user =
+        req.session && req.session.user
+          ? ` user=${req.session.user._id}(${req.session.user.role})`
+          : "";
       const msg = `[HTTP] ${req.method} ${req.originalUrl || req.url} ${status} (${durationMs}ms)${user}`;
 
       if (status >= 500) {

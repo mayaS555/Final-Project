@@ -54,7 +54,10 @@ function stubHttps(resStub, shouldError = false) {
   mock.method(https, "get", (_url, _opts, callback) => {
     if (shouldError) {
       const req = {
-        on: (event, cb) => { if (event === "error") cb(new Error("ENOTFOUND")); return req; },
+        on: (event, cb) => {
+          if (event === "error") cb(new Error("ENOTFOUND"));
+          return req;
+        },
         destroy: () => {},
       };
       return req;
@@ -91,11 +94,11 @@ describe("weatherService", () => {
     assert.equal(result.fromCache, false);
     assert.equal(result.data.city, "Tel Aviv");
     assert.equal(result.data.country, "IL");
-    assert.equal(result.data.temp, 26);          // Math.round(25.6)
+    assert.equal(result.data.temp, 26); // Math.round(25.6)
     assert.equal(result.data.humidity, 72);
     assert.equal(result.data.icon, "01d");
     assert.equal(result.data.description, "clear sky");
-    assert.equal(result.data.wind, 3);           // Math.round(3.2)
+    assert.equal(result.data.wind, 3); // Math.round(3.2)
   });
 
   test("returns fromCache=true and stale=false on a cache hit", async () => {

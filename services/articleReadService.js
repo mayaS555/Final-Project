@@ -12,7 +12,7 @@ async function markArticleRead(deviceId, articleId) {
   await ArticleRead.updateOne(
     { deviceId, articleId },
     { $set: { readAt: new Date() } },
-    { upsert: true }
+    { upsert: true },
   );
 }
 
@@ -22,7 +22,9 @@ async function getReadArticleIds(deviceId) {
   if (!isValidDeviceId(deviceId)) {
     throw new Error("getReadArticleIds needs a valid device id.");
   }
-  const records = await ArticleRead.find({ deviceId }).select({ articleId: 1, _id: 0 }).lean();
+  const records = await ArticleRead.find({ deviceId })
+    .select({ articleId: 1, _id: 0 })
+    .lean();
   return records.map((record) => record.articleId);
 }
 

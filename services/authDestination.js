@@ -6,7 +6,11 @@ function defaultDestination(role) {
 
 // Preserve returnTo for protected pages; only allow paths within this application.
 function loginDestination(role, returnTo) {
-  if (typeof returnTo === "string" && /^\/(?!\/)/.test(returnTo) && !/[\\\x00-\x20\x7f]/.test(returnTo)) {
+  if (
+    typeof returnTo === "string" &&
+    /^\/(?!\/)/.test(returnTo) &&
+    !/[\\\x00-\x20\x7f]/.test(returnTo)
+  ) {
     return returnTo;
   }
   return defaultDestination(role);

@@ -45,7 +45,9 @@ function useArticleModel(model) {
 
 function getArticleModel() {
   if (!ArticleModel) {
-    throw new Error("publicArticleService has no article model. Call useArticleModel(model) at startup.");
+    throw new Error(
+      "publicArticleService has no article model. Call useArticleModel(model) at startup.",
+    );
   }
   return ArticleModel;
 }
@@ -67,7 +69,9 @@ function toSafeImageUrl(value) {
   }
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.href
+      : null;
   } catch (error) {
     return null;
   }
@@ -119,7 +123,8 @@ function buildFeedFilter({ q, category, viewed, readArticleIds }) {
       // Never fall back to an unfiltered feed when the history is missing.
       throw new Error("A viewed filter needs the list of read article ids.");
     }
-    filter._id = viewed === "viewed" ? { $in: readArticleIds } : { $nin: readArticleIds };
+    filter._id =
+      viewed === "viewed" ? { $in: readArticleIds } : { $nin: readArticleIds };
   } else if (viewed !== "all") {
     throw new Error("Unknown viewed filter.");
   }
@@ -129,12 +134,22 @@ function buildFeedFilter({ q, category, viewed, readArticleIds }) {
 // page must already be a validated integer >= 1, and sort is "date" or "popular".
 // Filters and sorting are applied by MongoDB before skip and limit.
 // One extra row is requested only to learn whether another page exists.
-async function getPublishedArticles({ page, q = "", category = "", viewed = "all", sort = "date", readArticleIds }) {
+async function getPublishedArticles({
+  page,
+  q = "",
+  category = "",
+  viewed = "all",
+  sort = "date",
+  readArticleIds,
+}) {
   if (!Object.hasOwn(FEED_SORTS, sort)) {
     throw new Error("Unknown sort.");
   }
   const documents = await getArticleModel()
-    .find(buildFeedFilter({ q, category, viewed, readArticleIds }), feedProjection)
+    .find(
+      buildFeedFilter({ q, category, viewed, readArticleIds }),
+      feedProjection,
+    )
     .sort(FEED_SORTS[sort])
     .skip((page - 1) * FEED_PAGE_SIZE)
     .limit(FEED_PAGE_SIZE + 1)
@@ -149,7 +164,10 @@ async function getPublishedArticles({ page, q = "", category = "", viewed = "all
 
 // Category choices come only from approved versions, never from pending revisions.
 async function getPublishedCategories() {
-  const categories = await getArticleModel().distinct("approved.category", approvedOnlyFilter);
+  const categories = await getArticleModel().distinct(
+    "approved.category",
+    approvedOnlyFilter,
+  );
 
   return categories
     .filter((category) => typeof category === "string" && category.length > 0)
@@ -174,7 +192,10 @@ async function isArticlePublished(id) {
   if (typeof id !== "string" || !OBJECT_ID_PATTERN.test(id)) {
     return false;
   }
-  const found = await getArticleModel().exists({ _id: id, ...approvedOnlyFilter });
+  const found = await getArticleModel().exists({
+    _id: id,
+    ...approvedOnlyFilter,
+  });
   return Boolean(found);
 }
 

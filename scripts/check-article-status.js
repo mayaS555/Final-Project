@@ -21,13 +21,24 @@ const {
  * @example expectRejected("draft", "published", "editor", 409);
  */
 function expectRejected(from, to, role, status) {
-  assert.equal(canTransition(from, to, role), false, `${role}: ${from} -> ${to} should be rejected`);
-  assert.throws(() => assertTransition(from, to, role), (error) => error.status === status);
+  assert.equal(
+    canTransition(from, to, role),
+    false,
+    `${role}: ${from} -> ${to} should be rejected`,
+  );
+  assert.throws(
+    () => assertTransition(from, to, role),
+    (error) => error.status === status,
+  );
 }
 
 // Every row of the table is allowed for its own role and refused (403) for the other role.
 for (const { from, to, by } of ARTICLE_TRANSITIONS) {
-  assert.equal(canTransition(from, to, by), true, `${by}: ${from} -> ${to} should be allowed`);
+  assert.equal(
+    canTransition(from, to, by),
+    true,
+    `${by}: ${from} -> ${to} should be allowed`,
+  );
   assert.doesNotThrow(() => assertTransition(from, to, by));
   expectRejected(from, to, by === "editor" ? "reporter" : "editor", 403);
 }
@@ -60,8 +71,18 @@ assert.equal(canDelete({ status: "draft" }, "reporter", true), true);
 assert.equal(canDelete({ status: "returned" }, "reporter", true), true);
 assert.equal(canDelete({ status: "draft" }, "reporter", false), false);
 assert.equal(canDelete({ status: "pending" }, "reporter", true), false);
-assert.equal(canDelete({ status: "draft", approved: { publishedAt } }, "reporter", true), false);
-assert.equal(canDelete({ status: "published", approved: { publishedAt } }, "editor", false), true);
+assert.equal(
+  canDelete({ status: "draft", approved: { publishedAt } }, "reporter", true),
+  false,
+);
+assert.equal(
+  canDelete(
+    { status: "published", approved: { publishedAt } },
+    "editor",
+    false,
+  ),
+  true,
+);
 assert.equal(canDelete({ status: "draft" }, "guest", true), false);
 
 console.log("article status checks passed");

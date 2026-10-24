@@ -11,7 +11,11 @@ const articleService = require("../services/articleService");
 const reporterRoutes = require("../routes/reporterRoutes");
 const { toEditView } = require("../controllers/reporterController");
 const { ARTICLE_CATEGORIES } = require("../models/articleCategories");
-const { skipWithoutDatabase, connectTestDatabase, disconnectTestDatabase } = require("./testDatabase");
+const {
+  skipWithoutDatabase,
+  connectTestDatabase,
+  disconnectTestDatabase,
+} = require("./testDatabase");
 const { startTestServer } = require("./testServer");
 
 const USERS = {
@@ -32,10 +36,17 @@ let testServer;
  * @example const { html } = await getEditPage(id, "noa");
  */
 async function getEditPage(articleId, user) {
-  const response = await fetch(`${testServer.baseUrl}/reporter/articles/${articleId}/edit`, {
-    headers: user ? { "X-Test-User": user } : {},
-  });
-  return { status: response.status, html: await response.text(), cacheControl: response.headers.get("cache-control") };
+  const response = await fetch(
+    `${testServer.baseUrl}/reporter/articles/${articleId}/edit`,
+    {
+      headers: user ? { "X-Test-User": user } : {},
+    },
+  );
+  return {
+    status: response.status,
+    html: await response.text(),
+    cacheControl: response.headers.get("cache-control"),
+  };
 }
 
 /**
@@ -51,8 +62,20 @@ function buildArticle(fields = {}) {
 describe("toEditView (no MongoDB needed)", () => {
   test("the fields come from the working copy, not the public version", () => {
     const article = buildArticle({
-      draft: { title: "Working", summary: "S", content: "C", imageUrl: "/a.png", category: "Sports" },
-      approved: { title: "Live", category: "Culture", authorName: "Noa", publishedAt, updatedAt: publishedAt },
+      draft: {
+        title: "Working",
+        summary: "S",
+        content: "C",
+        imageUrl: "/a.png",
+        category: "Sports",
+      },
+      approved: {
+        title: "Live",
+        category: "Culture",
+        authorName: "Noa",
+        publishedAt,
+        updatedAt: publishedAt,
+      },
     });
     assert.deepEqual(toEditView(article, USERS.noa).fields, {
       title: "Working",
@@ -65,19 +88,34 @@ describe("toEditView (no MongoDB needed)", () => {
 
   test("the author edits and submits a draft", () => {
     const view = toEditView(buildArticle(), USERS.noa);
-    assert.deepEqual([view.canEdit, view.canSubmit, view.submitLabel], [true, true, "Submit for approval"]);
+    assert.deepEqual(
+      [view.canEdit, view.canSubmit, view.submitLabel],
+      [true, true, "Submit for approval"],
+    );
     assert.equal(view.readOnlyMessage, "");
     assert.equal(view.dashboardUrl, "/reporter");
   });
 
   test("a returned article shows the note and offers Resubmit", () => {
-    const view = toEditView(buildArticle({ status: "returned", editorNote: "Add a source." }), USERS.noa);
-    assert.deepEqual([view.canEdit, view.canSubmit, view.submitLabel], [true, true, "Resubmit"]);
+    const view = toEditView(
+      buildArticle({ status: "returned", editorNote: "Add a source." }),
+      USERS.noa,
+    );
+    assert.deepEqual(
+      [view.canEdit, view.canSubmit, view.submitLabel],
+      [true, true, "Resubmit"],
+    );
     assert.equal(view.editorNote, "Add a source.");
   });
 
   test("the editor's note is only shown while the article is returned", () => {
-    assert.equal(toEditView(buildArticle({ status: "pending", editorNote: "Old" }), USERS.noa).editorNote, "");
+    assert.equal(
+      toEditView(
+        buildArticle({ status: "pending", editorNote: "Old" }),
+        USERS.noa,
+      ).editorNote,
+      "",
+    );
   });
 
   test("pending is read-only for the author, with the reason", () => {
@@ -88,36 +126,78 @@ describe("toEditView (no MongoDB needed)", () => {
 
   test("published is read-only for the author, pointing to Edit published article", () => {
     const view = toEditView(
-      buildArticle({ status: "published", approved: { title: "Live", authorName: "Noa", publishedAt, updatedAt: publishedAt } }),
-      USERS.noa
+      buildArticle({
+        status: "published",
+        approved: {
+          title: "Live",
+          authorName: "Noa",
+          publishedAt,
+          updatedAt: publishedAt,
+        },
+      }),
+      USERS.noa,
     );
-    assert.deepEqual([view.canEdit, view.canSubmit, view.isLive], [false, false, true]);
+    assert.deepEqual(
+      [view.canEdit, view.canSubmit, view.isLive],
+      [false, false, true],
+    );
     assert.match(view.readOnlyMessage, /Edit published article/);
   });
 
   test("an editor edits only a pending article and never submits", () => {
     const pending = toEditView(buildArticle({ status: "pending" }), USERS.ed);
-    assert.deepEqual([pending.canEdit, pending.canSubmit, pending.dashboardUrl], [true, false, null]);
+    assert.deepEqual(
+      [pending.canEdit, pending.canSubmit, pending.dashboardUrl],
+      [true, false, null],
+    );
     const draft = toEditView(buildArticle(), USERS.ed);
     assert.deepEqual([draft.canEdit, draft.canSubmit], [false, false]);
-    assert.match(draft.readOnlyMessage, /Editors can change an article only while it is waiting/);
+    assert.match(
+      draft.readOnlyMessage,
+      /Editors can change an article only while it is waiting/,
+    );
   });
 
   test("an admin writes their own articles and edits any pending article", () => {
-    const ownDraft = toEditView(new Article({ author: USERS.adm._id, authorName: "Ada" }), USERS.adm);
-    assert.deepEqual([ownDraft.canEdit, ownDraft.canSubmit, ownDraft.dashboardUrl], [true, true, "/reporter"]);
+    const ownDraft = toEditView(
+      new Article({ author: USERS.adm._id, authorName: "Ada" }),
+      USERS.adm,
+    );
+    assert.deepEqual(
+      [ownDraft.canEdit, ownDraft.canSubmit, ownDraft.dashboardUrl],
+      [true, true, "/reporter"],
+    );
 
-    const otherPending = toEditView(buildArticle({ status: "pending" }), USERS.adm);
-    assert.deepEqual([otherPending.canEdit, otherPending.canSubmit, otherPending.dashboardUrl], [true, false, "/reporter"]);
+    const otherPending = toEditView(
+      buildArticle({ status: "pending" }),
+      USERS.adm,
+    );
+    assert.deepEqual(
+      [otherPending.canEdit, otherPending.canSubmit, otherPending.dashboardUrl],
+      [true, false, "/reporter"],
+    );
 
     const otherDraft = toEditView(buildArticle(), USERS.adm);
-    assert.deepEqual([otherDraft.canEdit, otherDraft.canSubmit], [false, false]);
-    assert.match(otherDraft.readOnlyMessage, /Editors can change an article only while it is waiting/);
+    assert.deepEqual(
+      [otherDraft.canEdit, otherDraft.canSubmit],
+      [false, false],
+    );
+    assert.match(
+      otherDraft.readOnlyMessage,
+      /Editors can change an article only while it is waiting/,
+    );
   });
 
   test("isLive is true only with a public version", () => {
     assert.equal(toEditView(buildArticle(), USERS.noa).isLive, false);
-    const revising = buildArticle({ approved: { title: "Live", authorName: "Noa", publishedAt, updatedAt: publishedAt } });
+    const revising = buildArticle({
+      approved: {
+        title: "Live",
+        authorName: "Noa",
+        publishedAt,
+        updatedAt: publishedAt,
+      },
+    });
     assert.equal(toEditView(revising, USERS.noa).isLive, true);
   });
 });
@@ -129,7 +209,10 @@ describe("GET /reporter/articles/:id/edit access (no MongoDB needed)", () => {
   after(() => testServer.stop());
 
   test("nobody logged in gets 401", async () => {
-    assert.equal((await getEditPage(String(new mongoose.Types.ObjectId()))).status, 401);
+    assert.equal(
+      (await getEditPage(String(new mongoose.Types.ObjectId()))).status,
+      401,
+    );
   });
 
   test("an invalid id gets 400", async () => {
@@ -137,184 +220,267 @@ describe("GET /reporter/articles/:id/edit access (no MongoDB needed)", () => {
   });
 });
 
-describe("GET /reporter/articles/:id/edit with MongoDB", { skip: skipWithoutDatabase }, () => {
-  const articles = {};
+describe(
+  "GET /reporter/articles/:id/edit with MongoDB",
+  { skip: skipWithoutDatabase },
+  () => {
+    const articles = {};
 
-  before(async () => {
-    await connectTestDatabase();
-    testServer = await startTestServer([reporterRoutes], USERS);
-    mock.method(console, "log", () => {});
-    const { noa, ed } = USERS;
+    before(async () => {
+      await connectTestDatabase();
+      testServer = await startTestServer([reporterRoutes], USERS);
+      mock.method(console, "log", () => {});
+      const { noa, ed } = USERS;
 
-    articles.draft = await articleService.createDraft(noa);
-    articles.draft = await articleService.saveWorkingCopy(articles.draft, noa, {
-      title: "<b>Harbor</b> report",
-      summary: "Short summary",
-      content: "First paragraph\n\nSecond </textarea><script>alert(1)</script>",
-      imageUrl: "/images/harbor.jpg",
-      category: "Economy",
+      articles.draft = await articleService.createDraft(noa);
+      articles.draft = await articleService.saveWorkingCopy(
+        articles.draft,
+        noa,
+        {
+          title: "<b>Harbor</b> report",
+          summary: "Short summary",
+          content:
+            "First paragraph\n\nSecond </textarea><script>alert(1)</script>",
+          imageUrl: "/images/harbor.jpg",
+          category: "Economy",
+        },
+      );
+
+      articles.returned = await articleService.createDraft(noa);
+      articles.returned = await articleService.saveWorkingCopy(
+        articles.returned,
+        noa,
+        {
+          title: "Needs sources",
+          content: "Text",
+          category: "Sports",
+        },
+      );
+      articles.returned = await articleService.submit(articles.returned, noa);
+      articles.returned = await articleService.returnToReporter(
+        articles.returned,
+        ed,
+        "Add a second source.",
+      );
+
+      articles.published = await articleService.createDraft(noa);
+      articles.published = await articleService.saveWorkingCopy(
+        articles.published,
+        noa,
+        {
+          title: "Library news",
+          content: "Text",
+          category: "Culture",
+        },
+      );
+      articles.published = await articleService.submit(articles.published, noa);
+      articles.published = (
+        await articleService.approve(articles.published, ed)
+      ).article;
+
+      articles.revising = await articleService.createDraft(noa);
+      articles.revising = await articleService.saveWorkingCopy(
+        articles.revising,
+        noa,
+        {
+          title: "Old title",
+          content: "Text",
+          category: "Health",
+        },
+      );
+      articles.revising = await articleService.submit(articles.revising, noa);
+      articles.revising = (
+        await articleService.approve(articles.revising, ed)
+      ).article;
+      articles.revising = await articleService.startRevision(
+        articles.revising,
+        noa,
+      );
+      articles.revising = await articleService.saveWorkingCopy(
+        articles.revising,
+        noa,
+        { title: "New title" },
+      );
+
+      articles.pending = await articleService.createDraft(noa);
+      articles.pending = await articleService.saveWorkingCopy(
+        articles.pending,
+        noa,
+        {
+          title: "Waiting",
+          content: "Text",
+          category: "World",
+        },
+      );
+      articles.pending = await articleService.submit(articles.pending, noa);
     });
 
-    articles.returned = await articleService.createDraft(noa);
-    articles.returned = await articleService.saveWorkingCopy(articles.returned, noa, {
-      title: "Needs sources",
-      content: "Text",
-      category: "Sports",
+    after(async () => {
+      mock.restoreAll();
+      await testServer.stop();
+      await disconnectTestDatabase();
     });
-    articles.returned = await articleService.submit(articles.returned, noa);
-    articles.returned = await articleService.returnToReporter(articles.returned, ed, "Add a second source.");
 
-    articles.published = await articleService.createDraft(noa);
-    articles.published = await articleService.saveWorkingCopy(articles.published, noa, {
-      title: "Library news",
-      content: "Text",
-      category: "Culture",
+    test("another reporter gets 403, a missing article 404", async () => {
+      assert.equal(
+        (await getEditPage(String(articles.draft._id), "dan")).status,
+        403,
+      );
+      assert.equal(
+        (await getEditPage(String(new mongoose.Types.ObjectId()), "noa"))
+          .status,
+        404,
+      );
     });
-    articles.published = await articleService.submit(articles.published, noa);
-    articles.published = (await articleService.approve(articles.published, ed)).article;
 
-    articles.revising = await articleService.createDraft(noa);
-    articles.revising = await articleService.saveWorkingCopy(articles.revising, noa, {
-      title: "Old title",
-      content: "Text",
-      category: "Health",
+    test("a draft is filled from the working copy, escaped, and not cached", async () => {
+      const { status, html, cacheControl } = await getEditPage(
+        String(articles.draft._id),
+        "noa",
+      );
+      assert.equal(status, 200);
+      assert.equal(cacheControl, "private, no-store");
+      assert.ok(html.includes('value="&lt;b&gt;Harbor&lt;/b&gt; report"'));
+      assert.ok(html.includes(">Short summary</textarea>"));
+      assert.ok(
+        html.includes(
+          "Second &lt;/textarea&gt;&lt;script&gt;alert(1)&lt;/script&gt;</textarea>",
+        ),
+      );
+      assert.ok(!html.includes("<script>alert(1)</script>"));
+      assert.ok(html.includes('value="/images/harbor.jpg"'));
+      assert.ok(
+        html.includes('<option value="Economy" selected>Economy</option>'),
+      );
     });
-    articles.revising = await articleService.submit(articles.revising, noa);
-    articles.revising = (await articleService.approve(articles.revising, ed)).article;
-    articles.revising = await articleService.startRevision(articles.revising, noa);
-    articles.revising = await articleService.saveWorkingCopy(articles.revising, noa, { title: "New title" });
 
-    articles.pending = await articleService.createDraft(noa);
-    articles.pending = await articleService.saveWorkingCopy(articles.pending, noa, {
-      title: "Waiting",
-      content: "Text",
-      category: "World",
+    test("the category list is the shared constant", async () => {
+      const { html } = await getEditPage(String(articles.draft._id), "noa");
+      for (const category of ARTICLE_CATEGORIES) {
+        assert.ok(html.includes(`<option value="${category}"`), category);
+      }
     });
-    articles.pending = await articleService.submit(articles.pending, noa);
-  });
 
-  after(async () => {
-    mock.restoreAll();
-    await testServer.stop();
-    await disconnectTestDatabase();
-  });
+    test("every input has a label", async () => {
+      const { html } = await getEditPage(String(articles.draft._id), "noa");
+      for (const id of [
+        "rep-title",
+        "rep-summary",
+        "rep-content",
+        "rep-image",
+        "rep-category",
+      ]) {
+        assert.ok(html.includes(`<label for="${id}">`), id);
+        assert.ok(html.includes(`id="${id}"`), id);
+      }
+    });
 
-  test("another reporter gets 403, a missing article 404", async () => {
-    assert.equal((await getEditPage(String(articles.draft._id), "dan")).status, 403);
-    assert.equal((await getEditPage(String(new mongoose.Types.ObjectId()), "noa")).status, 404);
-  });
+    test("a draft is editable with Submit for approval and Back to dashboard", async () => {
+      const { html } = await getEditPage(String(articles.draft._id), "noa");
+      assert.ok(html.includes('<fieldset class="rep-fields">'));
+      assert.ok(html.includes(">Submit for approval</button>"));
+      assert.ok(html.includes('href="/reporter">Back to dashboard</a>'));
+      assert.ok(!html.includes("rep-read-only"));
+      assert.ok(!html.includes("Readers still see the published version"));
+    });
 
-  test("a draft is filled from the working copy, escaped, and not cached", async () => {
-    const { status, html, cacheControl } = await getEditPage(String(articles.draft._id), "noa");
-    assert.equal(status, 200);
-    assert.equal(cacheControl, "private, no-store");
-    assert.ok(html.includes('value="&lt;b&gt;Harbor&lt;/b&gt; report"'));
-    assert.ok(html.includes(">Short summary</textarea>"));
-    assert.ok(html.includes("Second &lt;/textarea&gt;&lt;script&gt;alert(1)&lt;/script&gt;</textarea>"));
-    assert.ok(!html.includes("<script>alert(1)</script>"));
-    assert.ok(html.includes('value="/images/harbor.jpg"'));
-    assert.ok(html.includes('<option value="Economy" selected>Economy</option>'));
-  });
+    test("an editable page loads autosave and shows the save status", async () => {
+      const { html } = await getEditPage(String(articles.draft._id), "noa");
+      assert.ok(
+        html.includes('<script src="/js/reporter-autosave.js" defer></script>'),
+      );
+      assert.ok(html.includes('id="rep-save-status"'));
+    });
 
-  test("the category list is the shared constant", async () => {
-    const { html } = await getEditPage(String(articles.draft._id), "noa");
-    for (const category of ARTICLE_CATEGORIES) {
-      assert.ok(html.includes(`<option value="${category}"`), category);
-    }
-  });
+    test("the author's editable page loads the submit script after autosave, with the required fields", async () => {
+      const { html } = await getEditPage(String(articles.draft._id), "noa");
+      assert.ok(html.includes('data-required-fields="title,content,category"'));
+      const autosaveAt = html.indexOf("reporter-autosave.js");
+      const submitAt = html.indexOf(
+        '<script src="/js/reporter-edit.js" defer></script>',
+      );
+      assert.ok(submitAt > autosaveAt && autosaveAt > 0);
+    });
 
-  test("every input has a label", async () => {
-    const { html } = await getEditPage(String(articles.draft._id), "noa");
-    for (const id of ["rep-title", "rep-summary", "rep-content", "rep-image", "rep-category"]) {
-      assert.ok(html.includes(`<label for="${id}">`), id);
-      assert.ok(html.includes(`id="${id}"`), id);
-    }
-  });
+    test("an editor's page (no Submit) does not load the submit script", async () => {
+      const { html } = await getEditPage(String(articles.pending._id), "ed");
+      assert.ok(html.includes("reporter-autosave.js"));
+      assert.ok(!html.includes("reporter-edit.js"));
+    });
 
-  test("a draft is editable with Submit for approval and Back to dashboard", async () => {
-    const { html } = await getEditPage(String(articles.draft._id), "noa");
-    assert.ok(html.includes('<fieldset class="rep-fields">'));
-    assert.ok(html.includes(">Submit for approval</button>"));
-    assert.ok(html.includes('href="/reporter">Back to dashboard</a>'));
-    assert.ok(!html.includes("rep-read-only"));
-    assert.ok(!html.includes("Readers still see the published version"));
-  });
+    test("a read-only page has no autosave", async () => {
+      const { html } = await getEditPage(String(articles.pending._id), "noa");
+      assert.ok(!html.includes("reporter-autosave.js"));
+      assert.ok(!html.includes('id="rep-save-status"'));
+    });
 
-  test("an editable page loads autosave and shows the save status", async () => {
-    const { html } = await getEditPage(String(articles.draft._id), "noa");
-    assert.ok(html.includes('<script src="/js/reporter-autosave.js" defer></script>'));
-    assert.ok(html.includes('id="rep-save-status"'));
-  });
+    test("a returned article shows the editor's note at the top and Resubmit", async () => {
+      const { html } = await getEditPage(String(articles.returned._id), "noa");
+      assert.ok(html.includes("The editor returned this article"));
+      assert.ok(html.includes("Add a second source."));
+      assert.ok(html.indexOf("Add a second source.") < html.indexOf("<form"));
+      assert.ok(html.includes(">Resubmit</button>"));
+    });
 
-  test("the author's editable page loads the submit script after autosave, with the required fields", async () => {
-    const { html } = await getEditPage(String(articles.draft._id), "noa");
-    assert.ok(html.includes('data-required-fields="title,content,category"'));
-    const autosaveAt = html.indexOf("reporter-autosave.js");
-    const submitAt = html.indexOf('<script src="/js/reporter-edit.js" defer></script>');
-    assert.ok(submitAt > autosaveAt && autosaveAt > 0);
-  });
+    test("a pending article is read-only with the reason, without an error", async () => {
+      const { status, html } = await getEditPage(
+        String(articles.pending._id),
+        "noa",
+      );
+      assert.equal(status, 200);
+      assert.ok(html.includes('<fieldset class="rep-fields" disabled>'));
+      assert.ok(html.includes("waiting for an editor"));
+      assert.ok(!html.includes('id="rep-submit"'));
+    });
 
-  test("an editor's page (no Submit) does not load the submit script", async () => {
-    const { html } = await getEditPage(String(articles.pending._id), "ed");
-    assert.ok(html.includes("reporter-autosave.js"));
-    assert.ok(!html.includes("reporter-edit.js"));
-  });
+    test("a published article is read-only and shows the public-version banner", async () => {
+      const { html } = await getEditPage(String(articles.published._id), "noa");
+      assert.ok(html.includes('<fieldset class="rep-fields" disabled>'));
+      assert.ok(
+        html.includes(
+          "Readers still see the published version until an editor approves your changes.",
+        ),
+      );
+      assert.ok(html.includes(`href="/articles/${articles.published._id}"`));
+    });
 
-  test("a read-only page has no autosave", async () => {
-    const { html } = await getEditPage(String(articles.pending._id), "noa");
-    assert.ok(!html.includes("reporter-autosave.js"));
-    assert.ok(!html.includes('id="rep-save-status"'));
-  });
+    test("a published article being revised is editable, shows the new title and the banner", async () => {
+      const { html } = await getEditPage(String(articles.revising._id), "noa");
+      assert.ok(html.includes('<fieldset class="rep-fields">'));
+      assert.ok(html.includes('value="New title"'));
+      assert.ok(html.includes("Readers still see the published version"));
+    });
 
-  test("a returned article shows the editor's note at the top and Resubmit", async () => {
-    const { html } = await getEditPage(String(articles.returned._id), "noa");
-    assert.ok(html.includes("The editor returned this article"));
-    assert.ok(html.includes("Add a second source."));
-    assert.ok(html.indexOf("Add a second source.") < html.indexOf("<form"));
-    assert.ok(html.includes(">Resubmit</button>"));
-  });
+    test("an editor can open a pending article and edit it, without Submit or the reporter dashboard link", async () => {
+      const { status, html } = await getEditPage(
+        String(articles.pending._id),
+        "ed",
+      );
+      assert.equal(status, 200);
+      assert.ok(html.includes('<fieldset class="rep-fields">'));
+      assert.ok(!html.includes('id="rep-submit"'));
+      assert.ok(!html.includes("Back to dashboard"));
+    });
 
-  test("a pending article is read-only with the reason, without an error", async () => {
-    const { status, html } = await getEditPage(String(articles.pending._id), "noa");
-    assert.equal(status, 200);
-    assert.ok(html.includes('<fieldset class="rep-fields" disabled>'));
-    assert.ok(html.includes("waiting for an editor"));
-    assert.ok(!html.includes('id="rep-submit"'));
-  });
+    test("an admin can open and edit a pending article and return to the dashboard", async () => {
+      const { status, html } = await getEditPage(
+        String(articles.pending._id),
+        "adm",
+      );
+      assert.equal(status, 200);
+      assert.ok(html.includes('<fieldset class="rep-fields">'));
+      assert.ok(!html.includes('id="rep-submit"'));
+      assert.ok(html.includes('href="/reporter">Back to dashboard</a>'));
+    });
 
-  test("a published article is read-only and shows the public-version banner", async () => {
-    const { html } = await getEditPage(String(articles.published._id), "noa");
-    assert.ok(html.includes('<fieldset class="rep-fields" disabled>'));
-    assert.ok(html.includes("Readers still see the published version until an editor approves your changes."));
-    assert.ok(html.includes(`href="/articles/${articles.published._id}"`));
-  });
-
-  test("a published article being revised is editable, shows the new title and the banner", async () => {
-    const { html } = await getEditPage(String(articles.revising._id), "noa");
-    assert.ok(html.includes('<fieldset class="rep-fields">'));
-    assert.ok(html.includes('value="New title"'));
-    assert.ok(html.includes("Readers still see the published version"));
-  });
-
-  test("an editor can open a pending article and edit it, without Submit or the reporter dashboard link", async () => {
-    const { status, html } = await getEditPage(String(articles.pending._id), "ed");
-    assert.equal(status, 200);
-    assert.ok(html.includes('<fieldset class="rep-fields">'));
-    assert.ok(!html.includes('id="rep-submit"'));
-    assert.ok(!html.includes("Back to dashboard"));
-  });
-
-  test("an admin can open and edit a pending article and return to the dashboard", async () => {
-    const { status, html } = await getEditPage(String(articles.pending._id), "adm");
-    assert.equal(status, 200);
-    assert.ok(html.includes('<fieldset class="rep-fields">'));
-    assert.ok(!html.includes('id="rep-submit"'));
-    assert.ok(html.includes('href="/reporter">Back to dashboard</a>'));
-  });
-
-  test("the page shows the latest saved version on every request", async () => {
-    await articleService.saveWorkingCopy(await Article.findById(articles.draft._id), USERS.noa, { summary: "Changed elsewhere" });
-    const { html } = await getEditPage(String(articles.draft._id), "noa");
-    assert.ok(html.includes(">Changed elsewhere</textarea>"));
-  });
-});
+    test("the page shows the latest saved version on every request", async () => {
+      await articleService.saveWorkingCopy(
+        await Article.findById(articles.draft._id),
+        USERS.noa,
+        { summary: "Changed elsewhere" },
+      );
+      const { html } = await getEditPage(String(articles.draft._id), "noa");
+      assert.ok(html.includes(">Changed elsewhere</textarea>"));
+    });
+  },
+);

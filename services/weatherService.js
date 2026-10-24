@@ -29,14 +29,18 @@ function httpGet(url) {
     const req = https.get(url, { timeout: 5000 }, (res) => {
       let raw = "";
       res.setEncoding("utf8");
-      res.on("data", (chunk) => { raw += chunk; });
+      res.on("data", (chunk) => {
+        raw += chunk;
+      });
       res.on("end", () => {
         try {
           const body = JSON.parse(raw);
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve(body);
           } else {
-            const err = new Error(`OpenWeatherMap responded with ${res.statusCode}`);
+            const err = new Error(
+              `OpenWeatherMap responded with ${res.statusCode}`,
+            );
             err.statusCode = res.statusCode;
             err.body = body;
             reject(err);
@@ -93,7 +97,12 @@ async function getWeather(city, apiKey, units = "metric") {
 
   // Return fresh cache hit immediately.
   if (cached && now - cached.fetchedAt < CACHE_TTL_MS) {
-    return { data: cached.data, fromCache: true, stale: false, unavailable: false };
+    return {
+      data: cached.data,
+      fromCache: true,
+      stale: false,
+      unavailable: false,
+    };
   }
 
   // Attempt a live fetch.
@@ -111,7 +120,12 @@ async function getWeather(city, apiKey, units = "metric") {
     // Fallback 1: return stale cache if we have it.
     if (cached) {
       const staleData = { ...cached.data, stale: true };
-      return { data: staleData, fromCache: true, stale: true, unavailable: false };
+      return {
+        data: staleData,
+        fromCache: true,
+        stale: true,
+        unavailable: false,
+      };
     }
 
     // Fallback 2: return a sentinel so the UI shows "unavailable".
@@ -141,7 +155,11 @@ async function getWeatherForWidget() {
   if (!apiKey) {
     return null;
   }
-  return getWeather(process.env.WEATHER_DEFAULT_CITY || "Tel Aviv", apiKey, "metric");
+  return getWeather(
+    process.env.WEATHER_DEFAULT_CITY || "Tel Aviv",
+    apiKey,
+    "metric",
+  );
 }
 
 /**

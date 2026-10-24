@@ -11,7 +11,9 @@ const router = express.Router();
 // controller, the rate limiter or the database.
 function requireJsonContentType(req, res, next) {
   if (!req.is("application/json")) {
-    res.status(415).json({ error: "Comments must be sent as application/json." });
+    res
+      .status(415)
+      .json({ error: "Comments must be sent as application/json." });
     return;
   }
   next();
@@ -21,10 +23,30 @@ function requireJsonContentType(req, res, next) {
 const readJsonBody = express.json({ limit: "10kb" });
 
 // The article id is checked inside the controller: the article must have an approved public version.
-router.get("/api/public/articles/:id/comments", deviceIdentity, commentController.listComments);
-router.post("/api/public/articles/:id/comments", deviceIdentity, requireJsonContentType, readJsonBody, commentController.createComment);
-router.patch("/api/public/comments/:id", deviceIdentity, requireJsonContentType, readJsonBody, commentController.updateComment);
-router.delete("/api/public/comments/:id", deviceIdentity, commentController.deleteComment);
+router.get(
+  "/api/public/articles/:id/comments",
+  deviceIdentity,
+  commentController.listComments,
+);
+router.post(
+  "/api/public/articles/:id/comments",
+  deviceIdentity,
+  requireJsonContentType,
+  readJsonBody,
+  commentController.createComment,
+);
+router.patch(
+  "/api/public/comments/:id",
+  deviceIdentity,
+  requireJsonContentType,
+  readJsonBody,
+  commentController.updateComment,
+);
+router.delete(
+  "/api/public/comments/:id",
+  deviceIdentity,
+  commentController.deleteComment,
+);
 
 // Malformed or oversized JSON would otherwise reach Express's default HTML error page.
 router.use((error, req, res, next) => {

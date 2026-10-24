@@ -40,22 +40,27 @@
     if (data.icon) {
       html +=
         '<img class="weather-icon weather-icon--img"' +
-        ' src="' + iconUrl(data.icon) + '"' +
-        ' alt="' + (data.description || "") + '"' +
+        ' src="' +
+        iconUrl(data.icon) +
+        '"' +
+        ' alt="' +
+        (data.description || "") +
+        '"' +
         ' width="40" height="40">';
     }
 
     html +=
       '<span class="weather-temp">' +
-        (data.temp !== null ? data.temp + "\u00B0C" : "\u2014") +
+      (data.temp !== null ? data.temp + "\u00B0C" : "\u2014") +
       "</span>";
 
-    html += '<span class="weather-desc">' + (data.description || "") + "</span>";
+    html +=
+      '<span class="weather-desc">' + (data.description || "") + "</span>";
 
     html +=
       '<span class="weather-city">' +
-        (data.city || "") +
-        (data.country ? ", " + data.country : "") +
+      (data.city || "") +
+      (data.country ? ", " + data.country : "") +
       "</span>";
 
     if (stale) {
@@ -102,7 +107,9 @@
 
     // First client-side refresh happens after one full interval; the server has
     // already rendered the initial state.
-    setInterval(function () { refresh(widget); }, REFRESH_INTERVAL_MS);
+    setInterval(function () {
+      refresh(widget);
+    }, REFRESH_INTERVAL_MS);
   }
 
   if (document.readyState === "loading") {

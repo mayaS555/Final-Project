@@ -4,7 +4,11 @@
 // Errors go to next(err) with error.status, for A's error middleware.
 
 const Article = require("../models/Article");
-const { createHttpError, hasEditorRole, hasReporterRole } = require("../services/articleStatus");
+const {
+  createHttpError,
+  hasEditorRole,
+  hasReporterRole,
+} = require("../services/articleStatus");
 
 const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
 
@@ -34,7 +38,12 @@ function requireLoginWithRole(roles) {
       return;
     }
     if (!roles.includes(user.role)) {
-      next(createHttpError(403, `Only ${roles.map((role) => `${role}s`).join(" and ")} can use this page.`));
+      next(
+        createHttpError(
+          403,
+          `Only ${roles.map((role) => `${role}s`).join(" and ")} can use this page.`,
+        ),
+      );
       return;
     }
     next();
@@ -90,7 +99,9 @@ function requireArticleOwnerOrEditor(req, res, next) {
     return;
   }
   const isEditor = hasEditorRole(user.role);
-  const isAuthor = hasReporterRole(user.role) && String(req.article.author) === String(user._id);
+  const isAuthor =
+    hasReporterRole(user.role) &&
+    String(req.article.author) === String(user._id);
   if (!isEditor && !isAuthor) {
     next(createHttpError(403, "You can only open your own articles."));
     return;
@@ -98,4 +109,10 @@ function requireArticleOwnerOrEditor(req, res, next) {
   next();
 }
 
-module.exports = { requireStaffLogin, requireReporterLogin, loadArticle, requireArticleOwnerOrEditor, getSessionUser };
+module.exports = {
+  requireStaffLogin,
+  requireReporterLogin,
+  loadArticle,
+  requireArticleOwnerOrEditor,
+  getSessionUser,
+};

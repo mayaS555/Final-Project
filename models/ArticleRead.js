@@ -12,7 +12,7 @@ const articleReadSchema = new mongoose.Schema(
     // Time of the latest visit.
     readAt: { type: Date, required: true },
   },
-  { collection: "article_reads" }
+  { collection: "article_reads" },
 );
 
 // One record per device and article. It also serves "all articles this device has read".

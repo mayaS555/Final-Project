@@ -9,7 +9,9 @@ router.get("/login", (req, res) => {
     const destination = defaultDestination(req.session.user.role);
     return res.redirect(destination);
   }
-  const queryString = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
+  const queryString = req.url.includes("?")
+    ? req.url.slice(req.url.indexOf("?"))
+    : "";
   res.redirect(`/login.html${queryString}`);
 });
 

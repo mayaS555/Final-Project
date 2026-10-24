@@ -75,7 +75,10 @@ describe("normalizeError", () => {
     err.keyValue = { email: "test@example.com" };
     const normalized = normalizeError(err);
     assert.equal(normalized.status, 409);
-    assert.equal(normalized.message, "A record with this email already exists.");
+    assert.equal(
+      normalized.message,
+      "A record with this email already exists.",
+    );
   });
 
   test("preserves existing valid HTTP status codes", () => {
@@ -112,7 +115,10 @@ describe("normalizeError", () => {
       const err = new Error("Sensitive DB details");
       const normalized = normalizeError(err);
       assert.equal(normalized.status, 500);
-      assert.equal(normalized.message, "Internal server error. Please try again later.");
+      assert.equal(
+        normalized.message,
+        "Internal server error. Please try again later.",
+      );
     } finally {
       process.env.NODE_ENV = originalEnv;
     }
@@ -134,7 +140,8 @@ describe("isJsonRequest", () => {
     const req = {
       path: "/custom",
       xhr: false,
-      get: (header) => (header.toLowerCase() === "accept" ? "application/json" : ""),
+      get: (header) =>
+        header.toLowerCase() === "accept" ? "application/json" : "",
     };
     assert.equal(isJsonRequest(req), true);
   });
@@ -143,7 +150,10 @@ describe("isJsonRequest", () => {
     const req = {
       path: "/reporter",
       xhr: false,
-      get: (header) => (header.toLowerCase() === "accept" ? "text/html,application/xhtml+xml" : ""),
+      get: (header) =>
+        header.toLowerCase() === "accept"
+          ? "text/html,application/xhtml+xml"
+          : "",
     };
     assert.equal(isJsonRequest(req), false);
   });
@@ -253,7 +263,9 @@ describe("errorHandler HTTP integration", () => {
   });
 
   test("handles 401 on HTML page with 302 redirect to login", async () => {
-    const res = await fetch(`${baseUrl}/reporter/dashboard`, { redirect: "manual" });
+    const res = await fetch(`${baseUrl}/reporter/dashboard`, {
+      redirect: "manual",
+    });
     assert.equal(res.status, 302);
     const location = res.headers.get("Location");
     assert.ok(location.startsWith("/login.html?returnTo="));

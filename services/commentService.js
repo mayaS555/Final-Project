@@ -53,29 +53,48 @@ function toPublicComment(document, articleId, viewerDeviceId) {
 async function listComments(articleId, { cursor = null, viewerDeviceId } = {}) {
   const article = await Article.findById(articleId).select("comments").lean();
   const newestFirst = (article ? article.comments : []).sort(
-    (first, second) => second.createdAt - first.createdAt || String(second._id).localeCompare(String(first._id))
+    (first, second) =>
+      second.createdAt - first.createdAt ||
+      String(second._id).localeCompare(String(first._id)),
   );
   const remaining = cursor
     ? newestFirst.filter(
         (comment) =>
           comment.createdAt < cursor.createdAt ||
-          (comment.createdAt.getTime() === cursor.createdAt.getTime() && String(comment._id) < cursor.id)
+          (comment.createdAt.getTime() === cursor.createdAt.getTime() &&
+            String(comment._id) < cursor.id),
       )
     : newestFirst;
 
   const pageDocuments = remaining.slice(0, COMMENT_PAGE_SIZE);
   return {
-    items: pageDocuments.map((document) => toPublicComment(document, articleId, viewerDeviceId)),
+    items: pageDocuments.map((document) =>
+      toPublicComment(document, articleId, viewerDeviceId),
+    ),
     hasMore: remaining.length > COMMENT_PAGE_SIZE,
-    nextBefore: pageDocuments.length > 0 ? buildCursor(pageDocuments[pageDocuments.length - 1]) : null,
+    nextBefore:
+      pageDocuments.length > 0
+        ? buildCursor(pageDocuments[pageDocuments.length - 1])
+        : null,
   };
 }
 
 // Only the listed fields are written. The owner and the article come from the server.
 async function createComment({ articleId, deviceId, displayName, body }) {
   const now = new Date();
-  const comment = { _id: new mongoose.Types.ObjectId(), deviceId, displayName, body, createdAt: now, updatedAt: now };
-  await Article.updateOne({ _id: articleId }, { $push: { comments: comment } }, { timestamps: false, runValidators: true });
+  const comment = {
+    _id: new mongoose.Types.ObjectId(),
+    deviceId,
+    displayName,
+    body,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await Article.updateOne(
+    { _id: articleId },
+    { $push: { comments: comment } },
+    { timestamps: false, runValidators: true },
+  );
   return toPublicComment(comment, articleId, deviceId);
 }
 
@@ -94,9 +113,15 @@ async function updateCommentBody(commentId, deviceId, body) {
   const updated = await Article.findOneAndUpdate(
     ownComment,
     { $set: { "comments.$.body": body, "comments.$.updatedAt": new Date() } },
-    { returnDocument: "after", timestamps: false, projection: { comments: { $elemMatch: { _id: commentId } } } }
+    {
+      returnDocument: "after",
+      timestamps: false,
+      projection: { comments: { $elemMatch: { _id: commentId } } },
+    },
   ).lean();
-  return updated ? toPublicComment(updated.comments[0], updated._id, deviceId) : null;
+  return updated
+    ? toPublicComment(updated.comments[0], updated._id, deviceId)
+    : null;
 }
 
 // Returns true when a comment of this device was deleted.
@@ -104,7 +129,7 @@ async function deleteComment(commentId, deviceId) {
   const result = await Article.updateOne(
     { comments: { $elemMatch: { _id: commentId, deviceId } } },
     { $pull: { comments: { _id: commentId, deviceId } } },
-    { timestamps: false }
+    { timestamps: false },
   );
   return result.modifiedCount === 1;
 }

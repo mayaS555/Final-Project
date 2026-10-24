@@ -22,14 +22,22 @@ const {
  * @example expectRejected("draft", "published", "editor", 409);
  */
 function expectRejected(from, to, role, status) {
-  assert.equal(canTransition(from, to, role), false, `${role}: ${from} -> ${to} should be rejected`);
+  assert.equal(
+    canTransition(from, to, role),
+    false,
+    `${role}: ${from} -> ${to} should be rejected`,
+  );
   assert.throws(() => assertTransition(from, to, role), { status });
 }
 
 describe("transitions", () => {
   test("every row of the table is allowed for its own role", () => {
     for (const { from, to, by } of ARTICLE_TRANSITIONS) {
-      assert.equal(canTransition(from, to, by), true, `${by}: ${from} -> ${to}`);
+      assert.equal(
+        canTransition(from, to, by),
+        true,
+        `${by}: ${from} -> ${to}`,
+      );
       assert.doesNotThrow(() => assertTransition(from, to, by));
     }
   });
@@ -60,7 +68,11 @@ describe("transitions", () => {
 
   test("an admin can make every transition", () => {
     for (const { from, to } of ARTICLE_TRANSITIONS) {
-      assert.equal(canTransition(from, to, "admin"), true, `admin: ${from} -> ${to}`);
+      assert.equal(
+        canTransition(from, to, "admin"),
+        true,
+        `admin: ${from} -> ${to}`,
+      );
       assert.doesNotThrow(() => assertTransition(from, to, "admin"));
     }
   });
@@ -91,7 +103,11 @@ describe("canEditWorkingCopy", () => {
 
   test("another reporter can never edit", () => {
     for (const status of ["draft", "pending", "returned", "published"]) {
-      assert.equal(canEditWorkingCopy(status, "reporter", false), false, status);
+      assert.equal(
+        canEditWorkingCopy(status, "reporter", false),
+        false,
+        status,
+      );
     }
   });
 
@@ -128,8 +144,22 @@ describe("canDelete", () => {
 
   test("the author cannot delete while pending, or once it was published", () => {
     assert.equal(canDelete({ status: "pending" }, "reporter", true), false);
-    assert.equal(canDelete({ status: "published", approved: { publishedAt } }, "reporter", true), false);
-    assert.equal(canDelete({ status: "draft", approved: { publishedAt } }, "reporter", true), false);
+    assert.equal(
+      canDelete(
+        { status: "published", approved: { publishedAt } },
+        "reporter",
+        true,
+      ),
+      false,
+    );
+    assert.equal(
+      canDelete(
+        { status: "draft", approved: { publishedAt } },
+        "reporter",
+        true,
+      ),
+      false,
+    );
   });
 
   test("another reporter cannot delete", () => {
@@ -138,13 +168,21 @@ describe("canDelete", () => {
 
   test("an editor deletes any article", () => {
     for (const status of ["draft", "pending", "returned", "published"]) {
-      assert.equal(canDelete({ status, approved: { publishedAt } }, "editor", false), true, status);
+      assert.equal(
+        canDelete({ status, approved: { publishedAt } }, "editor", false),
+        true,
+        status,
+      );
     }
   });
 
   test("an admin deletes any article", () => {
     for (const status of ["draft", "pending", "returned", "published"]) {
-      assert.equal(canDelete({ status, approved: { publishedAt } }, "admin", false), true, status);
+      assert.equal(
+        canDelete({ status, approved: { publishedAt } }, "admin", false),
+        true,
+        status,
+      );
     }
   });
 

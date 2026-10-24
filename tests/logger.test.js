@@ -21,8 +21,10 @@ function captureConsole(fn) {
   const origWarn = console.warn;
   const origError = console.error;
   console.log = (...args) => lines.push({ level: "log", text: args.join(" ") });
-  console.warn = (...args) => lines.push({ level: "warn", text: args.join(" ") });
-  console.error = (...args) => lines.push({ level: "error", text: args.join(" ") });
+  console.warn = (...args) =>
+    lines.push({ level: "warn", text: args.join(" ") });
+  console.error = (...args) =>
+    lines.push({ level: "error", text: args.join(" ") });
   try {
     fn();
   } finally {
@@ -104,14 +106,19 @@ describe("Output format", () => {
     const lines = captureConsole(() => logger.info("Hello world"));
     assert.equal(lines.length, 1);
     assert.equal(lines[0].level, "log");
-    assert.ok(lines[0].text.includes("[INFO]"), `Expected [INFO] in: ${lines[0].text}`);
+    assert.ok(
+      lines[0].text.includes("[INFO]"),
+      `Expected [INFO] in: ${lines[0].text}`,
+    );
     assert.ok(lines[0].text.includes("Hello world"));
     // ISO-8601 timestamp present
     assert.ok(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(lines[0].text));
   });
 
   test("warn writes to console.warn", () => {
-    const lines = captureConsole(() => logger.warn("Something bad might happen"));
+    const lines = captureConsole(() =>
+      logger.warn("Something bad might happen"),
+    );
     assert.equal(lines[0].level, "warn");
     assert.ok(lines[0].text.includes("[WARN]"));
   });
@@ -128,7 +135,7 @@ describe("Output format", () => {
 
   test("metadata key=value pairs are appended to the message", () => {
     const lines = captureConsole(() =>
-      logger.info("User action", { userId: "abc123", role: "reporter" })
+      logger.info("User action", { userId: "abc123", role: "reporter" }),
     );
     assert.ok(lines[0].text.includes("userId=abc123"));
     assert.ok(lines[0].text.includes("role=reporter"));
@@ -136,7 +143,12 @@ describe("Output format", () => {
 
   test("null or undefined metadata values are omitted", () => {
     const lines = captureConsole(() =>
-      logger.info("Sparse metadata", { a: "hello", b: null, c: undefined, d: 42 })
+      logger.info("Sparse metadata", {
+        a: "hello",
+        b: null,
+        c: undefined,
+        d: 42,
+      }),
     );
     assert.ok(lines[0].text.includes("a=hello"));
     assert.ok(lines[0].text.includes("d=42"));
@@ -202,7 +214,7 @@ describe("In-memory log buffer", () => {
 describe("logArticleEvent", () => {
   test("formats the message as [article] <event> article=<id> by=<userId> (<role>)", () => {
     const lines = captureConsole(() =>
-      logger.logArticleEvent("submit", "articleId123", "userId456", "reporter")
+      logger.logArticleEvent("submit", "articleId123", "userId456", "reporter"),
     );
     assert.ok(lines[0].text.includes("[article] submit"));
     assert.ok(lines[0].text.includes("article=articleId123"));
@@ -214,7 +226,7 @@ describe("logArticleEvent", () => {
     const article = { _id: "a1b2c3d4" };
     const user = { _id: "u9x8y7z6" };
     const lines = captureConsole(() =>
-      logger.logArticleEvent("approve", article, user, "editor")
+      logger.logArticleEvent("approve", article, user, "editor"),
     );
     assert.ok(lines[0].text.includes("article=a1b2c3d4"));
     assert.ok(lines[0].text.includes("by=u9x8y7z6"));
@@ -223,7 +235,9 @@ describe("logArticleEvent", () => {
 
   test("appends extra metadata when provided", () => {
     const lines = captureConsole(() =>
-      logger.logArticleEvent("return", "art1", "usr1", "editor", { note: "spelling errors" })
+      logger.logArticleEvent("return", "art1", "usr1", "editor", {
+        note: "spelling errors",
+      }),
     );
     assert.ok(lines[0].text.includes("note=spelling errors"));
   });
@@ -236,7 +250,7 @@ describe("logArticleEvent", () => {
 describe("logAuthEvent", () => {
   test("login_success is logged at info level", () => {
     const lines = captureConsole(() =>
-      logger.logAuthEvent("login_success", { userId: "u1", role: "reporter" })
+      logger.logAuthEvent("login_success", { userId: "u1", role: "reporter" }),
     );
     assert.ok(lines[0].text.includes("[INFO]"));
     assert.ok(lines[0].text.includes("[AUTH] login_success"));
@@ -244,7 +258,9 @@ describe("logAuthEvent", () => {
 
   test("login_failed_bad_password is logged at warn level", () => {
     const lines = captureConsole(() =>
-      logger.logAuthEvent("login_failed_bad_password", { email: "user@example.com" })
+      logger.logAuthEvent("login_failed_bad_password", {
+        email: "user@example.com",
+      }),
     );
     assert.equal(lines[0].level, "warn");
     assert.ok(lines[0].text.includes("[AUTH] login_failed_bad_password"));
@@ -252,14 +268,14 @@ describe("logAuthEvent", () => {
 
   test("unauthorized_access is logged at warn level", () => {
     const lines = captureConsole(() =>
-      logger.logAuthEvent("unauthorized_access", { path: "/reporter" })
+      logger.logAuthEvent("unauthorized_access", { path: "/reporter" }),
     );
     assert.equal(lines[0].level, "warn");
   });
 
   test("logout is logged at info level", () => {
     const lines = captureConsole(() =>
-      logger.logAuthEvent("logout", { userId: "u2" })
+      logger.logAuthEvent("logout", { userId: "u2" }),
     );
     assert.ok(lines[0].text.includes("[INFO]"));
   });
@@ -272,7 +288,7 @@ describe("logAuthEvent", () => {
 describe("logServerEvent", () => {
   test("server start event is logged at info level with port", () => {
     const lines = captureConsole(() =>
-      logger.logServerEvent("start", { port: 3000, env: "development" })
+      logger.logServerEvent("start", { port: 3000, env: "development" }),
     );
     assert.ok(lines[0].text.includes("[INFO]"));
     assert.ok(lines[0].text.includes("[SERVER] start"));
@@ -281,7 +297,7 @@ describe("logServerEvent", () => {
 
   test("db_connected event includes db name", () => {
     const lines = captureConsole(() =>
-      logger.logServerEvent("db_connected", { db: "daily-web" })
+      logger.logServerEvent("db_connected", { db: "daily-web" }),
     );
     assert.ok(lines[0].text.includes("db=daily-web"));
   });
@@ -354,7 +370,9 @@ describe("requestLogger middleware (HTTP integration)", () => {
     await fetch(`${baseUrl}/css/style.css`);
     await new Promise((r) => setImmediate(r));
     const logs = logger.getRecentLogs();
-    const entry = logs.find((l) => l.message && l.message.includes("style.css"));
+    const entry = logs.find(
+      (l) => l.message && l.message.includes("style.css"),
+    );
     assert.ok(!entry, "Static asset should not be logged at info level");
     logger.setLevel("debug");
   });

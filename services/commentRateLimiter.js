@@ -14,14 +14,20 @@ const DEFAULT_LIMIT = 3;
 const DEFAULT_WINDOW_MS = 60 * 1000;
 
 // `now` can be replaced in tests so the window can be tested without waiting.
-function createCommentRateLimiter({ limit = DEFAULT_LIMIT, windowMs = DEFAULT_WINDOW_MS, now = Date.now } = {}) {
+function createCommentRateLimiter({
+  limit = DEFAULT_LIMIT,
+  windowMs = DEFAULT_WINDOW_MS,
+  now = Date.now,
+} = {}) {
   // deviceId -> list of reservations, each { time }. A device has at most `limit` live entries.
   const reservationsByDevice = new Map();
   let lastSweepTime = now();
 
   function liveReservations(deviceId, currentTime) {
     const reservations = reservationsByDevice.get(deviceId) || [];
-    return reservations.filter((reservation) => reservation.time > currentTime - windowMs);
+    return reservations.filter(
+      (reservation) => reservation.time > currentTime - windowMs,
+    );
   }
 
   // Drops devices whose reservations have all expired, at most once per window,
@@ -49,8 +55,13 @@ function createCommentRateLimiter({ limit = DEFAULT_LIMIT, windowMs = DEFAULT_WI
     const live = liveReservations(deviceId, currentTime);
     if (live.length >= limit) {
       reservationsByDevice.set(deviceId, live);
-      const oldestTime = Math.min(...live.map((reservation) => reservation.time));
-      const retryAfterSeconds = Math.max(1, Math.ceil((oldestTime + windowMs - currentTime) / 1000));
+      const oldestTime = Math.min(
+        ...live.map((reservation) => reservation.time),
+      );
+      const retryAfterSeconds = Math.max(
+        1,
+        Math.ceil((oldestTime + windowMs - currentTime) / 1000),
+      );
       return { allowed: false, retryAfterSeconds };
     }
 

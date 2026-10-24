@@ -4,7 +4,14 @@
 
 const { describe, test, beforeEach, afterEach, mock } = require("node:test");
 const assert = require("assert");
-const { loadEditPage, saved, failed, offline, settle, beforeUnloadEvent } = require("./fakeEditPage");
+const {
+  loadEditPage,
+  saved,
+  failed,
+  offline,
+  settle,
+  beforeUnloadEvent,
+} = require("./fakeEditPage");
 
 describe("reporter autosave", () => {
   beforeEach(() => mock.timers.enable({ apis: ["setTimeout"] }));
@@ -40,7 +47,10 @@ describe("reporter autosave", () => {
     page.type("summary", "Short");
     page.type("category", "Sports");
     mock.timers.tick(1500);
-    assert.deepEqual(page.requests[1].body, { summary: "Short", category: "Sports" });
+    assert.deepEqual(page.requests[1].body, {
+      summary: "Short",
+      category: "Sports",
+    });
   });
 
   test("ignores input from elements that are not article fields", () => {
@@ -52,17 +62,25 @@ describe("reporter autosave", () => {
 
   test("never runs two saves at once; changes made meanwhile are sent right after", async () => {
     let finishFirst;
-    const page = loadEditPage([() => new Promise((resolve) => (finishFirst = resolve))]);
+    const page = loadEditPage([
+      () => new Promise((resolve) => (finishFirst = resolve)),
+    ]);
     page.type("title", "First");
     mock.timers.tick(1500);
     page.type("content", "Typed during the save");
     mock.timers.tick(1500);
     assert.equal(page.requests.length, 1);
 
-    finishFirst({ ok: true, status: 200, json: async () => ({ savedAt: "2026-10-18T09:30:00.000Z" }) });
+    finishFirst({
+      ok: true,
+      status: 200,
+      json: async () => ({ savedAt: "2026-10-18T09:30:00.000Z" }),
+    });
     await settle();
     assert.equal(page.requests.length, 2);
-    assert.deepEqual(page.requests[1].body, { content: "Typed during the save" });
+    assert.deepEqual(page.requests[1].body, {
+      content: "Typed during the save",
+    });
   });
 
   test("offline: keeps the data, shows the offline state and retries with growing waits", async () => {
@@ -112,7 +130,10 @@ describe("reporter autosave", () => {
       mock.timers.tick(60000);
       page.fire("window", "online");
       assert.equal(page.requests.length, 1);
-      assert.equal(page.fire("window", "beforeunload", beforeUnloadEvent()).prevented, true);
+      assert.equal(
+        page.fire("window", "beforeunload", beforeUnloadEvent()).prevented,
+        true,
+      );
     });
   }
 
@@ -126,7 +147,12 @@ describe("reporter autosave", () => {
   });
 
   test("400: shows the server's message and waits for the next change instead of retrying", async () => {
-    const page = loadEditPage([failed(400, "imageUrl must be an http(s) address or a path starting with /.")]);
+    const page = loadEditPage([
+      failed(
+        400,
+        "imageUrl must be an http(s) address or a path starting with /.",
+      ),
+    ]);
     page.type("imageUrl", "javascript:x");
     mock.timers.tick(1500);
     await settle();
@@ -180,7 +206,10 @@ describe("reporter autosave", () => {
 
   test("beforeunload warns only when changes could not be sent", async () => {
     const page = loadEditPage([offline]);
-    assert.equal(page.fire("window", "beforeunload", beforeUnloadEvent()).prevented, false);
+    assert.equal(
+      page.fire("window", "beforeunload", beforeUnloadEvent()).prevented,
+      false,
+    );
 
     page.type("title", "Sent on leave");
     const leaving = page.fire("window", "beforeunload", beforeUnloadEvent());
@@ -189,7 +218,10 @@ describe("reporter autosave", () => {
     await settle(); // that save failed: offline
 
     page.type("title", "Sent while offline");
-    assert.equal(page.fire("window", "beforeunload", beforeUnloadEvent()).prevented, true);
+    assert.equal(
+      page.fire("window", "beforeunload", beforeUnloadEvent()).prevented,
+      true,
+    );
   });
 
   test("coming back online retries at once", async () => {
@@ -216,14 +248,19 @@ describe("saveAllNow (used before submitting)", () => {
     const page = loadEditPage();
     page.type("title", "Just typed");
     assert.equal(await page.context.saveAllNow(), true);
-    assert.deepEqual(page.requests.map((request) => request.body), [{ title: "Just typed" }]);
+    assert.deepEqual(
+      page.requests.map((request) => request.body),
+      [{ title: "Just typed" }],
+    );
     mock.timers.tick(5000);
     assert.equal(page.requests.length, 1);
   });
 
   test("waits for a running save, then saves what was typed meanwhile", async () => {
     let finishFirst;
-    const page = loadEditPage([() => new Promise((resolve) => (finishFirst = resolve))]);
+    const page = loadEditPage([
+      () => new Promise((resolve) => (finishFirst = resolve)),
+    ]);
     page.type("title", "First");
     mock.timers.tick(1500);
     page.type("content", "Meanwhile");
@@ -236,9 +273,16 @@ describe("saveAllNow (used before submitting)", () => {
     await settle();
     assert.equal(done, false, "still waiting for the first save");
 
-    finishFirst({ ok: true, status: 200, json: async () => ({ savedAt: "2026-10-18T09:30:00.000Z" }) });
+    finishFirst({
+      ok: true,
+      status: 200,
+      json: async () => ({ savedAt: "2026-10-18T09:30:00.000Z" }),
+    });
     assert.equal(await result, true);
-    assert.deepEqual(page.requests.map((request) => request.body), [{ title: "First" }, { content: "Meanwhile" }]);
+    assert.deepEqual(
+      page.requests.map((request) => request.body),
+      [{ title: "First" }, { content: "Meanwhile" }],
+    );
   });
 
   test("resolves false when the save fails, and keeps the change as unsaved", async () => {
@@ -247,7 +291,10 @@ describe("saveAllNow (used before submitting)", () => {
     assert.equal(await page.context.saveAllNow(), false);
     assert.equal(page.status.dataset.state, "offline");
     // Still offline: the save sent on leaving will probably fail too, so the browser asks.
-    assert.equal(page.fire("window", "beforeunload", beforeUnloadEvent()).prevented, true);
+    assert.equal(
+      page.fire("window", "beforeunload", beforeUnloadEvent()).prevented,
+      true,
+    );
   });
 
   test("resolves false when autosave has stopped", async () => {
