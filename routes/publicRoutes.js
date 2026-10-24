@@ -4,7 +4,7 @@ const { deviceIdentity } = require("../middleware/deviceIdentity");
 
 const router = express.Router();
 
-// Mount this router before express.static, otherwise public/index.html answers GET /.
+// Mount this router before express.static so GET / is handled by the server-rendered feed.
 // deviceIdentity is attached per route so static files never receive the device cookie.
 router.get("/", deviceIdentity, publicController.renderHome);
 router.get("/articles/:id", deviceIdentity, publicController.renderArticle);

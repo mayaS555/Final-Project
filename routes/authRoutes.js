@@ -5,7 +5,8 @@ const router = express.Router();
 
 router.get("/login", (req, res) => {
   if (req.session && req.session.user) {
-    const destination = req.session.user.role === "editor" ? "/editor.html" : "/reporter";
+    // Only reporters have a dashboard; editors land on the public home page for now.
+    const destination = req.session.user.role === "reporter" ? "/reporter" : "/";
     return res.redirect(destination);
   }
   const queryString = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";

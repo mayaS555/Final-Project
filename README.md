@@ -1,11 +1,12 @@
 # The Daily Web
 
-A small news platform built as a final project. Reporters write and submit articles, editors review and approve them, and the public reads whatever has been published. There's also a comments section and a weather widget in the header.
+A small news platform built as a final project. Reporters write and submit articles, editors review submissions, and
+the public reads whatever has been published. There's also a comments section and a weather widget in the header.
 
 ## Stack
 
 - **Node.js / Express 5** – server and routing
-- **MongoDB* – data storage
+- **MongoDB** – data storage
 - **EJS** – server-side templating
 - **bcryptjs** – password hashing
 - **express-session + connect-mongo** – session management, stored in MongoDB so logins survive a restart
@@ -59,9 +60,9 @@ A small news platform built as a final project. Reporters write and submit artic
 
 Three roles, created manually (no self-registration):
 
-- **reporter** – can create and edit their own articles, submit for review
-- **editor** – can approve, return or re-publish any article; has access to the editor dashboard
-- **admin** – same as editor (reserved for future use)
+- **reporter** – creates and edits their own articles, submits them for review, and manages published revisions
+- **editor** – reviews all articles, edits pending submissions, and manages the article collection through the article API
+- **admin** – administrative staff account, created the same way as the other roles
 
 To create a user, either use the helper script or connect directly to MongoDB:
 ```bash
@@ -88,12 +89,16 @@ The seed also adds comments, per-day view data and publish-event markers for the
 ## Article workflow
 
 ```
-draft → pending → published
-              ↘ returned → pending (resubmit)
-published → pending (revision while old version stays live)
+draft → pending
+returned → pending (resubmit)
+pending → published (approve)
+pending → returned (return)
+published → draft (start a revision; the old version stays live)
 ```
 
-An article is public as soon as it has an `approved.publishedAt` date. Reporters submitting a revision don't take the current published version down – readers keep seeing it until the new version is approved.
+An article is public as soon as it has an `approved.publishedAt` date. Reporters starting a revision don't take the
+current published version down – readers keep seeing it until the new version is approved. The workflow is enforced by
+the state machine in `services/articleStatus.js` and the article service in `services/articleService.js`.
 
 ## Weather widget
 
@@ -103,23 +108,29 @@ The client-side script (`public/js/weather-widget.js`) quietly re-fetches every 
 
 ## API overview
 
-All the routes that return JSON live under `/api/`:
+The JSON API lives under `/api/`. Staff authentication is outside it: `POST /login` accepts either JSON or a normal
+form post, and `GET|POST /logout` clears the session.
 
-| Method | Path | Who can call it |
-|---|---|---|
-| `GET` | `/api/public/articles` | anyone |
-| `GET` | `/api/weather` | anyone |
-| `GET` | `/api/articles` | reporter / editor |
-| `POST` | `/api/articles` | reporter |
-| `PATCH` | `/api/articles/:id` | article owner or editor |
-| `DELETE` | `/api/articles/:id` | article owner or editor |
-| `POST` | `/api/articles/:id/submit` | article owner |
-| `POST` | `/api/articles/:id/approve` | editor |
-| `POST` | `/api/articles/:id/return` | editor |
-| `GET` | `/api/auth/me` | authenticated users |
-| `GET/POST` | `/api/articles/:id/comments` | anyone |
-| `PATCH/DELETE` | `/api/articles/:id/comments/:cid` | comment author (device cookie) |
+| Method | Path | Who can call it | Status |
+|---|---|---|---|
+| `GET` | `/api/public/articles` | anyone | Implemented |
+| `GET` | `/api/public/articles/:id/comments` | anyone | Implemented |
+| `POST` | `/api/public/articles/:id/comments` | anyone (rate-limited per device) | Implemented |
+| `PATCH` | `/api/public/comments/:id` | comment author (device cookie) | Implemented |
+| `DELETE` | `/api/public/comments/:id` | comment author (device cookie) | Implemented |
+| `GET` | `/api/weather` | anyone | Implemented |
+| `GET` | `/api/auth/me` | anyone; returns `null` when logged out | Implemented |
+| `GET` | `/api/articles` | reporter / editor | Implemented |
+| `POST` | `/api/articles` | reporter | Implemented |
+| `GET` | `/api/articles/:id` | article owner or editor | Implemented |
+| `PATCH` | `/api/articles/:id` | article owner or editor; reporters only while draft/returned, editors while pending | Implemented |
+| `DELETE` | `/api/articles/:id` | article owner or editor | Implemented |
+| `POST` | `/api/articles/:id/submit` | article owner | Implemented |
+| `POST` | `/api/articles/:id/approve` | editor | Not implemented yet |
+| `POST` | `/api/articles/:id/return` | editor | Not implemented yet |
+| `POST` | `/api/articles/:id/revise` | article owner | Implemented |
 
+Comment routes live under `/api/public/`, while article management routes live under `/api/articles/`.
 
 ## Project structure
 
@@ -132,7 +143,7 @@ services/      – business logic and shared utilities (article state machine, c
 views/         – EJS templates
   public/      – reader-facing pages and partials
   reporter/    – dashboard and article editor
-public/        – static assets (CSS, client-side JS)
+public/        – static assets (CSS, client-side JS, login page)
 scripts/       – one-off utilities (seed, create-user)
 tests/         – test files and test helpers
 ```
