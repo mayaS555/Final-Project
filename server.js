@@ -7,6 +7,8 @@ dotenv.config();
 
 const Article = require("./models/Article");
 const ArticleRead = require("./models/ArticleRead");
+const ArticleView = require("./models/ArticleView");
+const PublishEvent = require("./models/PublishEvent");
 const Comment = require("./models/Comment");
 const { useArticleModel } = require("./services/publicArticleService");
 
@@ -17,6 +19,7 @@ const publicRoutes = require("./routes/publicRoutes");
 const authRoutes = require("./routes/authRoutes");
 const articleApiRoutes = require("./routes/articleApiRoutes");
 const reporterRoutes = require("./routes/reporterRoutes");
+const editorRoutes = require("./routes/editorRoutes");
 const weatherRoutes = require("./routes/weatherRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 const logger = require("./services/logger");
@@ -87,6 +90,7 @@ app.use(authRoutes);
 // Reporter routes and Article REST API
 app.use(articleApiRoutes);
 app.use(reporterRoutes);
+app.use(editorRoutes);
 // Weather proxy (cached, no auth required)
 app.use(weatherRoutes);
 
@@ -126,6 +130,8 @@ async function startServer() {
     await Promise.all([
       Article.init(),
       ArticleRead.init(),
+      ArticleView.init(),
+      PublishEvent.init(),
       Comment.init(),
     ]);
     logger.logServerEvent("indexes_ready");

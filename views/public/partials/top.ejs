@@ -20,6 +20,10 @@
                 <% if (user.role === 'reporter' || user.role === 'admin') { %>
                     <a href="/reporter" style="margin-right: 0.5rem;"><%= user.role === 'admin' ? 'Admin Dashboard' : 'Reporter Dashboard' %></a>
                 <% } %>
+                <% if (user.role === 'editor' || user.role === 'admin') { %>
+                    <a href="/editor" style="margin-right: 0.5rem;">Editor Dashboard</a>
+                    <a href="/editor/analytics" style="margin-right: 0.5rem;">Impact Analytics</a>
+                <% } %>
                 <a href="/logout">Logout</a>
             <% } else { %>
                 <a href="/login.html">Staff Login</a>

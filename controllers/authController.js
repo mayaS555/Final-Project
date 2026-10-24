@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const logger = require("../services/logger");
+const { loginDestination } = require("../services/authDestination");
 
 /**
  * Handles user login.
@@ -56,9 +57,7 @@ async function login(req, res) {
       ip: req.ip,
     });
 
-    // Reporters and admins have a dashboard; editors land on the public home page for now.
-    const targetUrl =
-      returnTo || (user.role === "reporter" || user.role === "admin" ? "/reporter" : "/");
+    const targetUrl = loginDestination(user.role, returnTo);
 
     if (isHtmlForm) {
       return res.redirect(targetUrl);

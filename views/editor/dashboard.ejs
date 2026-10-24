@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor Dashboard | The Daily Web</title>
+  <link rel="stylesheet" href="/css/editor.css"><link rel="stylesheet" href="/css/editor-integration.css">
+  <script src="/js/editor-dashboard.js" defer></script>
+</head>
+<body>
+  <header><h1>The Daily Web</h1><nav aria-label="Staff">
+    <a href="/">Public site</a><a href="/editor/analytics">Impact Analytics</a>
+    <% if (user.role === 'admin') { %><a href="/reporter">Admin Dashboard</a><% } %>
+    <span>Hello, <%= user.name %></span><a href="/logout">Logout</a>
+  </nav></header>
+  <main class="editor-container" id="editor-dashboard">
+    <section class="filters">
+      <h2>Editor Dashboard</h2><p>Manage and review submitted articles</p>
+      <nav class="buttons" aria-label="Filter articles">
+        <a class="filter-link <%= !activeStatus ? 'active' : '' %>" href="/editor" <%- !activeStatus ? 'aria-current="page"' : '' %>>All Articles</a>
+        <% for (const tab of statusTabs) { %><a class="filter-link <%= activeStatus === tab.value ? 'active' : '' %>" href="/editor?status=<%= tab.value %>" <%- activeStatus === tab.value ? 'aria-current="page"' : '' %>><%= tab.label %></a><% } %>
+      </nav>
+      <form id="editor-search-form" action="/editor" method="GET">
+        <input type="hidden" name="status" id="editor-search-status" value="<%= activeStatus %>">
+        <label for="editor-search">Find by title</label><div class="editor-search-row"><input type="search" name="q" id="editor-search" maxlength="100" value="<%= q %>"><button type="submit">Search</button></div>
+      </form>
+      <p id="editor-list-status" role="status" aria-live="polite"></p>
+    </section>
+    <section class="articles-list" id="articles-list" aria-label="Articles"><%- include('cards') %></section>
+  </main>
+</body>
+</html>

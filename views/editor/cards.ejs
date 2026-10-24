@@ -1,0 +1,19 @@
+<% if (articles.length === 0) { %><p class="empty-message">No articles<%= activeStatus ? ' with this status' : '' %> found.</p><% } %>
+<% for (const article of articles) { %>
+  <a href="/editor/articles/<%= article._id %>" class="article-card-link">
+    <article class="article-card">
+      <div class="article-status <%= article.status === 'returned' ? 'needs-changes' : article.status %>"><%= statusLabels[article.status] %></div>
+      <h3><%= article.draft?.title || article.approved?.title || 'Untitled' %></h3>
+      <p class="article-info">Reporter: <%= article.authorName %></p>
+      <p class="article-info">Created: <%= formatDate(article.createdAt) %></p>
+      <p class="article-info">Last Updated: <%= formatDate(article.updatedAt) %></p>
+      <% if (article.approved?.publishedAt && article.status !== 'published') { %><p class="revision-note">New version in progress. Readers still see the approved version.</p><% } %>
+      <p class="article-summary"><%= article.draft?.summary || '' %></p>
+    </article>
+  </a>
+<% } %>
+<nav class="editor-pagination" aria-label="Article pages">
+  <% if (page > 1) { %><a href="<%= pageHref(page - 1) %>">Previous</a><% } %>
+  <span>Page <%= page %> of <%= pages %> · <%= total %> articles</span>
+  <% if (page < pages) { %><a href="<%= pageHref(page + 1) %>">Next</a><% } %>
+</nav>
