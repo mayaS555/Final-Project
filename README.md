@@ -30,8 +30,8 @@ the public reads whatever has been published. There's also a comments section an
    ```bash
    npm run seed
    ```
-   This replaces the articles and the demo data attached to them (comments, read history, article views and
-   publish events), and creates or updates the five demo reporters and one demo editor listed below. Other user
+   This replaces the articles (including the comments, view buckets and publish events embedded in them) and the
+   read history, and creates or updates the five demo reporters and one demo editor listed below. Other user
    accounts are not touched.
 
 4. Start the server:
@@ -87,6 +87,25 @@ node scripts/create-user.js
 The 500 seeded articles are owned by these reporters, so logging in as one of them shows a populated dashboard.
 The seed also adds comments, per-day view data and publish-event markers for the Impact Analytics demo.
 
+## Database
+
+MongoDB holds four collections:
+
+| Collection | Model | Contents |
+|---|---|---|
+| `articles` | `models/Article.js` | Each article with its working copy (`draft`), public version (`approved`), and embedded arrays: `comments` (guest comments), `views` (daily view buckets with per-minute counts) and `publishEvents` (one entry per approval, the Impact Analytics markers) |
+| `users` | `models/User.js` | Staff accounts (reporter / editor / admin) |
+| `article_reads` | `models/ArticleRead.js` | Which articles a browser has opened, for the viewed/unviewed feed filter |
+| `sessions` | connect-mongo | Login sessions |
+
+Comments and analytics used to live in their own `comments`, `article_views` and `publish_events` collections. A
+database that still has them must be migrated once, before the new code runs on it:
+
+```bash
+node scripts/migrate-embed-article-data.js --dry-run   # prints what would move
+node scripts/migrate-embed-article-data.js             # backs up to backups/, embeds, verifies, drops the old collections
+```
+
 ## Article workflow
 
 ```
@@ -138,14 +157,14 @@ Comment routes live under `/api/public/`, while article management routes live u
 ```
 controllers/   – request handlers (public site, reporter dashboard, article API, auth)
 middleware/    – session auth checks, device identity cookie, error handler
-models/        – Mongoose schemas (Article, User, Comment, ArticleRead, ArticleView, PublishEvent)
+models/        – Mongoose schemas (Article with its embedded comments and analytics, User, ArticleRead)
 routes/        – Express routers
 services/      – business logic and shared utilities (article state machine, caching, logging, weather)
 views/         – EJS templates
   public/      – reader-facing pages and partials
   reporter/    – dashboard and article editor
 public/        – static assets (CSS, client-side JS, login page)
-scripts/       – one-off utilities (seed, create-user)
+scripts/       – one-off utilities (seed, create-user, migrate-embed-article-data)
 tests/         – test files and test helpers
 ```
 
