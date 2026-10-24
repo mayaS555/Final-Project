@@ -1,9 +1,16 @@
-// Reporter area pages (owned by B). The dashboard lists the logged-in reporter's articles with their status
-// and the actions allowed for each one; the edit page shows one article's working copy. What is shown comes
-// from the state machine (services/articleStatus.js); the API enforces the same rules again when an action is used.
+// Reporter area pages (owned by B). The dashboard lists the logged-in reporter's articles (or every article for
+// an admin) with their status and the actions allowed for each one; the edit page shows one article's working copy.
+// What is shown comes from the state machine (services/articleStatus.js); the API enforces the same rules again
+// when an action is used.
 
 const articleService = require("../services/articleService");
-const { canEditWorkingCopy, canTransition, canDelete } = require("../services/articleStatus");
+const {
+  canEditWorkingCopy,
+  canTransition,
+  canDelete,
+  hasEditorRole,
+  hasReporterRole,
+} = require("../services/articleStatus");
 const { parseStatusFilter } = require("./articleApiController");
 const { getSessionUser } = require("../middleware/articleAccess");
 const { ARTICLE_STATUSES } = require("../models/Article");
@@ -48,17 +55,20 @@ function editPageUrl(articleId) {
 }
 
 /**
- * Turns one article into a dashboard row: what to show and which actions the reporter may use.
- * @param {Object} article A lean article from articleService.listArticles (the reporter's own).
+ * Turns one article into a dashboard row: what to show and which actions the user may use.
+ * @param {Object} article A lean article from articleService.listArticles.
+ * @param {Object} [user] The logged-in user; defaults to the article's reporter for the reporter dashboard.
  * @returns {Object} { id, title, category, status, statusLabel, editorNote, updatedAt, updatedAtText, isLive,
  *   hasPendingRevision, canEdit, canRevise, canDelete, editUrl, liveUrl }.
- * @example rows = articles.map(toDashboardRow);
+ * @example rows = articles.map((article) => toDashboardRow(article, user));
  */
-function toDashboardRow(article) {
+function toDashboardRow(article, user = { role: "reporter" }) {
   const draft = article.draft || {};
   const approved = article.approved || {};
   const id = String(article._id);
   const isLive = approved.publishedAt instanceof Date;
+  const isOwner =
+    !article.author || !user._id || String(article.author) === String(user._id);
   return {
     id,
     title: draft.title || approved.title || "Untitled",
@@ -71,10 +81,9 @@ function toDashboardRow(article) {
     isLive,
     // A published article that is being changed again: readers still see the approved version.
     hasPendingRevision: isLive && article.status !== "published",
-    // The rows are the reporter's own articles, so isOwner is true.
-    canEdit: canEditWorkingCopy(article.status, "reporter", true),
-    canRevise: canTransition(article.status, "draft", "reporter"),
-    canDelete: canDelete(article, "reporter", true),
+    canEdit: canEditWorkingCopy(article.status, user.role, isOwner),
+    canRevise: isOwner && canTransition(article.status, "draft", user.role),
+    canDelete: canDelete(article, user.role, isOwner),
     editUrl: editPageUrl(id),
     liveUrl: `/articles/${id}`,
   };
@@ -102,15 +111,23 @@ async function renderDashboard(req, res) {
   const status = parseStatusFilter(req.query.status);
   const user = getSessionUser(req);
   const articles = await articleService.listArticles(user, status);
-  // The page shows the reporter's own data, so shared caches must not keep it.
+  const isAdmin = user.role === "admin";
+  const title = isAdmin ? "All articles" : "My articles";
+  // The page shows staff data, so shared caches must not keep it.
   res.set("Cache-Control", "private, no-cache");
   res.render("reporter/dashboard", {
-    pageTitle: "My articles - The Daily Web",
+    pageTitle: `${title} - The Daily Web`,
+    dashboardTitle: title,
     reporterName: user.name,
-    rows: articles.map(toDashboardRow),
+    rows: articles.map((article) => toDashboardRow(article, user)),
     activeStatus: status,
     statusTabs: ARTICLE_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] })),
     message: dashboardMessage(req.query.msg),
+    emptyText: status
+      ? "No articles with this status."
+      : isAdmin
+        ? "There are no articles yet."
+        : "You have no articles yet. Start with \"New article\".",
   });
 }
 
@@ -118,11 +135,12 @@ async function renderDashboard(req, res) {
  * Explains why the working copy cannot be changed right now.
  * @param {string} status The article status.
  * @param {string} role The user's role.
+ * @param {boolean} isOwner true when the user wrote the article.
  * @returns {string} The message shown above a read-only form.
- * @example readOnlyReason("pending", "reporter")
+ * @example readOnlyReason("pending", "reporter", true)
  */
-function readOnlyReason(status, role) {
-  if (role === "editor") {
+function readOnlyReason(status, role, isOwner) {
+  if (hasEditorRole(role) && !isOwner) {
     return "Editors can change an article only while it is waiting for approval.";
   }
   if (status === "pending") {
@@ -161,13 +179,13 @@ function toEditView(article, user) {
     editorNote: article.status === "returned" ? article.editorNote : "",
     isLive: Boolean(article.approved && article.approved.publishedAt instanceof Date),
     canEdit,
-    readOnlyMessage: canEdit ? "" : readOnlyReason(article.status, user.role),
+    readOnlyMessage: canEdit ? "" : readOnlyReason(article.status, user.role, isAuthor),
     // Submitting is the author's action, from draft or returned.
     canSubmit: isAuthor && canTransition(article.status, "pending", user.role),
     submitLabel: article.status === "returned" ? "Resubmit" : "Submit for approval",
     liveUrl: `/articles/${id}`,
-    // The reporter dashboard is for reporters only; the editors' dashboard is D's page.
-    dashboardUrl: user.role === "reporter" ? "/reporter" : null,
+    // Reporters and admins have the dashboard; editors still have no dashboard of their own.
+    dashboardUrl: hasReporterRole(user.role) ? "/reporter" : null,
   };
 }
 

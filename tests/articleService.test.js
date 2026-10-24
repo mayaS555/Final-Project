@@ -14,6 +14,7 @@ const { skipWithoutDatabase, connectTestDatabase, disconnectTestDatabase } = req
 const reporter = { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Noa" };
 const otherReporter = { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Dan" };
 const editor = { _id: new mongoose.Types.ObjectId(), role: "editor", name: "Ed" };
+const admin = { _id: new mongoose.Types.ObjectId(), role: "admin", name: "Ada" };
 const completeCopy = { title: "Harbor report", summary: "Short", content: "First\n\nSecond", category: "Sports" };
 
 /**
@@ -41,7 +42,7 @@ function buildPublished() {
 }
 
 describe("checks before the database (no MongoDB needed)", () => {
-  test("only a reporter can create a draft", async () => {
+  test("an editor cannot create a draft", async () => {
     await assert.rejects(articleService.createDraft(editor), { status: 403 });
   });
 
@@ -159,7 +160,10 @@ describe("full lifecycle with MongoDB", { skip: skipWithoutDatabase }, () => {
    * @example assert.deepEqual(loggedEvents(), ["submit"]);
    */
   function loggedEvents() {
-    return logged.mock.calls.map((call) => call.arguments[0].split(" ")[1]);
+    return logged.mock.calls
+      .map((call) => String(call.arguments[0]).match(/\[article\] (\w+)/))
+      .filter(Boolean)
+      .map((match) => match[1]);
   }
 
   /**
@@ -178,6 +182,31 @@ describe("full lifecycle with MongoDB", { skip: skipWithoutDatabase }, () => {
     assert.equal(String(article.author), String(reporter._id));
     assert.equal(article.authorName, "Noa");
     assert.equal(await Article.exists({ _id: article._id }).then(Boolean), true);
+  });
+
+  test("an admin can write, review and revise articles like a reporter and an editor", async () => {
+    let article = await articleService.createDraft(admin);
+    assert.equal(String(article.author), String(admin._id));
+    assert.equal(article.authorName, "Ada");
+
+    article = await articleService.saveWorkingCopy(article, admin, completeCopy);
+    article = await articleService.submit(article, admin);
+    assert.equal(article.status, "pending");
+
+    article = await articleService.saveWorkingCopy(article, admin, { title: "Admin edit" });
+    article = await articleService.returnToReporter(article, admin, "Add a source.");
+    assert.equal(article.status, "returned");
+
+    article = await articleService.submit(article, admin);
+    article = (await articleService.approve(article, admin)).article;
+    assert.equal(article.status, "published");
+
+    article = await articleService.startRevision(article, admin);
+    assert.equal(article.status, "draft");
+
+    const reporterPending = await articleService.submit(await createCompleteDraft(), reporter);
+    await articleService.deleteArticle(reporterPending, admin);
+    assert.equal(await Article.exists({ _id: reporterPending._id }), null);
   });
 
   test("saveWorkingCopy trims text, normalizes line breaks and leaves other fields alone", async () => {

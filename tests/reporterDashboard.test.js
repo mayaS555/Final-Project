@@ -17,6 +17,7 @@ const USERS = {
   noa: { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Noa" },
   dan: { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Dan" },
   ed: { _id: new mongoose.Types.ObjectId(), role: "editor", name: "Ed" },
+  adm: { _id: new mongoose.Types.ObjectId(), role: "admin", name: "Ada" },
 };
 const publishedAt = new Date("2026-10-01T09:00:00Z");
 
@@ -76,7 +77,15 @@ describe("toDashboardRow (no MongoDB needed)", () => {
    * @example leanArticle({ status: "pending" })
    */
   function leanArticle(fields) {
-    return { _id: id, status: "draft", draft: { title: "", category: "" }, editorNote: "", updatedAt: publishedAt, ...fields };
+    return {
+      _id: id,
+      author: USERS.noa._id,
+      status: "draft",
+      draft: { title: "", category: "" },
+      editorNote: "",
+      updatedAt: publishedAt,
+      ...fields,
+    };
   }
 
   test("the title falls back to the public title, then to Untitled", () => {
@@ -128,6 +137,29 @@ describe("toDashboardRow (no MongoDB needed)", () => {
     assert.equal(row.editUrl, `/reporter/articles/${id}/edit`);
     assert.equal(row.liveUrl, `/articles/${id}`);
   });
+
+  test("an admin edits own drafts, any pending article, and deletes every article", () => {
+    const ownDraft = toDashboardRow(leanArticle({ author: USERS.adm._id }), USERS.adm);
+    assert.deepEqual([ownDraft.canEdit, ownDraft.canDelete, ownDraft.canRevise], [true, true, false]);
+
+    const otherDraft = toDashboardRow(leanArticle({ author: USERS.noa._id }), USERS.adm);
+    assert.deepEqual([otherDraft.canEdit, otherDraft.canDelete], [false, true]);
+
+    const otherPending = toDashboardRow(leanArticle({ status: "pending", author: USERS.noa._id }), USERS.adm);
+    assert.deepEqual([otherPending.canEdit, otherPending.canDelete], [true, true]);
+
+    const ownPublished = toDashboardRow(
+      leanArticle({ status: "published", author: USERS.adm._id, approved: { title: "Live", publishedAt } }),
+      USERS.adm
+    );
+    assert.deepEqual([ownPublished.canRevise, ownPublished.canDelete], [true, true]);
+
+    const otherPublished = toDashboardRow(
+      leanArticle({ status: "published", author: USERS.noa._id, approved: { title: "Live", publishedAt } }),
+      USERS.adm
+    );
+    assert.deepEqual([otherPublished.canRevise, otherPublished.canDelete], [false, true]);
+  });
 });
 
 describe("dashboardMessage (no MongoDB needed)", () => {
@@ -150,6 +182,10 @@ describe("GET /reporter access (no MongoDB needed)", () => {
 
   test("an editor gets 403", async () => {
     assert.equal((await getDashboard("ed")).status, 403);
+  });
+
+  test("an admin passes the role check", async () => {
+    assert.equal((await getDashboard("adm", "?status=live")).status, 400);
   });
 
   test("an unknown or repeated status filter gets 400", async () => {
@@ -219,6 +255,19 @@ describe("GET /reporter with MongoDB", { skip: skipWithoutDatabase }, () => {
     }
     assert.equal(findRow(html, String(articles.other._id)), "");
     assert.ok(!html.includes("Dan's story"));
+  });
+
+  test("an admin sees every article with admin actions", async () => {
+    const { status, html } = await getDashboard("adm");
+    assert.equal(status, 200);
+    assert.ok(html.includes(">All articles</h1>"));
+    for (const name of ["draft", "returned", "published", "revising", "other"]) {
+      assert.ok(findRow(html, String(articles[name]._id)), name);
+    }
+    const otherRow = findRow(html, String(articles.other._id));
+    assert.ok(otherRow.includes('data-action="delete"'));
+    assert.ok(!otherRow.includes(">Edit</a>"));
+    assert.ok(otherRow.includes("Dan&#39;s story"));
   });
 
   test("escapes titles", async () => {

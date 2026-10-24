@@ -56,8 +56,9 @@ async function login(req, res) {
       ip: req.ip,
     });
 
-    // Only reporters have a dashboard; editors land on the public home page for now.
-    const targetUrl = returnTo || (user.role === "reporter" ? "/reporter" : "/");
+    // Reporters and admins have a dashboard; editors land on the public home page for now.
+    const targetUrl =
+      returnTo || (user.role === "reporter" || user.role === "admin" ? "/reporter" : "/");
 
     if (isHtmlForm) {
       return res.redirect(targetUrl);

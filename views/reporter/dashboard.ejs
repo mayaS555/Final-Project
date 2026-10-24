@@ -1,11 +1,11 @@
-<%# Reporter dashboard (owned by B): the logged-in reporter's articles with their status.
-    Rendered by controllers/reporterController.js. Uses C's temporary partials until A's shared layout exists.
-    The action buttons are disabled until public/js/reporter-dashboard.js attaches their handlers. %>
+<%# Reporter dashboard (owned by B): the logged-in reporter's articles with their status, or every article
+    for an admin. Rendered by controllers/reporterController.js. Uses C's temporary partials until A's shared
+    layout exists. The action buttons are disabled until public/js/reporter-dashboard.js attaches their handlers. %>
 <%- include("../public/partials/top") %>
     <link rel="stylesheet" href="/css/reporter.css">
     <main class="pub-main rep-dashboard" id="rep-dashboard">
         <div class="rep-toolbar">
-            <h1 class="pub-page-title">My articles</h1>
+            <h1 class="pub-page-title"><%= dashboardTitle %></h1>
             <button type="button" class="rep-button" id="rep-new-article" disabled>New article</button>
         </div>
         <p class="pub-meta">Logged in as <%= reporterName %></p>
@@ -20,7 +20,7 @@
         </nav>
 
         <p class="pub-empty" id="rep-empty"<%= rows.length > 0 ? " hidden" : "" %>>
-            <%= activeStatus ? "No articles with this status." : "You have no articles yet. Start with \"New article\"." %>
+            <%= emptyText %>
         </p>
 
         <ul class="rep-list" id="rep-list">
