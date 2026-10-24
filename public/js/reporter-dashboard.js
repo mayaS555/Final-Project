@@ -1,4 +1,4 @@
-// Reporter dashboard actions (owned by B): "New article", "Edit published article" and "Delete".
+// Reporter and admin dashboard actions (owned by B): "New article", "Edit published article" and "Delete".
 // Each one calls the Article API with fetch; the server checks every permission again.
 // Used by views/reporter/dashboard.ejs. The buttons stay disabled until this script has attached its handlers.
 

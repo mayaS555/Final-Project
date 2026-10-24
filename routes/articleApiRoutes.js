@@ -33,8 +33,8 @@ function requireJsonContentType(req, res, next) {
 // Article text is up to 50000 characters; 200 KB leaves room for non-Latin text (2-3 bytes per character).
 const readJsonBody = express.json({ limit: "200kb" });
 
-// Every route checks the login first. Routes with :id then load the article and allow only its author
-// or an editor; the service checks the status rules.
+// Every route checks the login first. Routes with :id then load the article and allow only its author,
+// an editor or an admin; the service checks the status rules.
 const writeJson = [requireJsonContentType, readJsonBody];
 const ownArticle = [loadArticle, requireArticleOwnerOrEditor];
 

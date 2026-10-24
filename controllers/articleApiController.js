@@ -100,7 +100,7 @@ function parseStatusFilter(rawStatus) {
 }
 
 /**
- * POST /api/articles - creates an empty draft for the logged-in reporter.
+ * POST /api/articles - creates an empty draft for the logged-in reporter or admin.
  * @param {Object} req The Express request.
  * @param {Object} res The Express response.
  * @returns {Promise<void>} 201 with the article. 403 for an editor (thrown by the service).
@@ -112,7 +112,7 @@ async function createArticle(req, res) {
 }
 
 /**
- * GET /api/articles?status= - the dashboard list: a reporter's own articles, or all articles for an editor.
+ * GET /api/articles?status= - the dashboard list: a reporter's own articles, or all articles for an editor or admin.
  * @param {Object} req The Express request; reads req.query.status.
  * @param {Object} res The Express response.
  * @returns {Promise<void>} 200 with { items }. 400 for an invalid status.
@@ -125,7 +125,7 @@ async function listArticles(req, res) {
 }
 
 /**
- * GET /api/articles/:id - the full article, for its author or an editor.
+ * GET /api/articles/:id - the full article, for its author, an editor or an admin.
  * @param {Object} req The Express request; reads req.article (set by loadArticle).
  * @param {Object} res The Express response.
  * @returns {void} 200 with the article.

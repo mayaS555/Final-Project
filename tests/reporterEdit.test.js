@@ -18,6 +18,7 @@ const USERS = {
   noa: { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Noa" },
   dan: { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Dan" },
   ed: { _id: new mongoose.Types.ObjectId(), role: "editor", name: "Ed" },
+  adm: { _id: new mongoose.Types.ObjectId(), role: "admin", name: "Ada" },
 };
 const publishedAt = new Date("2026-10-01T09:00:00Z");
 
@@ -100,6 +101,18 @@ describe("toEditView (no MongoDB needed)", () => {
     const draft = toEditView(buildArticle(), USERS.ed);
     assert.deepEqual([draft.canEdit, draft.canSubmit], [false, false]);
     assert.match(draft.readOnlyMessage, /Editors can change an article only while it is waiting/);
+  });
+
+  test("an admin writes their own articles and edits any pending article", () => {
+    const ownDraft = toEditView(new Article({ author: USERS.adm._id, authorName: "Ada" }), USERS.adm);
+    assert.deepEqual([ownDraft.canEdit, ownDraft.canSubmit, ownDraft.dashboardUrl], [true, true, "/reporter"]);
+
+    const otherPending = toEditView(buildArticle({ status: "pending" }), USERS.adm);
+    assert.deepEqual([otherPending.canEdit, otherPending.canSubmit, otherPending.dashboardUrl], [true, false, "/reporter"]);
+
+    const otherDraft = toEditView(buildArticle(), USERS.adm);
+    assert.deepEqual([otherDraft.canEdit, otherDraft.canSubmit], [false, false]);
+    assert.match(otherDraft.readOnlyMessage, /Editors can change an article only while it is waiting/);
   });
 
   test("isLive is true only with a public version", () => {
@@ -289,6 +302,14 @@ describe("GET /reporter/articles/:id/edit with MongoDB", { skip: skipWithoutData
     assert.ok(html.includes('<fieldset class="rep-fields">'));
     assert.ok(!html.includes('id="rep-submit"'));
     assert.ok(!html.includes("Back to dashboard"));
+  });
+
+  test("an admin can open and edit a pending article and return to the dashboard", async () => {
+    const { status, html } = await getEditPage(String(articles.pending._id), "adm");
+    assert.equal(status, 200);
+    assert.ok(html.includes('<fieldset class="rep-fields">'));
+    assert.ok(!html.includes('id="rep-submit"'));
+    assert.ok(html.includes('href="/reporter">Back to dashboard</a>'));
   });
 
   test("the page shows the latest saved version on every request", async () => {

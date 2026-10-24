@@ -1,12 +1,19 @@
 // Article workflow (owned by B): the ONLY place that changes an article's status or its public (approved) fields.
 // Called by B's reporter controllers and D's editor controllers, which never set status or approved themselves.
 // Every check uses services/articleStatus.js. Errors are thrown with error.status (400, 403, 409); database errors
-// are rethrown. `user` is the logged-in user from A's session: { _id, role: "reporter" | "editor", name }.
+// are rethrown. `user` is the logged-in user from A's session: { _id, role: "reporter" | "editor" | "admin", name }.
 
 const Article = require("../models/Article");
 const logger = require("./logger");
 const { toSafeImageUrl } = require("./publicArticleService");
-const { assertTransition, canEditWorkingCopy, canDelete, createHttpError } = require("./articleStatus");
+const {
+  assertTransition,
+  canEditWorkingCopy,
+  canDelete,
+  createHttpError,
+  hasEditorRole,
+  hasReporterRole,
+} = require("./articleStatus");
 
 // The working-copy fields a request may change. Any other key is rejected.
 const WORKING_COPY_FIELDS = ["title", "summary", "content", "imageUrl", "category"];
@@ -127,15 +134,15 @@ async function updateIfStatusUnchanged(article, update) {
 }
 
 /**
- * Creates a new, empty draft owned by a reporter.
- * @param {Object} user The logged-in reporter ({ _id, role, name }).
+ * Creates a new, empty draft owned by a reporter or admin.
+ * @param {Object} user The logged-in reporter or admin ({ _id, role, name }).
  * @returns {Promise<Object>} The new article document (status "draft").
- * @throws {Error} error.status 403 when the user is not a reporter.
+ * @throws {Error} error.status 403 when the user is not a reporter or admin.
  * @example const article = await createDraft(req.session.user);
  */
 async function createDraft(user) {
-  if (user.role !== "reporter") {
-    throw createHttpError(403, "Only a reporter can create an article.");
+  if (!hasReporterRole(user.role)) {
+    throw createHttpError(403, "Only a reporter or an admin can create an article.");
   }
   return Article.create({ author: user._id, authorName: user.name });
 }
@@ -164,9 +171,9 @@ async function saveWorkingCopy(article, user, fields) {
 /**
  * Sends the working copy to the editors: draft or returned -> pending. Clears the editor's note.
  * @param {Object} article The article document.
- * @param {Object} user The logged-in reporter.
+ * @param {Object} user The logged-in reporter or admin.
  * @returns {Promise<Object>} The updated article document (status "pending").
- * @throws {Error} error.status 400 title, content or category empty, 403 not a reporter or not the author,
+ * @throws {Error} error.status 400 title, content or category empty, 403 not a reporter/admin or not the author,
  *   409 wrong status or changed meanwhile.
  * @example const article = await submit(article, req.session.user);
  */
@@ -183,10 +190,10 @@ async function submit(article, user) {
  * Publishes the working copy: pending -> published. Copies the working copy into the public fields,
  * sets approved.publishedAt on the first publish and approved.updatedAt every time, and adds 1 to publishCount.
  * @param {Object} article The article document.
- * @param {Object} editor The logged-in editor.
+ * @param {Object} editor The logged-in editor or admin.
  * @returns {Promise<{ article: Object, isFirstPublish: boolean }>} The published article, and whether this
  *   was its first publish (for D's publish event).
- * @throws {Error} error.status 400 working copy incomplete, 403 not an editor, 409 wrong status or changed meanwhile.
+ * @throws {Error} error.status 400 working copy incomplete, 403 not an editor or admin, 409 wrong status or changed meanwhile.
  * @example Used by D: const { article, isFirstPublish } = await approve(article, req.session.user);
  */
 async function approve(article, editor) {
@@ -221,10 +228,10 @@ async function approve(article, editor) {
 /**
  * Sends the working copy back to its reporter: pending -> returned, with the editor's reason.
  * @param {Object} article The article document.
- * @param {Object} editor The logged-in editor.
+ * @param {Object} editor The logged-in editor or admin.
  * @param {*} note The editor's reason (required, trimmed, at most 1000 characters).
  * @returns {Promise<Object>} The updated article document (status "returned").
- * @throws {Error} error.status 400 empty or too long note, 403 not an editor, 409 wrong status or changed meanwhile.
+ * @throws {Error} error.status 400 empty or too long note, 403 not an editor or admin, 409 wrong status or changed meanwhile.
  * @example Used by D: const article = await returnToReporter(article, req.session.user, req.body.note);
  */
 async function returnToReporter(article, editor, note) {
@@ -245,9 +252,9 @@ async function returnToReporter(article, editor, note) {
  * Opens a published article for changes: published -> draft. Copies the public version into the working
  * copy so the reporter starts from what readers see. The public version stays online and unchanged.
  * @param {Object} article The article document.
- * @param {Object} user The logged-in reporter.
+ * @param {Object} user The logged-in reporter or admin.
  * @returns {Promise<Object>} The updated article document (status "draft").
- * @throws {Error} error.status 403 not a reporter or not the author, 409 wrong status or changed meanwhile.
+ * @throws {Error} error.status 403 not a reporter/admin or not the author, 409 wrong status or changed meanwhile.
  * @example const article = await startRevision(article, req.session.user);
  */
 async function startRevision(article, user) {
@@ -280,23 +287,24 @@ async function deleteArticle(article, user) {
 }
 
 /**
- * Lists articles for the staff dashboards, last changed first: a reporter sees only their own, an editor sees all.
- * Only the fields of a list row are read. Uses the { author, updatedAt } and { status, updatedAt } indexes.
+ * Lists articles for the staff dashboards, last changed first: a reporter sees only their own, an editor or
+ * admin sees all. Only the fields of a list row are read. Uses the { author, updatedAt } and
+ * { status, updatedAt } indexes.
  * @param {Object} user The logged-in user.
  * @param {string} [status] Optional status filter; must already be one of the article statuses.
  * @returns {Promise<Object[]>} Lean articles with the title and category of draft and approved, approved.publishedAt,
- *   status, editorNote and updatedAt.
- * @throws {Error} error.status 403 for a role other than reporter or editor.
+ *   author, status, editorNote and updatedAt.
+ * @throws {Error} error.status 403 for a role other than reporter, editor or admin.
  * @example const rows = await listArticles(req.session.user, "pending");
  */
 async function listArticles(user, status) {
   let filter;
-  if (user.role === "reporter") {
-    filter = { author: user._id };
-  } else if (user.role === "editor") {
+  if (hasEditorRole(user.role)) {
     filter = {};
+  } else if (hasReporterRole(user.role)) {
+    filter = { author: user._id };
   } else {
-    throw createHttpError(403, "Only reporters and editors can list articles.");
+    throw createHttpError(403, "Only reporters, editors and admins can list articles.");
   }
   if (status) {
     filter.status = status;
@@ -309,6 +317,7 @@ async function listArticles(user, status) {
       "approved.title": 1,
       "approved.category": 1,
       "approved.publishedAt": 1,
+      author: 1,
       status: 1,
       editorNote: 1,
       updatedAt: 1,

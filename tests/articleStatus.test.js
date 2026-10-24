@@ -58,6 +58,13 @@ describe("transitions", () => {
     expectRejected("published", "draft", "editor", 403);
   });
 
+  test("an admin can make every transition", () => {
+    for (const { from, to } of ARTICLE_TRANSITIONS) {
+      assert.equal(canTransition(from, to, "admin"), true, `admin: ${from} -> ${to}`);
+      assert.doesNotThrow(() => assertTransition(from, to, "admin"));
+    }
+  });
+
   test("error messages say what went wrong", () => {
     assert.throws(() => assertTransition("pending", "published", "reporter"), {
       message: "Only an editor can approve an article.",
@@ -95,6 +102,16 @@ describe("canEditWorkingCopy", () => {
     assert.equal(canEditWorkingCopy("published", "editor", false), false);
   });
 
+  test("an admin edits their own drafts and any pending article", () => {
+    assert.equal(canEditWorkingCopy("draft", "admin", true), true);
+    assert.equal(canEditWorkingCopy("returned", "admin", true), true);
+    assert.equal(canEditWorkingCopy("pending", "admin", true), true);
+    assert.equal(canEditWorkingCopy("pending", "admin", false), true);
+    assert.equal(canEditWorkingCopy("draft", "admin", false), false);
+    assert.equal(canEditWorkingCopy("returned", "admin", false), false);
+    assert.equal(canEditWorkingCopy("published", "admin", true), false);
+  });
+
   test("an unknown role cannot edit", () => {
     assert.equal(canEditWorkingCopy("draft", "guest", true), false);
     assert.equal(canEditWorkingCopy("draft", undefined, true), false);
@@ -122,6 +139,12 @@ describe("canDelete", () => {
   test("an editor deletes any article", () => {
     for (const status of ["draft", "pending", "returned", "published"]) {
       assert.equal(canDelete({ status, approved: { publishedAt } }, "editor", false), true, status);
+    }
+  });
+
+  test("an admin deletes any article", () => {
+    for (const status of ["draft", "pending", "returned", "published"]) {
+      assert.equal(canDelete({ status, approved: { publishedAt } }, "admin", false), true, status);
     }
   });
 

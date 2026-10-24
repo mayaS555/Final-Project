@@ -4,7 +4,7 @@
 // Errors go to next(err) with error.status, for A's error middleware.
 
 const Article = require("../models/Article");
-const { createHttpError } = require("../services/articleStatus");
+const { createHttpError, hasEditorRole, hasReporterRole } = require("../services/articleStatus");
 
 const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
 
@@ -22,9 +22,9 @@ function getSessionUser(req) {
 /**
  * Builds a middleware that lets the request continue only for a logged-in user with one of the roles.
  * Stand-in until A's login and role middleware are merged; then use A's and delete this function.
- * @param {string[]} roles The allowed roles, for example ["reporter", "editor"].
+ * @param {string[]} roles The allowed roles, for example ["reporter", "editor", "admin"].
  * @returns {Function} Express middleware that passes 401 (nobody logged in) or 403 (another role) to next.
- * @example const requireReporterLogin = requireLoginWithRole(["reporter"]);
+ * @example const requireReporterLogin = requireLoginWithRole(["reporter", "admin"]);
  */
 function requireLoginWithRole(roles) {
   return function requireRole(req, res, next) {
@@ -41,9 +41,9 @@ function requireLoginWithRole(roles) {
   };
 }
 
-// Article API: reporters and editors. Reporter area: reporters only.
-const requireStaffLogin = requireLoginWithRole(["reporter", "editor"]);
-const requireReporterLogin = requireLoginWithRole(["reporter"]);
+// Article API: reporters, editors and admins. Reporter area: reporters and admins.
+const requireStaffLogin = requireLoginWithRole(["reporter", "editor", "admin"]);
+const requireReporterLogin = requireLoginWithRole(["reporter", "admin"]);
 
 /**
  * Loads the article named by :id and stores it in req.article.
@@ -88,8 +88,8 @@ function requireArticleOwnerOrEditor(req, res, next) {
     next(createHttpError(401, "Please log in."));
     return;
   }
-  const isEditor = user.role === "editor";
-  const isAuthor = user.role === "reporter" && String(req.article.author) === String(user._id);
+  const isEditor = hasEditorRole(user.role);
+  const isAuthor = hasReporterRole(user.role) && String(req.article.author) === String(user._id);
   if (!isEditor && !isAuthor) {
     next(createHttpError(403, "You can only open your own articles."));
     return;

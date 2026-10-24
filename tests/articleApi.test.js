@@ -15,6 +15,7 @@ const USERS = {
   noa: { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Noa" },
   dan: { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Dan" },
   ed: { _id: new mongoose.Types.ObjectId(), role: "editor", name: "Ed" },
+  adm: { _id: new mongoose.Types.ObjectId(), role: "admin", name: "Ada" },
   guest: { _id: new mongoose.Types.ObjectId(), role: "guest", name: "Guest" },
 };
 
@@ -147,21 +148,27 @@ describe("Article API with MongoDB", { skip: skipWithoutDatabase }, () => {
     return created.body.id;
   }
 
-  test("POST /api/articles creates an empty draft for a reporter, not for an editor", async () => {
+  test("POST /api/articles creates an empty draft for a reporter or an admin, not for an editor", async () => {
     const created = await call("POST", "/api/articles", { user: "noa" });
     assert.equal(created.status, 201);
     assert.equal(created.body.status, "draft");
     assert.equal(created.body.authorName, "Noa");
     assert.equal(created.body.approved, null);
+
+    const adminCreated = await call("POST", "/api/articles", { user: "adm" });
+    assert.equal(adminCreated.status, 201);
+    assert.equal(adminCreated.body.authorName, "Ada");
+
     assert.equal((await call("POST", "/api/articles", { user: "ed" })).status, 403);
   });
 
-  test("GET /api/articles/:id: the author and an editor read it, another reporter gets 403", async () => {
+  test("GET /api/articles/:id: the author, an editor and an admin read it, another reporter gets 403", async () => {
     const id = await createCompleteDraft("noa");
     const own = await call("GET", `/api/articles/${id}`, { user: "noa" });
     assert.equal(own.status, 200);
     assert.equal(own.body.draft.title, "Harbor report by noa");
     assert.equal((await call("GET", `/api/articles/${id}`, { user: "ed" })).status, 200);
+    assert.equal((await call("GET", `/api/articles/${id}`, { user: "adm" })).status, 200);
     assert.equal((await call("GET", `/api/articles/${id}`, { user: "dan" })).status, 403);
     assert.equal((await call("GET", `/api/articles/${someId}`, { user: "noa" })).status, 404);
   });
@@ -182,6 +189,30 @@ describe("Article API with MongoDB", { skip: skipWithoutDatabase }, () => {
     const stored = await Article.findById(id);
     assert.equal(stored.draft.title, "Harbor report by noa");
     assert.equal(stored.status, "draft");
+  });
+
+  test("an admin edits a pending article and deletes any article", async () => {
+    const id = await createCompleteDraft("noa");
+    await call("POST", `/api/articles/${id}/submit`, { user: "noa" });
+
+    const saved = await call("PATCH", `/api/articles/${id}`, { user: "adm", body: { title: "Admin edit" } });
+    assert.equal(saved.status, 200);
+    assert.equal((await Article.findById(id)).draft.title, "Admin edit");
+
+    assert.equal((await call("DELETE", `/api/articles/${id}`, { user: "adm" })).status, 204);
+    assert.equal(await Article.exists({ _id: id }), null);
+  });
+
+  test("an admin submits and revises their own article", async () => {
+    const id = await createCompleteDraft("adm");
+    const submitted = await call("POST", `/api/articles/${id}/submit`, { user: "adm" });
+    assert.equal(submitted.status, 200);
+    assert.equal(submitted.body.status, "pending");
+
+    await require("../services/articleService").approve(await Article.findById(id), USERS.adm);
+    const revised = await call("POST", `/api/articles/${id}/revise`, { user: "adm" });
+    assert.equal(revised.status, 200);
+    assert.equal(revised.body.status, "draft");
   });
 
   test("submit, then illegal transitions get 409 and locked edits get 403", async () => {
@@ -215,7 +246,7 @@ describe("Article API with MongoDB", { skip: skipWithoutDatabase }, () => {
     assert.equal(revised.body.draft.title, "Harbor report by noa");
   });
 
-  test("GET /api/articles: reporters see their own, editors see all, status filters", async () => {
+  test("GET /api/articles: reporters see their own, editors and admins see all, status filters", async () => {
     await Article.deleteMany({});
     const noaDraft = await createCompleteDraft("noa");
     const noaPending = await createCompleteDraft("noa");
@@ -236,6 +267,8 @@ describe("Article API with MongoDB", { skip: skipWithoutDatabase }, () => {
 
     const editorList = await call("GET", "/api/articles", { user: "ed" });
     assert.equal(editorList.body.items.length, 3);
+    const adminList = await call("GET", "/api/articles", { user: "adm" });
+    assert.equal(adminList.body.items.length, 3);
     const pendingList = await call("GET", "/api/articles?status=pending", { user: "ed" });
     assert.deepEqual(pendingList.body.items.map((item) => item.id), [noaPending]);
     const danList = await call("GET", "/api/articles", { user: "dan" });

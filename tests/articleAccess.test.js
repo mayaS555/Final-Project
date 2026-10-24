@@ -11,6 +11,7 @@ const authorId = new mongoose.Types.ObjectId();
 const reporter = { _id: authorId, role: "reporter", name: "Noa" };
 const otherReporter = { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Dan" };
 const editor = { _id: new mongoose.Types.ObjectId(), role: "editor", name: "Ed" };
+const admin = { _id: new mongoose.Types.ObjectId(), role: "admin", name: "Ada" };
 
 /**
  * Runs one middleware and returns what it passed to next.
@@ -66,9 +67,10 @@ describe("loadArticle", () => {
 describe("requireArticleOwnerOrEditor", () => {
   const article = new Article({ author: authorId, authorName: "Noa" });
 
-  test("lets the author and any editor continue", async () => {
+  test("lets the author, any editor and any admin continue", async () => {
     assert.equal(await runMiddleware(requireArticleOwnerOrEditor, { article, session: { user: reporter } }), undefined);
     assert.equal(await runMiddleware(requireArticleOwnerOrEditor, { article, session: { user: editor } }), undefined);
+    assert.equal(await runMiddleware(requireArticleOwnerOrEditor, { article, session: { user: admin } }), undefined);
   });
 
   test("refuses another reporter with 403", async () => {

@@ -62,7 +62,8 @@ Three roles, created manually (no self-registration):
 
 - **reporter** – creates and edits their own articles, submits them for review, and manages published revisions
 - **editor** – reviews all articles, edits pending submissions, and manages the article collection through the article API
-- **admin** – administrative staff account, created the same way as the other roles
+- **admin** – combines the reporter and editor roles: can write and manage their own articles, review pending
+  submissions, and manage every article in the collection
 
 To create a user, either use the helper script or connect directly to MongoDB:
 ```bash
@@ -120,14 +121,14 @@ form post, and `GET|POST /logout` clears the session.
 | `DELETE` | `/api/public/comments/:id` | comment author (device cookie) | Implemented |
 | `GET` | `/api/weather` | anyone | Implemented |
 | `GET` | `/api/auth/me` | anyone; returns `null` when logged out | Implemented |
-| `GET` | `/api/articles` | reporter / editor | Implemented |
-| `POST` | `/api/articles` | reporter | Implemented |
-| `GET` | `/api/articles/:id` | article owner or editor | Implemented |
-| `PATCH` | `/api/articles/:id` | article owner or editor; reporters only while draft/returned, editors while pending | Implemented |
-| `DELETE` | `/api/articles/:id` | article owner or editor | Implemented |
+| `GET` | `/api/articles` | reporter / editor / admin | Implemented |
+| `POST` | `/api/articles` | reporter / admin | Implemented |
+| `GET` | `/api/articles/:id` | article owner / editor / admin | Implemented |
+| `PATCH` | `/api/articles/:id` | article owner / editor / admin; draft or returned for the owner, pending for editor or admin | Implemented |
+| `DELETE` | `/api/articles/:id` | article owner / editor / admin | Implemented |
 | `POST` | `/api/articles/:id/submit` | article owner | Implemented |
-| `POST` | `/api/articles/:id/approve` | editor | Not implemented yet |
-| `POST` | `/api/articles/:id/return` | editor | Not implemented yet |
+| `POST` | `/api/articles/:id/approve` | editor / admin | Not implemented yet |
+| `POST` | `/api/articles/:id/return` | editor / admin | Not implemented yet |
 | `POST` | `/api/articles/:id/revise` | article owner | Implemented |
 
 Comment routes live under `/api/public/`, while article management routes live under `/api/articles/`.

@@ -88,12 +88,13 @@ being revised keeps showing its approved version.
 
 | Rule | Allowed |
 | --- | --- |
-| `canTransition(from, to, role)` | Only a row above, by its own role. |
+| `canTransition(from, to, role)` | Only a row above, by its own role; an admin may make every row. |
 | `assertTransition(from, to, role)` | Throws with `error.status` `403` (wrong role) or `409` (no such change). |
-| `canEditWorkingCopy(status, role, isOwner)` | Reporter: own article in `draft`/`returned`. Editor: any article in `pending`. |
-| `canDelete(article, role, isOwner)` | Editor: any. Reporter: own, `draft`/`returned`, never published. |
+| `canEditWorkingCopy(status, role, isOwner)` | Reporter: own article in `draft`/`returned`. Editor: any article in `pending`. Admin: either set of rules. |
+| `canDelete(article, role, isOwner)` | Editor or admin: any. Reporter: own, `draft`/`returned`, never published. |
 
-Role names are `"reporter"` and `"editor"`. Callers decide `isOwner` and check ownership for reporter transitions.
+Role names are `"reporter"`, `"editor"` and `"admin"`; the admin combines the other two roles. Callers decide
+`isOwner` and check ownership for reporter transitions.
 
 **Service functions** (`services/articleService.js`). Each takes a loaded article document and the acting `user`
 (`{ _id, role, name }`), saves, and returns the updated document. Errors carry `error.status`: `400` bad input,
@@ -101,7 +102,7 @@ Role names are `"reporter"` and `"editor"`. Callers decide `isOwner` and check o
 
 | Function | Does |
 | --- | --- |
-| `createDraft(user)` | Reporter only: a new empty draft. |
+| `createDraft(user)` | Reporter or admin only: a new empty draft. |
 | `saveWorkingCopy(article, user, fields)` | Saves `title`, `summary`, `content`, `imageUrl`, `category` to `draft`. Other keys: `400`. |
 | `submit(article, user)` | Author: `draft`/`returned` → `pending`. Needs title, content, category. Clears `editorNote`. |
 | `approve(article, editor)` | `pending` → `published`. Copies `draft` into `approved`, sets the dates, adds 1 to `publishCount`. Returns `{ article, isFirstPublish }`. |
@@ -211,10 +212,10 @@ app.use(require("./routes/reporterRoutes"));
   `useArticleModel(Article)` from C's `publicArticleService`.
 - **JSON parser.** Mount these routers before the global `express.json()`, or raise its limit. The default 100 KB
   answers `413` for a long article; the API router has its own 200 KB parser.
-- **Session user.** Assumed at `req.session.user = { _id, role, name }`, with roles `"reporter"` and `"editor"`;
-  `name` is the byline. It is read only in `getSessionUser`, so a different shape is a one-line change there.
+- **Session user.** Assumed at `req.session.user = { _id, role, name }`, with roles `"reporter"`, `"editor"` and
+  `"admin"`; `name` is the byline. It is read only in `getSessionUser`, so a different shape is a one-line change there.
 - **Login middleware.** Replace `requireStaffLogin` and `requireReporterLogin` with A's middleware, then delete them.
-- **After login.** Send reporters to `/reporter`.
+- **After login.** Send reporters and admins to `/reporter`.
 - **Errors.** B's errors carry `error.status` (`400`, `401`, `403`, `404`, `409`, `415`). Send `error.message` for
   4xx: JSON for `/api/*`, a page otherwise. On the reporter pages, redirecting a 401 to the login page is friendlier.
 - **Layout.** The reporter pages use C's temporary partials (`views/public/partials/top`, `bottom`) and load
