@@ -90,21 +90,6 @@ app.use(reporterRoutes);
 // Weather proxy (cached, no auth required)
 app.use(weatherRoutes);
 
-// Protect editor area pages from unauthorized visitors
-app.get(["/editor.html", "/editor-article.html"], (req, res, next) => {
-  if (!req.session?.user) {
-    const err = new Error("Please log in as an editor.");
-    err.status = 401;
-    return next(err);
-  }
-  if (req.session.user.role !== "editor" && req.session.user.role !== "admin") {
-    const err = new Error("Only editors can access this page.");
-    err.status = 403;
-    return next(err);
-  }
-  next();
-});
-
 // Serve static assets from public folder
 app.use(express.static(path.join(__dirname, "public")));
 

@@ -235,7 +235,7 @@ is maintained (every change to the value also updates that index). B, D and C sh
 ## 3. Connections needed from A, B and D (proposals, not agreements)
 
 **A**
-- Mount `routes/publicRoutes.js` before `express.static`; otherwise `public/index.html` answers `GET /`.
+- Mount `routes/publicRoutes.js` before `express.static` so the EJS feed, not a static file, answers `GET /`.
 - Set the EJS view engine. The template root must be the project's `views` folder (the one that contains `public/`),
   not the project root: the controllers render `public/home`, `public/article` and `public/message`. The static
   folder must serve `public/css/public.css` and `public/js/public-feed.js`, `public-comments.js` at `/css/...` and
