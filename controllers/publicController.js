@@ -1,5 +1,7 @@
 const publicArticleService = require("../services/publicArticleService");
 const articleReadService = require("../services/articleReadService");
+const { recordArticleView } = require("../services/impactAnalyticsService");
+const logger = require("../services/logger");
 const commentService = require("../services/commentService");
 const weatherService = require("../services/weatherService");
 
@@ -257,7 +259,7 @@ async function renderArticle(req, res) {
       console.error("Could not store the read state:", error);
     }
 
-    // Integration point: D's recordArticleView(article.id) belongs here, once per successful page visit.
+    // D records a view below, after the full article template renders successfully.
 
     // The first page of comments is rendered with the article. If it cannot be read, the article is
     // still served and the page says that comments are unavailable.
@@ -295,6 +297,13 @@ async function renderArticle(req, res) {
       weather,
       formatDate,
       formatDateTime,
+    }, async (renderError, html) => {
+      if (renderError) return handleUnexpectedError(renderError, res, false);
+      if (req.method === "GET") {
+        try { await recordArticleView(article.id); }
+        catch (error) { logger.warn("Could not record article view", { articleId: article.id, code: error.code }); }
+      }
+      res.send(html);
     });
   } catch (error) {
     handleUnexpectedError(error, res, false);

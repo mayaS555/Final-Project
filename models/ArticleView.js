@@ -13,6 +13,8 @@ const articleViewSchema = new mongoose.Schema(
     bucketStart: { type: Date, required: true },
     // Number of views in this bucket.
     count: { type: Number, required: true, min: 1 },
+    // UTC minute offsets 0..1439. Legacy/seed daily totals have no minute breakdown.
+    minuteCounts: { type: Map, of: Number, default: () => ({}) },
   },
   { collection: "article_views" }
 );

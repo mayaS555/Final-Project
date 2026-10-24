@@ -113,12 +113,13 @@ function toWorkingCopyUpdate(fields) {
  *   (too long, unknown category). Other database errors are rethrown.
  * @example const updated = await updateIfStatusUnchanged(article, { $set: { status: "pending" } });
  */
-async function updateIfStatusUnchanged(article, update) {
+async function updateIfStatusUnchanged(article, update, session) {
   let updated;
   try {
     updated = await Article.findOneAndUpdate({ _id: article._id, status: article.status }, update, {
       returnDocument: "after",
       runValidators: true,
+      ...(session ? { session } : {}),
     });
   } catch (error) {
     if (error.name === "ValidationError") {
@@ -196,7 +197,7 @@ async function submit(article, user) {
  * @throws {Error} error.status 400 working copy incomplete, 403 not an editor or admin, 409 wrong status or changed meanwhile.
  * @example Used by D: const { article, isFirstPublish } = await approve(article, req.session.user);
  */
-async function approve(article, editor) {
+async function approve(article, editor, { session } = {}) {
   assertTransition(article.status, "published", editor.role);
   assertReadyForReview(article.draft);
 
@@ -219,9 +220,9 @@ async function approve(article, editor) {
       },
     },
     $inc: { publishCount: 1 },
-  });
-  logArticleEvent("approve", updated, editor);
-  // Person D hooks in here: record the publish event (updated._id, isFirstPublish, now).
+  }, session);
+  if (!session) logArticleEvent("approve", updated, editor);
+  // D's controller records PublishEvent in the same transaction as this update.
   return { article: updated, isFirstPublish };
 }
 
