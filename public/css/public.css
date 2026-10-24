@@ -1,11 +1,42 @@
 /* Every rule is scoped under .pub-site so staff pages are not affected. */
 
+/* Newspaper palette and fonts. Change these to restyle the whole public site. */
 .pub-site {
+    --paper: #f6efe2;
+    --card: #fffaf2;
+    --ink: #2b1d14;
+    --muted: #6e5a4a;
+    --rule: #e0cfb5;
+    --accent: #c0392b;
+    --stripe: rgba(192, 57, 43, 0.07);
+    --headline-font: Georgia, "Times New Roman", serif;
+    --body-font: Arial, Helvetica, sans-serif;
+
     margin: 0;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: var(--body-font);
     line-height: 1.5;
-    color: #1f2933;
-    background: #f4f5f7;
+    color: var(--ink);
+    /* Thin diagonal stripes over the paper color: 2px stripe, then 22px gap, repeated. */
+    background:
+        repeating-linear-gradient(
+            45deg,
+            var(--stripe) 0 2px,
+            transparent 2px 24px
+        ),
+        var(--paper);
+    /* Keeps the stripes still while scrolling. */
+    background-attachment: fixed;
+}
+
+/* Dark mode: same variables, darker values. theme-toggle.js sets data-theme on <html>. */
+:root[data-theme="dark"] .pub-site {
+    --paper: #1c1612;
+    --card: #2a211b;
+    --ink: #f3e9dc;
+    --muted: #bfae9c;
+    --rule: #4a3b30;
+    --accent: #e8735f;
+    --stripe: rgba(232, 115, 95, 0.08);
 }
 
 .pub-site *,
@@ -18,49 +49,95 @@
     color: inherit;
 }
 
+/* All headings use the serif newspaper font. */
+.pub-site h1,
+.pub-site h2,
+.pub-site .pub-brand {
+    font-family: var(--headline-font);
+}
+
+/* ── Masthead ───────────────────────────────────────────────────────────── */
+
 .pub-site .pub-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px;
-    background: #14213d;
-    color: #ffffff;
+    gap: 12px;
+    padding: 20px 24px;
+    background: var(--card);
+    color: var(--ink);
+    /* Colored band on top, classic newspaper double line underneath. */
+    border-top: 6px solid var(--accent);
+    border-bottom: 4px double var(--ink);
 }
 
 .pub-site .pub-header a {
-    color: #ffffff;
+    color: var(--ink);
     text-decoration: none;
 }
 
+.pub-site .pub-header nav a:hover {
+    color: var(--accent);
+}
+
+.pub-site .theme-toggle {
+    margin-left: auto;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+}
+
+.pub-site .theme-toggle:hover {
+    border-color: var(--accent);
+}
+
 .pub-site .pub-brand {
-    font-size: 24px;
+    font-size: 34px;
     font-weight: bold;
+    letter-spacing: -0.5px;
 }
 
 .pub-site .pub-main {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 24px 16px 48px;
+    padding: 28px 16px 48px;
 }
 
+/* Section title with a red bar underneath, like "Top Stories". */
 .pub-site .pub-page-title {
-    margin: 0 0 20px;
-    font-size: 28px;
+    margin: 0 0 24px;
+    padding-bottom: 8px;
+    font-size: 30px;
+    border-bottom: 3px solid var(--accent);
+    display: inline-block;
 }
+
+/* ── Article cards ──────────────────────────────────────────────────────── */
 
 .pub-site .pub-feed {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 24px;
 }
 
 .pub-site .pub-card {
     flex: 1 1 300px;
     max-width: 100%;
-    background: #ffffff;
-    border-radius: 8px;
+    background: var(--card);
+    border-top: 3px solid var(--ink);
     overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.pub-site .pub-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
 
 .pub-site .pub-card-link {
@@ -78,7 +155,7 @@
 }
 
 .pub-site .pub-card-image-empty {
-    background: #d5d9e0;
+    background: var(--rule);
 }
 
 .pub-site .pub-card-body {
@@ -88,28 +165,61 @@
     padding: 16px;
 }
 
+/* Small red uppercase label above headlines. */
 .pub-site .pub-category {
     margin: 0 0 6px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: bold;
+    letter-spacing: 1px;
     text-transform: uppercase;
-    color: #8a5a00;
+    color: var(--accent);
 }
 
 .pub-site .pub-card-title {
     margin: 0 0 8px;
-    font-size: 20px;
+    font-size: 22px;
+    line-height: 1.25;
+}
+
+.pub-site .pub-card:hover .pub-card-title {
+    text-decoration: underline;
 }
 
 .pub-site .pub-card-summary {
     margin: 0 0 12px;
     flex: 1;
+    color: var(--muted);
 }
 
 .pub-site .pub-meta {
     margin: 0;
-    font-size: 14px;
-    color: #52606d;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+/* The first card is the lead story: full width, image beside the text. */
+@media (min-width: 760px) {
+    .pub-site .pub-card:first-child {
+        flex-basis: 100%;
+    }
+
+    .pub-site .pub-card:first-child .pub-card-link {
+        flex-direction: row;
+    }
+
+    .pub-site .pub-card:first-child .pub-card-image {
+        width: 60%;
+        height: 340px;
+    }
+
+    .pub-site .pub-card:first-child .pub-card-body {
+        justify-content: center;
+        padding: 24px 28px;
+    }
+
+    .pub-site .pub-card:first-child .pub-card-title {
+        font-size: 34px;
+    }
 }
 
 /* The hidden attribute must win over the display values set below. */
@@ -117,11 +227,15 @@
     display: none !important;
 }
 
+/* ── Filters and buttons ────────────────────────────────────────────────── */
+
 .pub-site .pub-filters {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--rule);
 }
 
 .pub-site .pub-filters input,
@@ -130,9 +244,9 @@
 .pub-site .pub-retry-button {
     padding: 10px 12px;
     font-size: 16px;
-    border: 1px solid #b8c0cc;
-    border-radius: 6px;
-    background: #ffffff;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--card);
     color: inherit;
 }
 
@@ -149,15 +263,21 @@
 .pub-site .pub-filters button,
 .pub-site .pub-retry-button {
     cursor: pointer;
-    background: #14213d;
-    border-color: #14213d;
-    color: #ffffff;
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--card);
+}
+
+.pub-site .pub-filters button:hover,
+.pub-site .pub-retry-button:hover {
+    background: var(--accent);
+    border-color: var(--accent);
 }
 
 .pub-site .pub-feed-status {
     margin: 20px 0 0;
     text-align: center;
-    color: #52606d;
+    color: var(--muted);
 }
 
 .pub-site .pub-retry-button {
@@ -168,8 +288,8 @@
 
 .pub-site .pub-empty {
     padding: 24px;
-    background: #ffffff;
-    border-radius: 8px;
+    background: var(--card);
+    border-top: 3px solid var(--ink);
 }
 
 .pub-site .pub-pager {
@@ -179,23 +299,45 @@
     margin-top: 28px;
 }
 
-.pub-site .pub-pager a,
-.pub-site .pub-back a {
+.pub-site .pub-pager a {
     font-weight: bold;
+    color: var(--accent);
 }
+
+/* "Back to all articles" is a link styled as a button. */
+.pub-site .pub-back a {
+    display: inline-block;
+    padding: 10px 18px;
+    font-weight: bold;
+    text-decoration: none;
+    border-radius: 2px;
+    background: var(--ink);
+    color: var(--card);
+}
+
+.pub-site .pub-back a:hover {
+    background: var(--accent);
+}
+
+/* ── Single article page ────────────────────────────────────────────────── */
 
 .pub-site .pub-article {
     max-width: 760px;
     margin: 0 auto;
-    padding: 24px;
-    background: #ffffff;
-    border-radius: 8px;
+    padding: 32px;
+    background: var(--card);
+    border-top: 3px solid var(--ink);
+}
+
+.pub-site .pub-article-header {
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--rule);
 }
 
 .pub-site .pub-article-title {
-    margin: 0 0 8px;
-    font-size: 34px;
-    line-height: 1.2;
+    margin: 0 0 12px;
+    font-size: 40px;
+    line-height: 1.15;
 }
 
 .pub-site .pub-article-image {
@@ -204,14 +346,25 @@
     max-height: 420px;
     margin: 20px 0;
     object-fit: cover;
-    border-radius: 6px;
 }
 
 .pub-site .pub-article-content p {
-    margin: 0 0 16px;
-    font-size: 18px;
+    margin: 0 0 18px;
+    font-family: var(--headline-font);
+    font-size: 19px;
+    line-height: 1.7;
     /* Keeps single line breaks typed by the reporter. */
     white-space: pre-line;
+}
+
+/* Big first letter, like a printed newspaper. */
+.pub-site .pub-article-content p:first-child::first-letter {
+    float: left;
+    margin: 4px 8px 0 0;
+    font-size: 64px;
+    line-height: 0.85;
+    font-weight: bold;
+    color: var(--accent);
 }
 
 .pub-site .pub-back {
@@ -225,7 +378,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    color: #ffffff;
+    color: var(--muted);
     font-size: 14px;
     white-space: nowrap;
 }
@@ -248,11 +401,11 @@
     font-size: 18px;
     font-weight: bold;
     letter-spacing: -0.5px;
+    color: var(--ink);
 }
 
 .pub-site .weather-desc {
     text-transform: capitalize;
-    opacity: 0.85;
 }
 
 /* Separator dot between description and city name. */
@@ -264,15 +417,13 @@
 
 .pub-site .weather-stale {
     font-size: 11px;
-    opacity: 0.65;
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border: 1px solid var(--rule);
     border-radius: 4px;
     padding: 1px 5px;
     margin-left: 4px;
 }
 
 .pub-site .weather-text--unavail {
-    opacity: 0.7;
     font-style: italic;
 }
 
@@ -284,10 +435,14 @@
     }
 }
 
-/* ── Responsive: general header adjustments ──────────────────────────────── */
+/* ── Responsive: general adjustments ─────────────────────────────────────── */
 @media (max-width: 600px) {
     .pub-site .pub-header {
         padding: 12px 16px;
+    }
+
+    .pub-site .pub-brand {
+        font-size: 26px;
     }
 
     .pub-site .pub-filters select,
@@ -299,25 +454,25 @@
         padding: 16px;
     }
 
-    /* Larger touch targets for the no-JavaScript pager and the back link. */
-    .pub-site .pub-pager a,
-    .pub-site .pub-back a {
+    /* Larger touch targets for the no-JavaScript pager. */
+    .pub-site .pub-pager a {
         display: inline-block;
         padding: 10px 4px;
     }
 
     .pub-site .pub-article-title {
-        font-size: 26px;
+        font-size: 28px;
     }
 }
 
-/* Comments on the article page. */
+/* ── Comments on the article page ───────────────────────────────────────── */
+
 .pub-site .pub-comments {
     max-width: 760px;
     margin: 24px auto 0;
-    padding: 24px;
-    background: #ffffff;
-    border-radius: 8px;
+    padding: 24px 32px;
+    background: var(--card);
+    border-top: 3px solid var(--ink);
 }
 
 .pub-site .pub-comments-title {
@@ -350,9 +505,9 @@
     width: 100%;
     padding: 10px 12px;
     font: inherit;
-    border: 1px solid #b8c0cc;
-    border-radius: 6px;
-    background: #ffffff;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--card);
     color: inherit;
 }
 
@@ -368,10 +523,10 @@
     padding: 8px 16px;
     font-size: 15px;
     cursor: pointer;
-    border: 1px solid #14213d;
-    border-radius: 6px;
-    background: #14213d;
-    color: #ffffff;
+    border: 1px solid var(--ink);
+    border-radius: 2px;
+    background: var(--ink);
+    color: var(--card);
 }
 
 .pub-site .pub-comment-form button {
@@ -381,8 +536,8 @@
 .pub-site .pub-comment-actions button,
 .pub-site .pub-comment-editor button[data-action="cancel"],
 .pub-site .pub-secondary-button {
-    background: #ffffff;
-    color: #14213d;
+    background: var(--card);
+    color: var(--ink);
 }
 
 .pub-site .pub-comments button:disabled {
@@ -393,16 +548,16 @@
 .pub-site .pub-form-status {
     min-height: 1.5em;
     margin: 0;
-    color: #52606d;
+    color: var(--muted);
 }
 
 .pub-site .pub-status-error {
-    color: #b00020;
+    color: var(--accent);
 }
 
 .pub-site .pub-comments-note {
     margin: 0 0 16px;
-    color: #52606d;
+    color: var(--muted);
 }
 
 .pub-site .pub-comment-list {
@@ -413,17 +568,17 @@
 
 .pub-site .pub-comment {
     padding: 16px 0;
-    border-top: 1px solid #e1e5ea;
+    border-top: 1px solid var(--rule);
 }
 
 .pub-site .pub-comment-meta {
     margin: 0 0 6px;
     font-size: 14px;
-    color: #52606d;
+    color: var(--muted);
 }
 
 .pub-site .pub-comment-author {
-    color: #1f2933;
+    color: var(--ink);
 }
 
 .pub-site .pub-comment-body {

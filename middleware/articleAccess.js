@@ -46,7 +46,7 @@ const requireStaffLogin = requireLoginWithRole(["reporter", "editor", "admin"]);
 const requireReporterLogin = requireLoginWithRole(["reporter", "admin"]);
 
 /**
- * Loads the article named by :id and stores it in req.article.
+ * Loads the article named by :id (without its comments and analytics) and stores it in req.article.
  * @param {Object} req The Express request; reads req.params.id.
  * @param {Object} res The Express response (not used).
  * @param {Function} next Called with no argument on success, with an error otherwise.
@@ -61,7 +61,8 @@ async function loadArticle(req, res, next) {
     return;
   }
   try {
-    const article = await Article.findById(id);
+    // The embedded comments and analytics are left out: staff pages and the article API never need them.
+    const article = await Article.findById(id, Article.EMBEDDED_ARRAYS);
     if (!article) {
       next(createHttpError(404, "Article not found."));
       return;

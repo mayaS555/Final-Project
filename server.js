@@ -7,9 +7,6 @@ dotenv.config();
 
 const Article = require("./models/Article");
 const ArticleRead = require("./models/ArticleRead");
-const ArticleView = require("./models/ArticleView");
-const PublishEvent = require("./models/PublishEvent");
-const Comment = require("./models/Comment");
 const { useArticleModel } = require("./services/publicArticleService");
 
 const session = require("express-session");
@@ -130,9 +127,6 @@ async function startServer() {
     await Promise.all([
       Article.init(),
       ArticleRead.init(),
-      ArticleView.init(),
-      PublishEvent.init(),
-      Comment.init(),
     ]);
     logger.logServerEvent("indexes_ready");
 

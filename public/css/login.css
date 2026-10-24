@@ -1,131 +1,91 @@
-header{
-    background-color: #111;
-    color: white;
-    padding: 20px;
-    text-align: center;
+/* Login page. Loaded after public.css and reuses its colors, fonts and masthead. */
+
+.pub-site .login-section {
+    display: flex;
+    justify-content: center;
+    padding: 48px 16px;
 }
 
-.login-box {
-    background-color: rgb(117, 161, 141);
-    padding: 40px;
-    border-radius: 60px;
-    margin: 30px;
-    text-align: center;
-    width: 700px;
-    padding: 35px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    margin: center;
+.pub-site .login-box {
     width: 100%;
     max-width: 420px;
+    padding: 32px;
+    background: var(--card);
+    border-top: 3px solid var(--ink);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
 
-.login-section {
-    min-height: calc(100vh - 70px);
-    display: flex;
-    justify-content: center;
-    align-items:flex-start ;
-    ;
-}
-
-.login-container {
-    min-height: calc(100vh - 76px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 30px;
-}
-
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    color: #222;
-}
-* {
-    box-sizing: border-box;
-}
-
-header h1 {
-    margin: 0;
-    font-size: 32px;
-}
-
-.login-box h2 {
-    margin-top: 0;
-    margin-bottom: 8px;
-    text-align: center;
+.pub-site .login-box h2 {
+    margin: 0 0 4px;
     font-size: 30px;
-}
-
-.login-subtitle {
     text-align: center;
-
-    color: #666;
-
-    margin-top: 0;
-    margin-bottom: 30px;
 }
 
-.form-group {
+/* Small red uppercase line, like the category labels on articles. */
+.pub-site .login-box h3 {
+    margin: 0 0 28px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--accent);
+}
+
+.pub-site .form-group {
     display: flex;
     flex-direction: column;
-
     margin-bottom: 20px;
 }
 
-.form-group label {
-    margin-bottom: 7px;
-
+.pub-site .form-group label {
+    margin-bottom: 6px;
     font-weight: bold;
 }
 
-.form-group input {
+.pub-site .form-group input {
     padding: 12px;
-
-    font-size: 16px;
-
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    font: inherit;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--paper);
+    color: var(--ink);
 }
 
-.form-group input:focus {
-    outline: none;
-    border-color: #222;
+.pub-site .form-group input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
 }
 
-/* Login button */
-
-button {
+.pub-site .login-box button {
     width: 100%;
-
     padding: 13px;
-
-    border: none;
-    border-radius: 4px;
-
-    background-color: #111;
-    color: white;
-
     font-size: 16px;
     font-weight: bold;
-
     cursor: pointer;
+    border: none;
+    border-radius: 2px;
+    background: var(--ink);
+    color: var(--card);
 }
 
-button:hover {
-    background-color: #333;
+.pub-site .login-box button:hover {
+    background: var(--accent);
 }
 
-/* Back link */
+.pub-site .login-box button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 
-.back-link {
+.pub-site .back-link {
     display: block;
-    margin-top: 30px;
+    margin-top: 24px;
     text-align: center;
-    color: #06431b;
+    font-weight: bold;
+    color: var(--accent);
     text-decoration: none;
 }
 
-.back-link:hover {
+.pub-site .back-link:hover {
     text-decoration: underline;
 }

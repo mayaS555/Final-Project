@@ -1,6 +1,21 @@
 /* Reporter area (owned by B). Loaded after C's public.css, whose base rules (.pub-site, .pub-main,
    .pub-page-title, .pub-meta, .pub-empty, .pub-form-status) these pages reuse. New classes start with rep-. */
 
+/* Reporter pages use fixed light colors, so keep public.css's light palette and hide the theme toggle. */
+.pub-site .theme-toggle {
+    display: none !important;
+}
+
+:root[data-theme="dark"] .pub-site {
+    --paper: #f6efe2;
+    --card: #fffaf2;
+    --ink: #2b1d14;
+    --muted: #6e5a4a;
+    --rule: #e0cfb5;
+    --accent: #c0392b;
+    --stripe: rgba(192, 57, 43, 0.07);
+}
+
 .pub-site .rep-toolbar {
     display: flex;
     flex-wrap: wrap;
