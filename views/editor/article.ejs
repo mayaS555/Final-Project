@@ -1,20 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= article.draft.title || 'Untitled' %> | Editor | The Daily Web</title>
+<%- include("../public/partials/top", { pageTitle: (article.draft.title || 'Untitled') + ' | Editor | The Daily Web' }) %>
   <link rel="stylesheet" href="/css/editor-article.css">
   <link rel="stylesheet" href="/css/editor-integration.css">
   <script src="/js/editor-article.js" defer></script>
-</head>
-<body>
-  <header>
-    <h1>The Daily Web</h1>
-    <nav aria-label="Staff"><a href="/">Public site</a><a href="/editor">Editor Dashboard</a><a href="/editor/analytics?article=<%= article._id %>">Impact Analytics</a><a href="/logout">Logout</a></nav>
-  </header>
   <main class="article-page" id="editor-page" data-article-id="<%= article._id %>">
     <a href="/editor" class="back-link">← Back to Articles</a>
+    <a href="/editor/analytics?article=<%= article._id %>" class="back-link">Impact Analytics for this article</a>
     <p id="editor-message" role="status" aria-live="polite"></p>
     <noscript><p>Enable JavaScript to edit, publish, return or delete this article.</p></noscript>
     <% if (article.approved?.publishedAt) { %>
@@ -92,5 +82,4 @@
       </section>
     <% } %>
   </main>
-</body>
-</html>
+<%- include("../public/partials/bottom") %>

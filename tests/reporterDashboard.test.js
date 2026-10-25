@@ -122,16 +122,16 @@ describe("toDashboardRow (no MongoDB needed)", () => {
     assert.equal(toDashboardRow(leanArticle({})).title, "Untitled");
   });
 
-  test("the badges use the Hebrew labels", () => {
+  test("the badges use the English labels", () => {
     assert.deepEqual(STATUS_LABELS, {
-      draft: "בהכנה",
-      pending: "ממתינה לאישור עורך",
-      published: "פורסמה",
-      returned: "הוחזרה לתיקונים",
+      draft: "Draft",
+      pending: "Pending Approval",
+      published: "Published",
+      returned: "Needs Changes",
     });
     assert.equal(
       toDashboardRow(leanArticle({ status: "returned" })).statusLabel,
-      "הוחזרה לתיקונים",
+      "Needs Changes",
     );
   });
 
@@ -407,12 +407,12 @@ describe("GET /reporter with MongoDB", { skip: skipWithoutDatabase }, () => {
     assert.ok(html.includes("&lt;script&gt;alert(1)&lt;/script&gt; Harbor"));
   });
 
-  test("a draft row: Hebrew badge, category, Edit and Delete only", async () => {
+  test("a draft row: status badge, category, Edit and Delete only", async () => {
     const row = findRow(
       (await getDashboard("noa")).html,
       String(articles.draft._id),
     );
-    assert.ok(row.includes("בהכנה"));
+    assert.ok(row.includes(">Draft</span>"));
     assert.ok(row.includes("Sports"));
     assert.ok(row.includes(">Edit</a>"));
     assert.ok(row.includes('data-action="delete"'));
@@ -425,7 +425,7 @@ describe("GET /reporter with MongoDB", { skip: skipWithoutDatabase }, () => {
       (await getDashboard("noa")).html,
       String(articles.returned._id),
     );
-    assert.ok(row.includes("הוחזרה לתיקונים"));
+    assert.ok(row.includes(">Needs Changes</span>"));
     assert.ok(row.includes("Add a second source."));
     assert.ok(row.includes(">Edit</a>"));
   });
@@ -435,7 +435,7 @@ describe("GET /reporter with MongoDB", { skip: skipWithoutDatabase }, () => {
       (await getDashboard("noa")).html,
       String(articles.published._id),
     );
-    assert.ok(row.includes("פורסמה"));
+    assert.ok(row.includes(">Published</span>"));
     assert.ok(row.includes(`href="/articles/${articles.published._id}"`));
     assert.ok(row.includes('data-action="revise"'));
     assert.ok(!row.includes(">Edit</a>"));
@@ -459,9 +459,7 @@ describe("GET /reporter with MongoDB", { skip: skipWithoutDatabase }, () => {
     assert.ok(findRow(html, String(articles.returned._id)));
     assert.equal(findRow(html, String(articles.draft._id)), "");
     assert.ok(
-      html.includes(
-        'href="/reporter?status=returned" lang="he" dir="rtl" aria-current="page"',
-      ),
+      html.includes('href="/reporter?status=returned" aria-current="page"'),
     );
   });
 

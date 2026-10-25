@@ -1,20 +1,8 @@
-header {
-  background-color: #111;
-  color: white;
-  padding: 20px;
-  text-align: center;
-}
-
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background-color: #f4f4f4;
-  color: #222;
-}
+/* Editor pages render inside public.css's .pub-site layout; colors come from its palette variables
+   so the newspaper design and dark mode apply here too. */
 
 /* articles sections */
 .articles-list {
-  padding-top: 5%;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -30,16 +18,27 @@ body {
 }
 
 .article-card {
-  background-color: white;
+  background-color: var(--card);
   padding: 25px;
-  border-radius: 12px;
   cursor: pointer;
-  border-style: solid;
-  border-color: #06431b;
+  border-top: 3px solid var(--ink);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 }
 
 .article-card:hover {
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.article-card h3 {
+  font-family: var(--headline-font);
+  font-size: 22px;
+}
+
+.article-card:hover h3 {
+  text-decoration: underline;
 }
 
 /*Article status */
@@ -50,11 +49,13 @@ body {
   font-weight: bold;
   margin-bottom: 20px;
 }
+/* Badge colors are fixed, so the text color is too (readable in both themes). */
 /* Pending article */
 .pending {
   border-color: aqua;
   border-style: dashed;
   background-color: aquamarine;
+  color: #222;
 }
 /* Published article */
 .published {
@@ -67,15 +68,14 @@ body {
   background-color: #ffd498;
   border-style: dashed;
   border-color: rgb(166, 111, 0);
+  color: #222;
 }
 
 /*filters*/
 .filters {
-  background-color: white;
-  margin-top: 20px;
+  background-color: var(--card);
   padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  border-top: 3px solid var(--ink);
   width: 90%;
   max-width: 1000px;
   margin: 40px auto;
@@ -84,14 +84,6 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-}
-/* All buttons */
-.buttons button {
-  padding: 12px 18px;
-  border: none;
-  border-radius: 6px;
-  font-size: 15px;
-  cursor: pointer;
 }
 .filters h2 {
   margin-top: 0;
@@ -102,19 +94,5 @@ body {
   margin-top: 0;
   margin-bottom: 20px;
   font-size: 20px;
-}
-.filters button {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 6px;
-  background-color: #e5e5e5;
-  color: #222;
-  cursor: pointer;
-}
-.filters button:hover {
-  background-color: #d5d5d5;
-}
-.filters button.active {
-  background-color: #111;
-  color: white;
+  color: var(--muted);
 }

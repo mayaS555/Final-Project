@@ -10,19 +10,12 @@ const {
   canDelete,
   hasEditorRole,
   hasReporterRole,
+  STATUS_LABELS,
 } = require("../services/articleStatus");
 const { parseStatusFilter } = require("./articleApiController");
 const { getSessionUser } = require("../middleware/articleAccess");
 const { ARTICLE_STATUSES } = require("../models/Article");
 const { ARTICLE_CATEGORIES } = require("../models/articleCategories");
-
-// Hebrew status labels shown in the badges and the filter tabs.
-const STATUS_LABELS = {
-  draft: "בהכנה",
-  pending: "ממתינה לאישור עורך",
-  published: "פורסמה",
-  returned: "הוחזרה לתיקונים",
-};
 
 // Messages the dashboard shows after an action, chosen by ?msg=<key>. Only these keys are shown; the text in
 // the address is never displayed, so a link cannot put its own words on the page.

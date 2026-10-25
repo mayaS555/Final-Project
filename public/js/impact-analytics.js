@@ -162,13 +162,21 @@
           : 30 * 86400000;
     from.value = new Date(end.getTime() - duration).toISOString().slice(0, 16);
   });
-  new ResizeObserver(() => {
+  function redrawChart() {
     if (chartData && !result.hidden)
       window.drawImpactChart(
         document.getElementById("impact-chart"),
         chartData,
       );
-  }).observe(document.getElementById("impact-chart").parentElement);
+  }
+  new ResizeObserver(redrawChart).observe(
+    document.getElementById("impact-chart").parentElement,
+  );
+  // theme-toggle.js switches data-theme on <html>; redraw so the canvas picks up the new colors.
+  new MutationObserver(redrawChart).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
   function updateDeleteButton() {
     deleteButton.disabled =
       deleting ||

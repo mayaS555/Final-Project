@@ -127,7 +127,7 @@ function toWorkingCopyUpdate(fields) {
  *   (too long, unknown category). Other database errors are rethrown.
  * @example const updated = await updateIfStatusUnchanged(article, { $set: { status: "pending" } });
  */
-async function updateIfStatusUnchanged(article, update) {
+async function updateIfStatusUnchanged(article, update, session) {
   let updated;
   try {
     updated = await Article.findOneAndUpdate(
@@ -136,7 +136,7 @@ async function updateIfStatusUnchanged(article, update) {
       {
         returnDocument: "after",
         runValidators: true,
-        projection: Article.EMBEDDED_ARRAYS,
+        ...(session ? { session } : {}),
       },
     );
   } catch (error) {
@@ -218,47 +218,44 @@ async function submit(article, user) {
 
 /**
  * Publishes the working copy: pending -> published. Copies the working copy into the public fields,
- * sets approved.publishedAt on the first publish and approved.updatedAt every time, adds 1 to publishCount,
- * and appends the matching entry to publishEvents (D's analytics markers) in the same update.
+ * sets approved.publishedAt on the first publish and approved.updatedAt every time, and adds 1 to publishCount.
  * @param {Object} article The article document.
  * @param {Object} editor The logged-in editor or admin.
  * @returns {Promise<{ article: Object, isFirstPublish: boolean }>} The published article, and whether this
- *   was its first publish.
+ *   was its first publish (for D's publish event).
  * @throws {Error} error.status 400 working copy incomplete, 403 not an editor or admin, 409 wrong status or changed meanwhile.
  * @example Used by D: const { article, isFirstPublish } = await approve(article, req.session.user);
  */
-async function approve(article, editor) {
+async function approve(article, editor, { session } = {}) {
   assertTransition(article.status, "published", editor.role);
   assertReadyForReview(article.draft);
 
   const now = new Date();
   const isFirstPublish = !(article.approved && article.approved.publishedAt);
   const { title, summary, content, imageUrl, category } = article.draft;
-  const updated = await updateIfStatusUnchanged(article, {
-    $set: {
-      status: "published",
-      editorNote: "",
-      approved: {
-        title,
-        summary,
-        content,
-        imageUrl,
-        category,
-        authorName: article.authorName,
-        publishedAt: isFirstPublish ? now : article.approved.publishedAt,
-        updatedAt: now,
+  const updated = await updateIfStatusUnchanged(
+    article,
+    {
+      $set: {
+        status: "published",
+        editorNote: "",
+        approved: {
+          title,
+          summary,
+          content,
+          imageUrl,
+          category,
+          authorName: article.authorName,
+          publishedAt: isFirstPublish ? now : article.approved.publishedAt,
+          updatedAt: now,
+        },
       },
+      $inc: { publishCount: 1 },
     },
-    $inc: { publishCount: 1 },
-    $push: {
-      publishEvents: {
-        publishedAt: now,
-        publishCount: article.publishCount + 1,
-        isFirstPublish,
-      },
-    },
-  });
-  logArticleEvent("approve", updated, editor);
+    session,
+  );
+  if (!session) logArticleEvent("approve", updated, editor);
+  // D's controller records PublishEvent in the same transaction as this update.
   return { article: updated, isFirstPublish };
 }
 
@@ -324,7 +321,7 @@ async function deleteArticle(article, user) {
   if (!canDelete(article, user.role, isAuthor(article, user))) {
     throw createHttpError(403, "You cannot delete this article.");
   }
-  // The embedded comments and analytics go with the article. Open question (B/C): read history is not deleted here.
+  // Open question (B/C/D): the article's comments and read history are not deleted here.
   const result = await Article.deleteOne({
     _id: article._id,
     status: article.status,

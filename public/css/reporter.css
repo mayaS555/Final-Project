@@ -1,19 +1,43 @@
 /* Reporter area (owned by B). Loaded after C's public.css, whose base rules (.pub-site, .pub-main,
    .pub-page-title, .pub-meta, .pub-empty, .pub-form-status) these pages reuse. New classes start with rep-. */
 
-/* Reporter pages use fixed light colors, so keep public.css's light palette and hide the theme toggle. */
-.pub-site .theme-toggle {
-  display: none !important;
+/* Reporter colors. Light values are the original ones; dark ones follow public.css's dark palette. */
+.pub-site {
+  --rep-primary: #14213d;
+  --rep-on-primary: #ffffff;
+  --rep-surface: #ffffff;
+  --rep-surface-muted: #f4f5f7;
+  --rep-border: #b8c0cc;
+  --rep-muted: #52606d;
+  --rep-danger: #b00020;
+  --rep-danger-bg: #fde0e3;
+  --rep-note-bg: #fff5f6;
+  --rep-amber: #8a5a00;
+  --rep-amber-bg: #fff3c4;
+  --rep-info-bg: #e8edf7;
+  --rep-draft-bg: #e4e7eb;
+  --rep-draft-fg: #323f4b;
+  --rep-published-bg: #d9f2e3;
+  --rep-published-fg: #1b6b3a;
 }
 
 :root[data-theme="dark"] .pub-site {
-  --paper: #f6efe2;
-  --card: #fffaf2;
-  --ink: #2b1d14;
-  --muted: #6e5a4a;
-  --rule: #e0cfb5;
-  --accent: #c0392b;
-  --stripe: rgba(192, 57, 43, 0.07);
+  --rep-primary: #f3e9dc;
+  --rep-on-primary: #1c1612;
+  --rep-surface: #2a211b;
+  --rep-surface-muted: #231b16;
+  --rep-border: #4a3b30;
+  --rep-muted: #bfae9c;
+  --rep-danger: #ff7b86;
+  --rep-danger-bg: #4a1c22;
+  --rep-note-bg: #3a1c20;
+  --rep-amber: #f0b44c;
+  --rep-amber-bg: #44350f;
+  --rep-info-bg: #26304a;
+  --rep-draft-bg: #3a3f46;
+  --rep-draft-fg: #d5dbe2;
+  --rep-published-bg: #173d27;
+  --rep-published-fg: #7fd6a0;
 }
 
 .pub-site .rep-toolbar {
@@ -35,21 +59,21 @@
   line-height: 1.5;
   text-decoration: none;
   cursor: pointer;
-  border: 1px solid #14213d;
+  border: 1px solid var(--rep-primary);
   border-radius: 6px;
-  background: #14213d;
-  color: #ffffff;
+  background: var(--rep-primary);
+  color: var(--rep-on-primary);
 }
 
 .pub-site .rep-button-secondary {
-  background: #ffffff;
-  color: #14213d;
+  background: var(--rep-surface);
+  color: var(--rep-primary);
 }
 
 .pub-site .rep-button-danger {
-  border-color: #b00020;
-  background: #ffffff;
-  color: #b00020;
+  border-color: var(--rep-danger);
+  background: var(--rep-surface);
+  color: var(--rep-danger);
 }
 
 .pub-site .rep-button:disabled {
@@ -68,15 +92,15 @@
   padding: 6px 12px;
   font-size: 14px;
   text-decoration: none;
-  border: 1px solid #b8c0cc;
+  border: 1px solid var(--rep-border);
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--rep-surface);
 }
 
 .pub-site .rep-tabs a[aria-current="page"] {
-  border-color: #14213d;
-  background: #14213d;
-  color: #ffffff;
+  border-color: var(--rep-primary);
+  background: var(--rep-primary);
+  color: var(--rep-on-primary);
 }
 
 .pub-site .rep-list {
@@ -94,7 +118,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 16px;
-  background: #ffffff;
+  background: var(--rep-surface);
   border-radius: 8px;
 }
 
@@ -110,7 +134,7 @@
 
 .pub-site .rep-category {
   font-weight: bold;
-  color: #8a5a00;
+  color: var(--rep-amber);
 }
 
 .pub-site .rep-badge {
@@ -122,37 +146,37 @@
 }
 
 .pub-site .rep-badge-draft {
-  background: #e4e7eb;
-  color: #323f4b;
+  background: var(--rep-draft-bg);
+  color: var(--rep-draft-fg);
 }
 
 .pub-site .rep-badge-pending {
-  background: #fff3c4;
-  color: #8a5a00;
+  background: var(--rep-amber-bg);
+  color: var(--rep-amber);
 }
 
 .pub-site .rep-badge-published {
-  background: #d9f2e3;
-  color: #1b6b3a;
+  background: var(--rep-published-bg);
+  color: var(--rep-published-fg);
 }
 
 .pub-site .rep-badge-returned {
-  background: #fde0e3;
-  color: #b00020;
+  background: var(--rep-danger-bg);
+  color: var(--rep-danger);
 }
 
 .pub-site .rep-note {
   margin: 8px 0 0;
   font-size: 14px;
-  color: #52606d;
+  color: var(--rep-muted);
 }
 
 .pub-site .rep-editor-note {
   margin-top: 10px;
   padding: 10px 12px;
   font-size: 14px;
-  border-left: 4px solid #b00020;
-  background: #fff5f6;
+  border-left: 4px solid var(--rep-danger);
+  background: var(--rep-note-bg);
 }
 
 .pub-site .rep-editor-note p {
@@ -187,7 +211,7 @@
 .pub-site .rep-save-status {
   margin: 0;
   font-size: 14px;
-  color: #52606d;
+  color: var(--rep-muted);
 }
 
 .pub-site .rep-editor-note-top {
@@ -198,24 +222,24 @@
 .pub-site .rep-editor-note-top h2 {
   margin: 0;
   font-size: 17px;
-  color: #b00020;
+  color: var(--rep-danger);
 }
 
 .pub-site .rep-banner {
   margin: 0 0 16px;
   padding: 10px 12px;
-  border-left: 4px solid #14213d;
-  background: #e8edf7;
+  border-left: 4px solid var(--rep-primary);
+  background: var(--rep-info-bg);
 }
 
 .pub-site .rep-banner-locked {
-  border-left-color: #8a5a00;
-  background: #fff3c4;
+  border-left-color: var(--rep-amber);
+  background: var(--rep-amber-bg);
 }
 
 .pub-site .rep-form {
   padding: 20px;
-  background: #ffffff;
+  background: var(--rep-surface);
   border-radius: 8px;
 }
 
@@ -241,9 +265,9 @@
   padding: 10px 12px;
   font: inherit;
   font-size: 16px;
-  border: 1px solid #b8c0cc;
+  border: 1px solid var(--rep-border);
   border-radius: 6px;
-  background: #ffffff;
+  background: var(--rep-surface);
   color: inherit;
 }
 
@@ -253,20 +277,20 @@
 
 /* A required field left empty on submit (set by reporter-edit.js). */
 .pub-site .rep-fields [aria-invalid="true"] {
-  border: 2px solid #b00020;
+  border: 2px solid var(--rep-danger);
 }
 
 .pub-site .rep-fields:disabled input,
 .pub-site .rep-fields:disabled textarea,
 .pub-site .rep-fields:disabled select {
-  background: #f4f5f7;
-  color: #52606d;
+  background: var(--rep-surface-muted);
+  color: var(--rep-muted);
 }
 
 .pub-site .rep-hint {
   margin: 0;
   font-size: 13px;
-  color: #52606d;
+  color: var(--rep-muted);
 }
 
 .pub-site .rep-form-actions {

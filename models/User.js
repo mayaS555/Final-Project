@@ -30,11 +30,27 @@ const userSchema = new mongoose.Schema(
       default: "reporter",
       required: true,
     },
+    // Login sessions of this user, written only by services/userSessionStore.js. Never selected by default.
+    sessions: {
+      type: [
+        {
+          _id: false,
+          sid: { type: String, required: true },
+          // The express-session data, as JSON.
+          data: { type: String, required: true },
+          expiresAt: { type: Date, required: true },
+        },
+      ],
+      select: false,
+    },
   },
   {
     timestamps: true,
   },
 );
+
+// Finds the user of a session cookie.
+userSchema.index({ "sessions.sid": 1 });
 
 // Hash the password before saving
 userSchema.pre("save", async function () {

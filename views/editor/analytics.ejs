@@ -1,14 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Impact Analytics | The Daily Web</title>
+<%- include("../public/partials/top", { pageTitle: "Impact Analytics | The Daily Web" }) %>
   <link rel="stylesheet" href="/css/editor.css"><link rel="stylesheet" href="/css/editor-integration.css">
   <link rel="stylesheet" href="/css/impact-analytics.css">
   <script src="/js/impact-chart.js" defer></script><script src="/js/impact-analytics.js" defer></script>
-</head>
-<body>
-  <header><h1>The Daily Web</h1><nav><a href="/">Public site</a><a href="/editor">Editor Dashboard</a><a href="/logout">Logout</a></nav></header>
   <main class="impact-page">
     <h2>Impact Analytics</h2><p>Explore article views before and after each approved publication or update.</p>
     <section class="impact-controls">
@@ -42,5 +35,4 @@
     </section>
     <noscript><p>Enable JavaScript to select an article and load analytics.</p></noscript>
   </main>
-</body>
-</html>
+<%- include("../public/partials/bottom") %>

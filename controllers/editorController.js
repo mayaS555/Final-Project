@@ -6,17 +6,13 @@ const {
   canEditWorkingCopy,
   canTransition,
   canDelete,
+  STATUS_LABELS,
 } = require("../services/articleStatus");
 const { ARTICLE_STATUSES } = Article;
 const { ARTICLE_CATEGORIES } = require("../models/articleCategories");
+const PublishEvent = require("../models/PublishEvent");
 const { createHttpError } = require("../services/articleStatus");
-
-const STATUS_LABELS = {
-  draft: "Draft",
-  pending: "Pending Approval",
-  published: "Published",
-  returned: "Needs Changes",
-};
+const logger = require("../services/logger");
 
 function formatDate(value) {
   return value instanceof Date
@@ -134,11 +130,27 @@ function renderArticle(req, res) {
 }
 
 async function approveArticle(req, res) {
-  // approve() also records the publish event for Impact Analytics, in the same update.
-  const { article } = await articleService.approve(
-    req.article,
-    getSessionUser(req),
-  );
+  const article = await Article.db.transaction(async (session) => {
+    const result = await articleService.approve(
+      req.article,
+      getSessionUser(req),
+      { session },
+    );
+    await PublishEvent.create(
+      [
+        {
+          articleId: result.article._id,
+          publishedAt: result.article.approved.updatedAt,
+          publishCount: result.article.publishCount,
+          isFirstPublish: result.isFirstPublish,
+        },
+      ],
+      { session },
+    );
+    return result.article;
+  });
+  const editor = getSessionUser(req);
+  logger.logArticleEvent("approve", article._id, editor._id, editor.role);
   res.json({ id: String(article._id), status: article.status });
 }
 

@@ -3,6 +3,7 @@ const controller = require("../controllers/editorController");
 const analytics = require("../controllers/analyticsController");
 const { getSessionUser, loadArticle } = require("../middleware/articleAccess");
 const { hasEditorRole, createHttpError } = require("../services/articleStatus");
+const { loadWeather } = require("../middleware/weatherWidget");
 
 const router = express.Router();
 
@@ -25,8 +26,18 @@ function requireJson(req, res, next) {
   next();
 }
 
-router.get("/editor", requireEditorLogin, controller.renderDashboard);
-router.get("/editor/analytics", requireEditorLogin, analytics.renderAnalytics);
+router.get(
+  "/editor",
+  requireEditorLogin,
+  loadWeather,
+  controller.renderDashboard,
+);
+router.get(
+  "/editor/analytics",
+  requireEditorLogin,
+  loadWeather,
+  analytics.renderAnalytics,
+);
 router.get("/api/editor/articles", requireEditorLogin, controller.getArticles);
 router.get(
   "/api/editor/articles/:id/impact",
@@ -38,6 +49,7 @@ router.get(
   "/editor/articles/:id",
   requireEditorLogin,
   loadArticle,
+  loadWeather,
   controller.renderArticle,
 );
 router.get("/editor.html", requireEditorLogin, (req, res) =>
