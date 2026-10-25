@@ -1,3 +1,14 @@
+/* Chart colors, read by impact-chart.js so the canvas follows the theme. */
+.pub-site {
+  --chart-line: #2563a8;
+  --chart-first: #16734b;
+  --chart-update: #b25000;
+}
+:root[data-theme="dark"] .pub-site {
+  --chart-line: #7fb2ec;
+  --chart-first: #5fc995;
+  --chart-update: #f0a35e;
+}
 .impact-page {
   width: 92%;
   max-width: 1100px;
@@ -5,9 +16,9 @@
 }
 .impact-controls,
 #impact-result {
-  background: white;
+  background: var(--card);
   padding: 26px;
-  border-radius: 12px;
+  border-top: 3px solid var(--ink);
   margin-bottom: 24px;
 }
 .impact-controls label {
@@ -19,19 +30,25 @@
 .impact-controls select {
   width: 100%;
   padding: 11px;
-  border: 1px solid #a0aab4;
-  border-radius: 6px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--card);
+  color: inherit;
   font: inherit;
   min-width: 0;
 }
 .impact-controls button {
   padding: 11px 20px;
-  border: 0;
-  border-radius: 6px;
-  background: #194b38;
-  color: white;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background: var(--ink);
+  color: var(--card);
   cursor: pointer;
   font: inherit;
+}
+.impact-controls button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
 }
 .range-row {
   display: flex;
@@ -50,7 +67,7 @@
   flex: 1;
 }
 .range-hint {
-  color: #52606d;
+  color: var(--muted);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -66,13 +83,13 @@
   font-size: 14px;
 }
 .legend-line {
-  color: #2563a8;
+  color: var(--chart-line);
 }
 .legend-first {
-  color: #16734b;
+  color: var(--chart-first);
 }
 .legend-update {
-  color: #b25000;
+  color: var(--chart-update);
 }
 .impact-table-wrap {
   overflow: auto;
@@ -85,7 +102,7 @@ table {
 th,
 td {
   padding: 10px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--rule);
   text-align: left;
 }
 #impact-events {
@@ -109,7 +126,7 @@ td {
 
 .impact-delete-panel {
   margin-top: 28px;
-  border-top: 1px solid #dedede;
+  border-top: 1px solid var(--rule);
   padding-top: 18px;
 }
 .impact-delete-panel button {

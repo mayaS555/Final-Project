@@ -7,7 +7,7 @@
     <main class="pub-main rep-edit">
         <header class="rep-toolbar">
             <h1 class="pub-page-title"><%= article.fields.title || "Untitled article" %></h1>
-            <span class="rep-badge rep-badge-<%= article.status %>" lang="he" dir="rtl"><%= article.statusLabel %></span>
+            <span class="rep-badge rep-badge-<%= article.status %>"><%= article.statusLabel %></span>
             <% if (article.canEdit) { %>
             <p class="rep-save-status" id="rep-save-status" role="status" aria-live="polite">Changes are saved automatically.</p>
             <% } %>

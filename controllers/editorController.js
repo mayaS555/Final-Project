@@ -6,17 +6,11 @@ const {
   canEditWorkingCopy,
   canTransition,
   canDelete,
+  STATUS_LABELS,
 } = require("../services/articleStatus");
 const { ARTICLE_STATUSES } = Article;
 const { ARTICLE_CATEGORIES } = require("../models/articleCategories");
 const { createHttpError } = require("../services/articleStatus");
-
-const STATUS_LABELS = {
-  draft: "Draft",
-  pending: "Pending Approval",
-  published: "Published",
-  returned: "Needs Changes",
-};
 
 function formatDate(value) {
   return value instanceof Date

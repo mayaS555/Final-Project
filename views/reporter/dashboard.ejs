@@ -15,7 +15,7 @@
         <nav class="rep-tabs" aria-label="Filter by status">
             <a href="/reporter"<%- activeStatus === "" ? ' aria-current="page"' : "" %>>All</a>
             <% statusTabs.forEach(function (tab) { %>
-            <a href="/reporter?status=<%= tab.value %>" lang="he" dir="rtl"<%- activeStatus === tab.value ? ' aria-current="page"' : "" %>><%= tab.label %></a>
+            <a href="/reporter?status=<%= tab.value %>"<%- activeStatus === tab.value ? ' aria-current="page"' : "" %>><%= tab.label %></a>
             <% }); %>
         </nav>
 
@@ -27,7 +27,7 @@
             <% rows.forEach(function (row) { %>
             <li class="rep-row" data-article-id="<%= row.id %>" data-edit-url="<%= row.editUrl %>">
                 <div class="rep-row-main">
-                    <span class="rep-badge rep-badge-<%= row.status %>" lang="he" dir="rtl"><%= row.statusLabel %></span>
+                    <span class="rep-badge rep-badge-<%= row.status %>"><%= row.statusLabel %></span>
                     <h2 class="rep-row-title"><%= row.title %></h2>
                     <p class="pub-meta">
                         <% if (row.category) { %><span class="rep-category"><%= row.category %></span> · <% } %>

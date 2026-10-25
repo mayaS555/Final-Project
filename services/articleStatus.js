@@ -145,7 +145,16 @@ function canDelete(article, role, isOwner) {
   );
 }
 
+// Status names shown to staff in badges and filter tabs; the database stores the keys.
+const STATUS_LABELS = {
+  draft: "Draft",
+  pending: "Pending Approval",
+  published: "Published",
+  returned: "Needs Changes",
+};
+
 module.exports = {
+  STATUS_LABELS,
   ARTICLE_TRANSITIONS,
   hasEditorRole,
   hasReporterRole,

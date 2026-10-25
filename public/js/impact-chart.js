@@ -19,17 +19,20 @@
     const x = (time) =>
       margin.left + ((time - start) / (end - start)) * plotWidth;
     const y = (value) => margin.top + (1 - value / max) * plotHeight;
-    context.fillStyle = "#fff";
+    // Colors come from the page's CSS variables, so the chart follows the light/dark theme.
+    const style = getComputedStyle(canvas);
+    const color = (name) => style.getPropertyValue(name).trim();
+    context.fillStyle = color("--card");
     context.fillRect(0, 0, width, height);
     context.font = "12px Arial";
     for (let i = 0; i <= 4; i++) {
       const value = (max * i) / 4;
-      context.strokeStyle = "#e5e7eb";
+      context.strokeStyle = color("--rule");
       context.beginPath();
       context.moveTo(margin.left, y(value));
       context.lineTo(width - margin.right, y(value));
       context.stroke();
-      context.fillStyle = "#334155";
+      context.fillStyle = color("--muted");
       context.textAlign = "right";
       context.fillText(
         value.toLocaleString("en-US", { maximumFractionDigits: 1 }),
@@ -41,12 +44,12 @@
     for (let i = 0; i <= ticks; i++) {
       const time = start + ((end - start) * i) / ticks;
       const date = new Date(time).toISOString();
-      context.fillStyle = "#334155";
+      context.fillStyle = color("--muted");
       context.textAlign = i === 0 ? "left" : i === ticks ? "right" : "center";
       context.fillText(date.slice(5, 10), x(time), height - 38);
       context.fillText(date.slice(11, 16) + " UTC", x(time), height - 20);
     }
-    context.strokeStyle = "#2563a8";
+    context.strokeStyle = color("--chart-line");
     context.lineWidth = 2;
     context.beginPath();
     data.points.forEach((point, index) => {
@@ -57,14 +60,18 @@
     context.stroke();
     for (const [index, event] of data.markers.entries()) {
       const px = x(Date.parse(event.at));
-      context.strokeStyle = event.first ? "#16734b" : "#b25000";
+      context.strokeStyle = color(
+        event.first ? "--chart-first" : "--chart-update",
+      );
       context.setLineDash([5, 4]);
       context.beginPath();
       context.moveTo(px, margin.top);
       context.lineTo(px, height - margin.bottom);
       context.stroke();
       context.setLineDash([]);
-      context.fillStyle = event.first ? "#16734b" : "#b25000";
+      context.fillStyle = color(
+        event.first ? "--chart-first" : "--chart-update",
+      );
       context.textAlign = px > width - 90 ? "right" : "left";
       context.fillText(
         event.first ? "First publish" : `Update ${event.version - 1}`,

@@ -1,17 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Editor Dashboard | The Daily Web</title>
+<%- include("../public/partials/top", { pageTitle: "Editor Dashboard | The Daily Web" }) %>
   <link rel="stylesheet" href="/css/editor.css"><link rel="stylesheet" href="/css/editor-integration.css">
   <script src="/js/editor-dashboard.js" defer></script>
-</head>
-<body>
-  <header><h1>The Daily Web</h1><nav aria-label="Staff">
-    <a href="/">Public site</a><a href="/editor/analytics">Impact Analytics</a>
-    <% if (user.role === 'admin') { %><a href="/reporter">Admin Dashboard</a><% } %>
-    <span>Hello, <%= user.name %></span><a href="/logout">Logout</a>
-  </nav></header>
   <main class="editor-container" id="editor-dashboard">
     <section class="filters">
       <h2>Editor Dashboard</h2><p>Manage and review submitted articles</p>
@@ -27,5 +16,4 @@
     </section>
     <section class="articles-list" id="articles-list" aria-label="Articles"><%- include('cards') %></section>
   </main>
-</body>
-</html>
+<%- include("../public/partials/bottom") %>
