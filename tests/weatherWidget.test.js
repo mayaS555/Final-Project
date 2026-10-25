@@ -27,4 +27,25 @@ describe("loadWeather", () => {
     assert.equal(res.locals.weather, reading);
     assert.equal(nextCalled, true);
   });
+
+  test("continues without weather when the lookup fails", async () => {
+    mock.method(weatherService, "getWeatherForWidget", async () => {
+      throw new Error("weather service is down");
+    });
+
+    const res = { locals: {} };
+    let nextCalled = false;
+
+    try {
+      await loadWeather({}, res, () => {
+        nextCalled = true;
+      });
+    } finally {
+      mock.restoreAll();
+    }
+
+    // A weather failure must not turn an editor page into an error page.
+    assert.equal(res.locals.weather, null);
+    assert.equal(nextCalled, true);
+  });
 });

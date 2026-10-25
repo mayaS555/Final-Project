@@ -89,9 +89,11 @@
       render(widget, result);
     } catch (_err) {
       // Network or parse error – leave the server-rendered content intact and
-      // mark the widget as stale so the user knows it might be out of date.
+      // mark a real reading as stale so the user knows it might be out of date.
+      // There is nothing to mark when the server already showed "unavailable".
+      const hasReading = widget.querySelector(".weather-temp");
       const existingStale = widget.querySelector(".weather-stale");
-      if (!existingStale) {
+      if (hasReading && !existingStale) {
         const tag = document.createElement("span");
         tag.className = "weather-stale";
         tag.title = "Could not refresh weather data";
@@ -105,8 +107,16 @@
     const widget = document.getElementById("weather-widget");
     if (!widget) return;
 
-    // First client-side refresh happens after one full interval; the server has
-    // already rendered the initial state.
+    // The server normally renders the initial reading. Retry immediately when
+    // it could not load one (or only had a stale cached value) instead of
+    // leaving the editor pages showing "Weather unavailable" for 15 minutes.
+    if (
+      !widget.querySelector(".weather-temp") ||
+      widget.querySelector(".weather-stale")
+    ) {
+      refresh(widget);
+    }
+
     setInterval(function () {
       refresh(widget);
     }, REFRESH_INTERVAL_MS);

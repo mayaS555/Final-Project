@@ -1,0 +1,301 @@
+[2026-10-24T18:44:46.244Z] [INFO] [SERVER] db_connecting uri=mongodb+srv://***@applicationdevelopment.asg29qk.mongodb.net
+[2026-10-24T18:44:46.530Z] [INFO] [SERVER] db_connected db=daily-web
+[2026-10-24T18:44:48.587Z] [INFO] [SERVER] indexes_ready
+[2026-10-24T18:44:48.593Z] [INFO] [SERVER] start port=3000 env=development
+[2026-10-24T18:44:50.749Z] [INFO] [HTTP] GET / 304 (254.61ms)
+[2026-10-24T18:44:55.921Z] [INFO] [HTTP] GET /login.html 304 (1.22ms)
+[2026-10-24T18:45:00.889Z] [INFO] [AUTH] login_success userId=6ad90506dea098913eef3baf email=itayz@mail.com role=admin ip=::ffff:127.0.0.1
+[2026-10-24T18:45:00.957Z] [INFO] [HTTP] POST /login 200 (213.16ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:45:01.504Z] [INFO] [HTTP] GET /reporter 200 (466.18ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:45:04.077Z] [INFO] [HTTP] GET / 200 (229.17ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:45:17.464Z] [INFO] [HTTP] GET /articles/6adc79ef955cebe16598ad60 200 (479.68ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:49:19.270Z] [INFO] [HTTP] GET /api/public/articles?page=2 304 (144.10ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:49:21.244Z] [INFO] [HTTP] GET /api/public/articles?page=3 200 (167.10ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:49:22.865Z] [INFO] [HTTP] GET /api/public/articles?page=4 200 (134.14ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:49:24.139Z] [INFO] [HTTP] GET /api/public/articles?page=5 200 (134.15ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:49:25.005Z] [INFO] [HTTP] GET /api/public/articles?page=6 200 (134.38ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:49:30.757Z] [INFO] [HTTP] GET /api/public/articles?page=7 200 (131.25ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:49:39.241Z] [INFO] [HTTP] GET /api/public/articles?page=8 200 (151.71ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:49:39.699Z] [INFO] [HTTP] GET /api/public/articles?page=9 200 (134.66ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:49:40.304Z] [INFO] [HTTP] GET /api/public/articles?page=10 200 (139.07ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:49:40.834Z] [INFO] [HTTP] GET /api/public/articles?page=11 200 (131.25ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:50:16.276Z] [INFO] [HTTP] GET /articles/6ada6ec1de39298ce138a29a 200 (482.81ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:50:19.046Z] [INFO] [HTTP] GET / 304 (148.29ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:50:20.733Z] [INFO] [HTTP] GET /articles/6adcf9df6dd92eb7067469ec 200 (470.80ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:50:23.312Z] [INFO] [HTTP] GET / 304 (140.99ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:50:34.142Z] [INFO] [HTTP] GET /api/public/articles?page=2 304 (132.44ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:50:58.236Z] [INFO] [HTTP] GET /articles/6ada6ec1de39298ce138a288 200 (468.99ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:51:00.279Z] [INFO] [HTTP] GET / 304 (139.37ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:51:01.243Z] [INFO] [HTTP] GET /api/public/articles?page=2 304 (137.54ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:52:28.335Z] [INFO] [HTTP] GET /api/public/articles?page=3 304 (151.54ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:52:31.296Z] [INFO] [HTTP] GET /api/public/articles?page=4 304 (136.80ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:52:36.083Z] [INFO] [HTTP] GET /api/public/articles?category=Economy&page=1 200 (132.15ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:52:37.863Z] [INFO] [HTTP] GET /api/public/articles?category=Economy&viewed=viewed&page=1 200 (203.58ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:52:39.989Z] [INFO] [HTTP] GET /api/public/articles?category=Economy&viewed=unviewed&page=1 200 (216.65ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:52:41.254Z] [INFO] [HTTP] GET /api/public/articles?viewed=unviewed&page=1 200 (203.22ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:52:42.386Z] [INFO] [HTTP] GET /api/public/articles?viewed=viewed&page=1 200 (194.59ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:52:46.641Z] [INFO] [HTTP] GET /articles/6ada6ec1de39298ce138a29a 304 (494.11ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T18:52:49.049Z] [INFO] [HTTP] GET / 304 (139.15ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-24T19:07:49.719Z] [INFO] [HTTP] GET /api/weather?city=Rishon%20LeZiyyon 200 (354.71ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:50:26.496Z] [INFO] [SERVER] db_connecting uri=mongodb+srv://***@applicationdevelopment.asg29qk.mongodb.net
+[2026-10-25T12:50:46.157Z] [INFO] [SERVER] db_connecting uri=mongodb+srv://***@applicationdevelopment.asg29qk.mongodb.net
+[2026-10-25T12:50:47.028Z] [INFO] [SERVER] db_connected db=daily-web
+[2026-10-25T12:50:49.354Z] [INFO] [SERVER] indexes_ready
+[2026-10-25T12:50:49.363Z] [INFO] [SERVER] start port=3000 env=development
+[2026-10-25T12:50:53.029Z] [INFO] [HTTP] GET / 200 (1926.13ms)
+[2026-10-25T12:50:54.785Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:54.794Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:54.800Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:54.906Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:55.029Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:55.079Z] [WARN] [HTTP 404] GET /images/seed/news-8.jpg - Cannot GET /images/seed/news-8.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:58.409Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404
+[2026-10-25T12:50:58.538Z] [INFO] [HTTP] GET / 304 (162.85ms)
+[2026-10-25T12:50:58.539Z] [WARN] [HTTP 404] GET /images/seed/news-10.jpg - Cannot GET /images/seed/news-10.jpg status=404
+[2026-10-25T12:50:58.916Z] [WARN] [HTTP 404] GET /images/seed/news-10.jpg - Cannot GET /images/seed/news-10.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:58.919Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:58.923Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:58.929Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:58.931Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:59.025Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:59.040Z] [WARN] [HTTP 404] GET /images/seed/news-8.jpg - Cannot GET /images/seed/news-8.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:59.509Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:59.603Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:59.607Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:59.723Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:59.922Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:50:59.924Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.090Z] [INFO] [HTTP] GET /api/public/articles?page=2 200 (114.47ms)
+[2026-10-25T12:51:00.225Z] [WARN] [HTTP 404] GET /images/seed/news-5.jpg - Cannot GET /images/seed/news-5.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.227Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.232Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.234Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.291Z] [WARN] [HTTP 404] GET /images/seed/news-10.jpg - Cannot GET /images/seed/news-10.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.307Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.368Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.526Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.528Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.763Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.767Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:00.770Z] [WARN] [HTTP 404] GET /images/seed/news-5.jpg - Cannot GET /images/seed/news-5.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:11.397Z] [INFO] [HTTP] GET / 304 (113.56ms)
+[2026-10-25T12:51:11.782Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:11.784Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:11.792Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:11.794Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:11.796Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:11.798Z] [WARN] [HTTP 404] GET /images/seed/news-10.jpg - Cannot GET /images/seed/news-10.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:11.886Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:11.888Z] [WARN] [HTTP 404] GET /images/seed/news-8.jpg - Cannot GET /images/seed/news-8.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:51:13.663Z] [INFO] [HTTP] GET /articles/6addaf688a08c035c6f44dc1 200 (686.00ms)
+[2026-10-25T12:51:14.007Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1
+[2026-10-25T12:52:10.601Z] [INFO] [HTTP] GET /login.html 304 (1.87ms)
+[2026-10-25T12:52:15.839Z] [INFO] [AUTH] login_success userId=6ad90506dea098913eef3baf email=itayz@mail.com role=admin ip=::ffff:127.0.0.1
+[2026-10-25T12:52:15.956Z] [INFO] [HTTP] POST /login 200 (351.00ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:52:16.915Z] [INFO] [HTTP] GET /reporter 200 (795.86ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:52:21.187Z] [INFO] [HTTP] GET / 200 (272.00ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:52:21.642Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:21.645Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:21.649Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:21.651Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:21.654Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:21.657Z] [WARN] [HTTP 404] GET /images/seed/news-10.jpg - Cannot GET /images/seed/news-10.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:22.646Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:22.649Z] [WARN] [HTTP 404] GET /images/seed/news-8.jpg - Cannot GET /images/seed/news-8.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:29.235Z] [INFO] [HTTP] GET /api/weather?city=Rishon%20LeZiyyon 200 (555.88ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:52:33.009Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:33.020Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:33.036Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:33.073Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:33.077Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:33.359Z] [INFO] [HTTP] GET /api/public/articles?page=2 304 (242.54ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:52:33.611Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:33.616Z] [WARN] [HTTP 404] GET /images/seed/news-5.jpg - Cannot GET /images/seed/news-5.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:33.622Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:33.626Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:34.229Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:34.232Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:34.236Z] [WARN] [HTTP 404] GET /images/seed/news-10.jpg - Cannot GET /images/seed/news-10.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:34.316Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:34.438Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:34.441Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:34.677Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:34.680Z] [WARN] [HTTP 404] GET /images/seed/news-5.jpg - Cannot GET /images/seed/news-5.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:34.682Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:34.980Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:35.916Z] [INFO] [HTTP] GET /api/public/articles?page=3 200 (225.61ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:52:36.038Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:36.043Z] [WARN] [HTTP 404] GET /images/seed/news-8.jpg - Cannot GET /images/seed/news-8.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:36.049Z] [WARN] [HTTP 404] GET /images/seed/news-4.jpg - Cannot GET /images/seed/news-4.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:45.543Z] [INFO] [HTTP] GET /reporter 304 (871.39ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:52:52.258Z] [INFO] [HTTP] GET /articles/6addaf688a08c035c6f44e78 200 (1000.28ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:52:52.681Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:57.079Z] [INFO] [HTTP] GET / 304 (222.11ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:52:57.650Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:57.656Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:57.663Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:57.670Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:57.674Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:57.679Z] [WARN] [HTTP 404] GET /images/seed/news-10.jpg - Cannot GET /images/seed/news-10.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:57.777Z] [WARN] [HTTP 404] GET /images/seed/news-8.jpg - Cannot GET /images/seed/news-8.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:52:57.779Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:53:18.164Z] [INFO] [HTTP] GET /api/public/articles?viewed=viewed&page=1 200 (269.09ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:53:18.272Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:53:18.278Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:53:21.671Z] [INFO] [HTTP] GET /api/public/articles?page=1 200 (173.37ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:53:21.784Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:53:21.787Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:53:21.790Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:53:21.795Z] [WARN] [HTTP 404] GET /images/seed/news-10.jpg - Cannot GET /images/seed/news-10.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:53:21.800Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:53:21.803Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:53:21.884Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:53:21.888Z] [WARN] [HTTP 404] GET /images/seed/news-8.jpg - Cannot GET /images/seed/news-8.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:53:24.064Z] [INFO] [HTTP] GET /reporter 304 (565.35ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:53:28.392Z] [INFO] [HTTP] GET /editor 200 (299.83ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:53:41.054Z] [INFO] [HTTP] GET /editor/articles/6addaf688a08c035c6f44e92 200 (257.91ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:54:44.666Z] [WARN] [HTTP] GET /articles/6adcf9df6dd92eb7067469ec 404 (195.61ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:54:48.683Z] [WARN] [HTTP] GET /articles/6adcf9df6dd92eb7067469ec 404 (200.87ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:54:50.186Z] [INFO] [HTTP] GET / 304 (193.31ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:54:51.177Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:54:51.184Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:54:51.190Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:54:51.194Z] [WARN] [HTTP 404] GET /images/seed/news-10.jpg - Cannot GET /images/seed/news-10.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:54:51.200Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:54:51.204Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:54:51.331Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:54:51.337Z] [WARN] [HTTP 404] GET /images/seed/news-8.jpg - Cannot GET /images/seed/news-8.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:56:58.878Z] [INFO] [HTTP] GET /articles/6addaf688a08c035c6f44e39 200 (635.25ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:56:59.342Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:04.772Z] [INFO] [HTTP] GET / 304 (250.80ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:57:05.308Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:05.310Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:05.313Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:05.315Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:06.979Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:06.982Z] [WARN] [HTTP 404] GET /images/seed/news-10.jpg - Cannot GET /images/seed/news-10.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:06.987Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:06.991Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:06.993Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:07.492Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:07.495Z] [WARN] [HTTP 404] GET /images/seed/news-8.jpg - Cannot GET /images/seed/news-8.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:07.501Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:18.669Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:18.672Z] [WARN] [HTTP 404] GET /images/seed/news-3.jpg - Cannot GET /images/seed/news-3.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:18.676Z] [WARN] [HTTP 404] GET /images/seed/news-7.jpg - Cannot GET /images/seed/news-7.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:18.679Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:18.683Z] [WARN] [HTTP 404] GET /images/seed/news-9.jpg - Cannot GET /images/seed/news-9.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:19.330Z] [INFO] [HTTP] GET /api/public/articles?page=2 304 (644.39ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T12:57:19.511Z] [WARN] [HTTP 404] GET /images/seed/news-5.jpg - Cannot GET /images/seed/news-5.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:19.520Z] [WARN] [HTTP 404] GET /images/seed/news-1.jpg - Cannot GET /images/seed/news-1.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:19.525Z] [WARN] [HTTP 404] GET /images/seed/news-2.jpg - Cannot GET /images/seed/news-2.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T12:57:19.531Z] [WARN] [HTTP 404] GET /images/seed/news-6.jpg - Cannot GET /images/seed/news-6.jpg status=404 ip=::ffff:127.0.0.1 user=6ad90506dea098913eef3baf
+[2026-10-25T14:36:28.279Z] [INFO] [SERVER] db_connecting uri=mongodb+srv://***@applicationdevelopment.asg29qk.mongodb.net
+[2026-10-25T14:36:28.970Z] [INFO] [SERVER] db_connected db=daily-web
+[2026-10-25T14:36:29.845Z] [INFO] [SERVER] indexes_ready
+[2026-10-25T14:36:29.848Z] [INFO] [SERVER] start port=3000 env=development
+[2026-10-25T14:36:36.931Z] [INFO] [HTTP] GET / 200 (1540.18ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:36:44.379Z] [INFO] [HTTP] GET /api/public/articles?page=2 304 (136.39ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:36:45.374Z] [INFO] [HTTP] GET /api/public/articles?page=3 304 (150.21ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:36:46.458Z] [INFO] [HTTP] GET /api/public/articles?page=4 200 (134.69ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:36:47.577Z] [INFO] [HTTP] GET /api/public/articles?page=5 200 (132.75ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:36:50.982Z] [INFO] [HTTP] GET /editor/analytics 200 (68.68ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:36:51.881Z] [INFO] [HTTP] GET /api/editor/articles?q=&page=1 200 (223.45ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:36:54.238Z] [INFO] [HTTP] GET /api/editor/articles/6addaf688a08c035c6f44e29/impact?from=2026-09-25T14%3A36%3A00.000Z&to=2026-10-25T14%3A37%3A00.000Z&resolution=day 200 (203.51ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:36:57.850Z] [INFO] [HTTP] GET /api/editor/articles/6addaf688a08c035c6f44e92/impact?from=2026-09-25T14%3A36%3A00.000Z&to=2026-10-25T14%3A37%3A00.000Z&resolution=day 200 (197.96ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:00.697Z] [INFO] [HTTP] GET /editor 200 (210.65ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:03.844Z] [INFO] [HTTP] GET /reporter 200 (487.40ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:05.514Z] [INFO] [HTTP] GET /editor 200 (214.03ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:08.969Z] [INFO] [HTTP] GET /reporter 304 (389.66ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:10.520Z] [INFO] [HTTP] GET /editor 200 (224.86ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:11.297Z] [INFO] [HTTP] GET /editor/analytics 200 (69.03ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:11.927Z] [INFO] [HTTP] GET /api/editor/articles?q=&page=1 200 (209.56ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:15.612Z] [INFO] [HTTP] GET / 304 (152.84ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:36.945Z] [INFO] [HTTP] GET /editor 200 (204.64ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:37.909Z] [INFO] [HTTP] GET /editor/analytics 200 (77.12ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:38.547Z] [INFO] [HTTP] GET /api/editor/articles?q=&page=1 200 (203.53ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:37:59.310Z] [INFO] [HTTP] GET / 304 (141.24ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:38:07.438Z] [INFO] [HTTP] GET /articles/6addaf688a08c035c6f44dc1 200 (477.92ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:38:13.350Z] [INFO] [HTTP] GET / 304 (150.84ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:38:14.477Z] [INFO] [HTTP] GET /api/public/articles?page=2 304 (131.16ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:38:26.121Z] [INFO] [SERVER] db_connecting uri=mongodb+srv://***@applicationdevelopment.asg29qk.mongodb.net
+[2026-10-25T14:38:26.833Z] [INFO] [SERVER] db_connected db=daily-web
+[2026-10-25T14:38:27.785Z] [INFO] [SERVER] indexes_ready
+[2026-10-25T14:38:27.789Z] [INFO] [SERVER] start port=3000 env=development
+[2026-10-25T14:38:33.030Z] [INFO] [AUTH] login_success userId=6ada6ec1de39298ce138a0ab email=editor@dailyweb.test role=editor ip=::1
+[2026-10-25T14:38:33.187Z] [INFO] [HTTP] POST /login 302 (415.63ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:38:33.615Z] [INFO] [HTTP] GET /editor 200 (286.86ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:38:33.943Z] [INFO] [HTTP] GET /editor/analytics 200 (144.07ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:38:38.128Z] [INFO] [HTTP] GET /api/weather 200 (1.03ms)
+[2026-10-25T14:38:42.339Z] [INFO] [HTTP] GET / 200 (73.10ms)
+[2026-10-25T14:39:00.254Z] [INFO] [HTTP] GET /editor 200 (209.23ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:39:00.400Z] [INFO] [HTTP] GET /editor/analytics 200 (67.22ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:39:04.598Z] [WARN] [AUTH 403] GET /reporter - Only reporters and admins can use this page. status=403 ip=::1 user=6ada6ec1de39298ce138a0ab
+[2026-10-25T14:39:04.668Z] [WARN] [HTTP] GET /reporter 403 (71.00ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:39:04.818Z] [WARN] [HTTP 404] GET /editor/articles/000000000000000000000000 - Article not found. status=404 ip=::1 user=6ada6ec1de39298ce138a0ab
+[2026-10-25T14:39:04.887Z] [WARN] [HTTP] GET /editor/articles/000000000000000000000000 404 (135.06ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:39:04.974Z] [INFO] [HTTP] GET / 200 (70.49ms)
+[2026-10-25T14:39:29.597Z] [INFO] [AUTH] login_success userId=665000000000000000000004 email=omer.friedman@dailyweb.test role=reporter ip=::1
+[2026-10-25T14:39:29.664Z] [INFO] [HTTP] POST /login 302 (230.54ms) user=665000000000000000000004(reporter)
+[2026-10-25T14:39:29.953Z] [INFO] [HTTP] GET /reporter 200 (212.22ms) user=665000000000000000000004(reporter)
+[2026-10-25T14:40:02.221Z] [INFO] [SERVER] db_connecting uri=mongodb+srv://***@applicationdevelopment.asg29qk.mongodb.net
+[2026-10-25T14:40:02.914Z] [INFO] [SERVER] db_connected db=daily-web
+[2026-10-25T14:40:03.814Z] [INFO] [SERVER] indexes_ready
+[2026-10-25T14:40:03.818Z] [INFO] [SERVER] start port=3000 env=development
+[2026-10-25T14:40:05.037Z] [INFO] [HTTP] GET /editor 200 (207.27ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:40:05.272Z] [INFO] [HTTP] GET /reporter 200 (148.70ms) user=665000000000000000000004(reporter)
+[2026-10-25T14:40:35.424Z] [INFO] [SERVER] db_connecting uri=mongodb+srv://***@applicationdevelopment.asg29qk.mongodb.net
+[2026-10-25T14:40:36.072Z] [INFO] [SERVER] db_connected db=daily-web
+[2026-10-25T14:40:37.744Z] [INFO] [SERVER] indexes_ready
+[2026-10-25T14:40:37.750Z] [INFO] [SERVER] start port=3100 env=development
+[2026-10-25T14:40:38.153Z] [WARN] [AUTH 401] GET /editor - Please log in. status=401 ip=::1
+[2026-10-25T14:40:38.160Z] [INFO] [HTTP] GET /editor 302 (11.67ms)
+[2026-10-25T14:40:38.234Z] [WARN] [AUTH 401] GET /editor/analytics - Please log in. status=401 ip=::1
+[2026-10-25T14:40:38.236Z] [INFO] [HTTP] GET /editor/analytics 302 (3.60ms)
+[2026-10-25T14:40:38.311Z] [WARN] [AUTH 401] GET /reporter - Please log in. status=401 ip=::1
+[2026-10-25T14:40:38.312Z] [INFO] [HTTP] GET /reporter 302 (1.28ms)
+[2026-10-25T14:40:41.808Z] [WARN] [AUTH 401] GET /editor - Please log in. status=401 ip=::1
+[2026-10-25T14:40:41.810Z] [INFO] [HTTP] GET /editor 302 (2.92ms)
+[2026-10-25T14:40:53.241Z] [INFO] [AUTH] login_success userId=6ada6ec1de39298ce138a0ab email=editor@dailyweb.test role=editor ip=::1
+[2026-10-25T14:40:53.405Z] [INFO] [HTTP] POST /login 302 (388.26ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:40:53.893Z] [INFO] [HTTP] GET /editor 200 (406.88ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:40:53.988Z] [INFO] [HTTP] GET /editor/analytics 200 (9.41ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:40:54.182Z] [INFO] [AUTH] login_success userId=665000000000000000000004 email=omer.friedman@dailyweb.test role=reporter ip=::1
+[2026-10-25T14:40:54.331Z] [INFO] [HTTP] POST /login 302 (328.24ms) user=665000000000000000000004(reporter)
+[2026-10-25T14:40:54.518Z] [INFO] [HTTP] GET /reporter 200 (97.43ms) user=665000000000000000000004(reporter)
+[2026-10-25T14:43:04.317Z] [INFO] [HTTP] GET / 200 (112.66ms)
+[2026-10-25T14:44:10.690Z] [INFO] [SERVER] db_connecting uri=mongodb+srv://***@applicationdevelopment.asg29qk.mongodb.net
+[2026-10-25T14:44:11.420Z] [INFO] [SERVER] db_connected db=daily-web
+[2026-10-25T14:44:12.318Z] [INFO] [SERVER] indexes_ready
+[2026-10-25T14:44:12.325Z] [INFO] [SERVER] start port=3000 env=development
+[2026-10-25T14:44:13.568Z] [INFO] [AUTH] login_success userId=6ada6ec1de39298ce138a0ab email=editor@dailyweb.test role=editor ip=::1
+[2026-10-25T14:44:13.739Z] [INFO] [HTTP] POST /login 302 (425.52ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:44:14.222Z] [INFO] [HTTP] GET /editor 200 (403.73ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:44:14.304Z] [INFO] [HTTP] GET /editor/analytics 200 (6.86ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:44:24.019Z] [INFO] [HTTP] GET /api/editor/articles?page=1 200 (162.30ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:44:24.414Z] [INFO] [HTTP] GET /api/editor/articles?q=&page=1 200 (153.14ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:44:37.488Z] [INFO] [HTTP] GET /api/editor/articles/6addaf688a08c035c6f44e92/impact?from=2026-09-25T14:44%3A00.000Z&to=2026-10-25T14:44%3A00.000Z&resolution=day 200 (139.55ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:44:42.266Z] [INFO] [HTTP] GET /api/public/articles?page=1 200 (70.96ms)
+[2026-10-25T14:45:50.893Z] [INFO] [SERVER] db_connecting uri=mongodb+srv://***@applicationdevelopment.asg29qk.mongodb.net
+[2026-10-25T14:45:51.615Z] [INFO] [SERVER] db_connected db=daily-web
+[2026-10-25T14:45:52.507Z] [INFO] [SERVER] indexes_ready
+[2026-10-25T14:45:52.512Z] [INFO] [SERVER] start port=3000 env=development
+[2026-10-25T14:46:00.029Z] [INFO] [HTTP] GET / 200 (79.29ms)
+[2026-10-25T14:46:01.897Z] [INFO] [HTTP] GET /login.html 200 (2.84ms)
+[2026-10-25T14:46:04.218Z] [INFO] [AUTH] login_success userId=6ad90506dea098913eef3baf email=itayz@mail.com role=admin ip=::ffff:127.0.0.1
+[2026-10-25T14:46:04.365Z] [INFO] [HTTP] POST /login 200 (328.64ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:04.835Z] [INFO] [HTTP] GET /reporter 200 (377.61ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:07.161Z] [INFO] [HTTP] GET /reporter 304 (354.95ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:08.350Z] [INFO] [HTTP] GET /editor 200 (184.21ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:08.559Z] [INFO] [HTTP] GET /editor 200 (143.63ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:46:08.645Z] [INFO] [HTTP] GET /editor/analytics 200 (4.35ms) user=6ada6ec1de39298ce138a0ab(editor)
+[2026-10-25T14:46:10.244Z] [INFO] [HTTP] GET /editor/analytics 200 (4.12ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:10.753Z] [INFO] [HTTP] GET /api/editor/articles?q=&page=1 200 (141.39ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:12.830Z] [INFO] [HTTP] GET /reporter 304 (462.29ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:14.496Z] [INFO] [HTTP] GET / 200 (95.84ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:16.385Z] [INFO] [HTTP] GET /editor 200 (152.66ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:18.544Z] [INFO] [HTTP] GET /reporter 304 (396.49ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:19.357Z] [INFO] [HTTP] GET /editor/analytics 200 (2.76ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:19.844Z] [INFO] [HTTP] GET /api/editor/articles?q=&page=1 200 (141.33ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:21.718Z] [INFO] [HTTP] GET /editor 200 (183.01ms) user=6ad90506dea098913eef3baf(admin)
+[2026-10-25T14:46:23.960Z] [INFO] [HTTP] GET / 304 (74.12ms) user=6ad90506dea098913eef3baf(admin)
