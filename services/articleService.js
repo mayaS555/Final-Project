@@ -16,7 +16,13 @@ const {
 } = require("./articleStatus");
 
 // The working-copy fields a request may change. Any other key is rejected.
-const WORKING_COPY_FIELDS = ["title", "summary", "content", "imageUrl", "category"];
+const WORKING_COPY_FIELDS = [
+  "title",
+  "summary",
+  "content",
+  "imageUrl",
+  "category",
+];
 // The working copy must have these before it can be reviewed or published.
 const REQUIRED_FOR_REVIEW = ["title", "content", "category"];
 const MAX_EDITOR_NOTE_LENGTH = 1000;
@@ -83,9 +89,14 @@ function toWorkingCopyUpdate(fields) {
   if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
     throw createHttpError(400, "The request body must be a JSON object.");
   }
-  const unknownKeys = Object.keys(fields).filter((key) => !WORKING_COPY_FIELDS.includes(key));
+  const unknownKeys = Object.keys(fields).filter(
+    (key) => !WORKING_COPY_FIELDS.includes(key),
+  );
   if (unknownKeys.length > 0) {
-    throw createHttpError(400, `These fields cannot be changed here: ${unknownKeys.join(", ")}.`);
+    throw createHttpError(
+      400,
+      `These fields cannot be changed here: ${unknownKeys.join(", ")}.`,
+    );
   }
 
   const changes = {};
@@ -98,7 +109,10 @@ function toWorkingCopyUpdate(fields) {
   // Same rule as the public site, so a saved image is never silently dropped when it is shown.
   const imageUrl = changes["draft.imageUrl"];
   if (imageUrl && !toSafeImageUrl(imageUrl)) {
-    throw createHttpError(400, "imageUrl must be an http(s) address or a path starting with /.");
+    throw createHttpError(
+      400,
+      "imageUrl must be an http(s) address or a path starting with /.",
+    );
   }
   return changes;
 }
@@ -113,14 +127,18 @@ function toWorkingCopyUpdate(fields) {
  *   (too long, unknown category). Other database errors are rethrown.
  * @example const updated = await updateIfStatusUnchanged(article, { $set: { status: "pending" } });
  */
-async function updateIfStatusUnchanged(article, update, session) {
+async function updateIfStatusUnchanged(article, update) {
   let updated;
   try {
-    updated = await Article.findOneAndUpdate({ _id: article._id, status: article.status }, update, {
-      returnDocument: "after",
-      runValidators: true,
-      ...(session ? { session } : {}),
-    });
+    updated = await Article.findOneAndUpdate(
+      { _id: article._id, status: article.status },
+      update,
+      {
+        returnDocument: "after",
+        runValidators: true,
+        projection: Article.EMBEDDED_ARRAYS,
+      },
+    );
   } catch (error) {
     if (error.name === "ValidationError") {
       const field = Object.values(error.errors)[0].path.replace(/^draft\./, "");
@@ -129,7 +147,10 @@ async function updateIfStatusUnchanged(article, update, session) {
     throw error;
   }
   if (!updated) {
-    throw createHttpError(409, "The article was changed meanwhile. Reload the page and try again.");
+    throw createHttpError(
+      409,
+      "The article was changed meanwhile. Reload the page and try again.",
+    );
   }
   return updated;
 }
@@ -143,7 +164,10 @@ async function updateIfStatusUnchanged(article, update, session) {
  */
 async function createDraft(user) {
   if (!hasReporterRole(user.role)) {
-    throw createHttpError(403, "Only a reporter or an admin can create an article.");
+    throw createHttpError(
+      403,
+      "Only a reporter or an admin can create an article.",
+    );
   }
   return Article.create({ author: user._id, authorName: user.name });
 }
@@ -161,7 +185,10 @@ async function createDraft(user) {
 async function saveWorkingCopy(article, user, fields) {
   const changes = toWorkingCopyUpdate(fields);
   if (!canEditWorkingCopy(article.status, user.role, isAuthor(article, user))) {
-    throw createHttpError(403, `You cannot edit this article while it is ${article.status}.`);
+    throw createHttpError(
+      403,
+      `You cannot edit this article while it is ${article.status}.`,
+    );
   }
   if (Object.keys(changes).length === 0) {
     return article;
@@ -182,22 +209,25 @@ async function submit(article, user) {
   assertTransition(article.status, "pending", user.role);
   assertAuthor(article, user);
   assertReadyForReview(article.draft);
-  const updated = await updateIfStatusUnchanged(article, { $set: { status: "pending", editorNote: "" } });
+  const updated = await updateIfStatusUnchanged(article, {
+    $set: { status: "pending", editorNote: "" },
+  });
   logArticleEvent("submit", updated, user);
   return updated;
 }
 
 /**
  * Publishes the working copy: pending -> published. Copies the working copy into the public fields,
- * sets approved.publishedAt on the first publish and approved.updatedAt every time, and adds 1 to publishCount.
+ * sets approved.publishedAt on the first publish and approved.updatedAt every time, adds 1 to publishCount,
+ * and appends the matching entry to publishEvents (D's analytics markers) in the same update.
  * @param {Object} article The article document.
  * @param {Object} editor The logged-in editor or admin.
  * @returns {Promise<{ article: Object, isFirstPublish: boolean }>} The published article, and whether this
- *   was its first publish (for D's publish event).
+ *   was its first publish.
  * @throws {Error} error.status 400 working copy incomplete, 403 not an editor or admin, 409 wrong status or changed meanwhile.
  * @example Used by D: const { article, isFirstPublish } = await approve(article, req.session.user);
  */
-async function approve(article, editor, { session } = {}) {
+async function approve(article, editor) {
   assertTransition(article.status, "published", editor.role);
   assertReadyForReview(article.draft);
 
@@ -220,9 +250,15 @@ async function approve(article, editor, { session } = {}) {
       },
     },
     $inc: { publishCount: 1 },
-  }, session);
-  if (!session) logArticleEvent("approve", updated, editor);
-  // D's controller records PublishEvent in the same transaction as this update.
+    $push: {
+      publishEvents: {
+        publishedAt: now,
+        publishCount: article.publishCount + 1,
+        isFirstPublish,
+      },
+    },
+  });
+  logArticleEvent("approve", updated, editor);
   return { article: updated, isFirstPublish };
 }
 
@@ -237,14 +273,20 @@ async function approve(article, editor, { session } = {}) {
  */
 async function returnToReporter(article, editor, note) {
   assertTransition(article.status, "returned", editor.role);
-  const editorNote = typeof note === "string" ? note.replace(/\r\n/g, "\n").trim() : "";
+  const editorNote =
+    typeof note === "string" ? note.replace(/\r\n/g, "\n").trim() : "";
   if (editorNote.length === 0) {
     throw createHttpError(400, "Please write why the article is returned.");
   }
   if (editorNote.length > MAX_EDITOR_NOTE_LENGTH) {
-    throw createHttpError(400, `The note must be at most ${MAX_EDITOR_NOTE_LENGTH} characters.`);
+    throw createHttpError(
+      400,
+      `The note must be at most ${MAX_EDITOR_NOTE_LENGTH} characters.`,
+    );
   }
-  const updated = await updateIfStatusUnchanged(article, { $set: { status: "returned", editorNote } });
+  const updated = await updateIfStatusUnchanged(article, {
+    $set: { status: "returned", editorNote },
+  });
   logArticleEvent("return", updated, editor);
   return updated;
 }
@@ -263,7 +305,10 @@ async function startRevision(article, user) {
   assertAuthor(article, user);
   const { title, summary, content, imageUrl, category } = article.approved;
   return updateIfStatusUnchanged(article, {
-    $set: { status: "draft", draft: { title, summary, content, imageUrl, category } },
+    $set: {
+      status: "draft",
+      draft: { title, summary, content, imageUrl, category },
+    },
   });
 }
 
@@ -279,10 +324,16 @@ async function deleteArticle(article, user) {
   if (!canDelete(article, user.role, isAuthor(article, user))) {
     throw createHttpError(403, "You cannot delete this article.");
   }
-  // Open question (B/C/D): the article's comments and read history are not deleted here.
-  const result = await Article.deleteOne({ _id: article._id, status: article.status });
+  // The embedded comments and analytics go with the article. Open question (B/C): read history is not deleted here.
+  const result = await Article.deleteOne({
+    _id: article._id,
+    status: article.status,
+  });
   if (result.deletedCount !== 1) {
-    throw createHttpError(409, "The article was changed meanwhile. Reload the page and try again.");
+    throw createHttpError(
+      409,
+      "The article was changed meanwhile. Reload the page and try again.",
+    );
   }
   logArticleEvent("delete", article, user);
 }
@@ -305,7 +356,10 @@ async function listArticles(user, status) {
   } else if (hasReporterRole(user.role)) {
     filter = { author: user._id };
   } else {
-    throw createHttpError(403, "Only reporters, editors and admins can list articles.");
+    throw createHttpError(
+      403,
+      "Only reporters, editors and admins can list articles.",
+    );
   }
   if (status) {
     filter.status = status;

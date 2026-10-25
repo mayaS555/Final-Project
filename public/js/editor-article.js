@@ -29,23 +29,36 @@
 
   function setBusy(value) {
     busy = value;
-    buttons.forEach((button) => { button.disabled = value || locked; });
+    buttons.forEach((button) => {
+      button.disabled = value || locked;
+    });
     document.getElementById("editor-fields").disabled = value || locked;
     if (returnForm) returnForm.elements.note.disabled = value || locked;
   }
 
   async function request(method, suffix = "", body) {
-    const response = await fetch(`/api/articles/${encodeURIComponent(id)}${suffix}`, {
-      method,
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
+    const response = await fetch(
+      `/api/articles/${encodeURIComponent(id)}${suffix}`,
+      {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      },
+    );
     if (!response.ok) {
       let text = "The request failed. Please try again.";
-      try { text = (await response.json()).error || text; } catch { /* Use the fallback for non-JSON responses. */ }
+      try {
+        text = (await response.json()).error || text;
+      } catch {
+        // Use the fallback for non-JSON responses.
+      }
       if ([401, 403, 409].includes(response.status)) {
         locked = true;
-        text += " Reload the page before trying again. Copy any unsaved text first.";
+        text +=
+          " Reload the page before trying again. Copy any unsaved text first.";
       }
       throw new Error(text);
     }
@@ -58,7 +71,12 @@
     try {
       await task();
     } catch (error) {
-      showMessage(error.name === "TypeError" ? "Could not reach the server. Your input is still here; please try again." : error.message, true);
+      showMessage(
+        error.name === "TypeError"
+          ? "Could not reach the server. Your input is still here; please try again."
+          : error.message,
+        true,
+      );
     } finally {
       setBusy(false);
     }
@@ -74,7 +92,9 @@
     showMessage("Changes are saved only when you select Save Changes.");
   });
 
-  form.addEventListener("input", () => { dirty = true; });
+  form.addEventListener("input", () => {
+    dirty = true;
+  });
   document.getElementById("cancel-edit").addEventListener("click", () => {
     if (busy || locked) return;
     form.reset();
@@ -89,7 +109,8 @@
     event.preventDefault();
     if (!form.reportValidity()) return;
     const fields = {};
-    for (const name of ["title", "summary", "content", "imageUrl", "category"]) fields[name] = form.elements[name].value;
+    for (const name of ["title", "summary", "content", "imageUrl", "category"])
+      fields[name] = form.elements[name].value;
     runAction(async () => {
       await request("PATCH", "", fields);
       finishAction();
@@ -97,7 +118,12 @@
   });
 
   document.getElementById("approve-article")?.addEventListener("click", () => {
-    if (busy || locked || !window.confirm("Approve and publish this version of the article?")) return;
+    if (
+      busy ||
+      locked ||
+      !window.confirm("Approve and publish this version of the article?")
+    )
+      return;
     runAction(async () => {
       await request("POST", "/approve", {});
       finishAction();
@@ -109,17 +135,28 @@
     returnSection.hidden = !returnSection.hidden;
     if (!returnSection.hidden) returnForm.elements.note.focus();
   });
-  returnForm?.addEventListener("input", () => { noteDirty = true; });
+  returnForm?.addEventListener("input", () => {
+    noteDirty = true;
+  });
   returnForm?.addEventListener("submit", (event) => {
     event.preventDefault();
     if (!returnForm.reportValidity()) return;
     runAction(async () => {
-      await request("POST", "/return", { note: returnForm.elements.note.value });
+      await request("POST", "/return", {
+        note: returnForm.elements.note.value,
+      });
       finishAction();
     });
   });
   document.getElementById("delete-article")?.addEventListener("click", () => {
-    if (busy || locked || !window.confirm("Delete this article? It will also be removed from the public site if it is published.")) return;
+    if (
+      busy ||
+      locked ||
+      !window.confirm(
+        "Delete this article? It will also be removed from the public site if it is published.",
+      )
+    )
+      return;
     runAction(async () => {
       await request("DELETE");
       finishAction("/editor");

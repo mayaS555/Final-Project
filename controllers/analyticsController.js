@@ -13,7 +13,9 @@ async function getAnalytics(req, res) {
 async function deleteStatistics(req, res) {
   const range = impact.parseDeleteRange(req.body);
   const { getSessionUser } = require("../middleware/articleAccess");
-  res.json(await impact.deleteViewStatistics(req.article, getSessionUser(req), range));
+  res.json(
+    await impact.deleteViewStatistics(req.article, getSessionUser(req), range),
+  );
 }
 
 module.exports = { renderAnalytics, getAnalytics, deleteStatistics };

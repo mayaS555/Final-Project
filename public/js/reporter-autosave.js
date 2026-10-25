@@ -42,7 +42,10 @@ function setStatus(state, detail) {
   };
   statusElement.textContent = texts[state] || detail;
   statusElement.dataset.state = state;
-  statusElement.classList.toggle("pub-status-error", state === "error" || state === "stopped");
+  statusElement.classList.toggle(
+    "pub-status-error",
+    state === "error" || state === "stopped",
+  );
 }
 
 /**
@@ -97,16 +100,25 @@ async function handleFailedSave(names, response) {
   const body = response ? await response.json().catch(() => ({})) : {};
 
   if (status === 401) {
-    stopAutosave("You are no longer logged in. Copy your latest changes, log in again, then reload this page.");
+    stopAutosave(
+      "You are no longer logged in. Copy your latest changes, log in again, then reload this page.",
+    );
   } else if (status === 403 || status === 409) {
-    stopAutosave("This article was changed elsewhere (for example, it was submitted or an editor opened it). Your latest changes were not saved. Reload the page.");
+    stopAutosave(
+      "This article was changed elsewhere (for example, it was submitted or an editor opened it). Your latest changes were not saved. Reload the page.",
+    );
   } else if (status === 400) {
     // Bad input does not get better by retrying; the next change tries again.
-    setStatus("error", `Not saved: ${body.error || "please check the fields."}`);
+    setStatus(
+      "error",
+      `Not saved: ${body.error || "please check the fields."}`,
+    );
   } else {
     // Network failure or a server error: keep the data and try again later.
     setStatus("offline");
-    scheduleSave(RETRY_DELAYS_MS[Math.min(failedAttempts, RETRY_DELAYS_MS.length - 1)]);
+    scheduleSave(
+      RETRY_DELAYS_MS[Math.min(failedAttempts, RETRY_DELAYS_MS.length - 1)],
+    );
     failedAttempts += 1;
   }
 }
@@ -121,7 +133,11 @@ async function handleFailedSave(names, response) {
  */
 async function saveNow({ keepalive = false } = {}) {
   clearTimeout(saveTimer);
-  if (isStopped || changedFields.size === 0 || (savesInFlight > 0 && !keepalive)) {
+  if (
+    isStopped ||
+    changedFields.size === 0 ||
+    (savesInFlight > 0 && !keepalive)
+  ) {
     return;
   }
   const names = [...changedFields];
@@ -164,7 +180,12 @@ async function saveNow({ keepalive = false } = {}) {
   }
   // Changes made while this save was running are sent right after it. After a failure the retry timer does it.
   // This runs before anyone waiting on thisSave continues, so saveAllNow sees the follow-up save.
-  if (!isStopped && !lastSaveFailed && changedFields.size > 0 && savesInFlight === 0) {
+  if (
+    !isStopped &&
+    !lastSaveFailed &&
+    changedFields.size > 0 &&
+    savesInFlight === 0
+  ) {
     saveNow();
   }
   markSaveDone();

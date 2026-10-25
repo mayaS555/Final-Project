@@ -41,11 +41,13 @@ function createButton(label, action) {
 
 // Same format as formatDateTime() in controllers/publicController.js.
 function formatDateTime(isoString) {
-  return new Date(isoString).toLocaleString("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }) + " UTC";
+  return (
+    new Date(isoString).toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "UTC",
+    }) + " UTC"
+  );
 }
 
 // Must produce the same markup as the comment in views/public/article.ejs.
@@ -59,7 +61,13 @@ function createCommentItem(comment) {
   const edited = createElement("span", "pub-comment-edited", "(edited)");
   edited.hidden = comment.updatedAt === comment.createdAt;
   const meta = createElement("p", "pub-comment-meta");
-  meta.append(createElement("strong", "pub-comment-author", comment.displayName), " ", time, " ", edited);
+  meta.append(
+    createElement("strong", "pub-comment-author", comment.displayName),
+    " ",
+    time,
+    " ",
+    edited,
+  );
 
   item.append(meta, createElement("p", "pub-comment-body", comment.body));
 
@@ -88,7 +96,9 @@ async function requestJson(url, options) {
   try {
     response = await fetch(url, options);
   } catch (error) {
-    throw new Error("Could not reach the server. Please check your connection and try again.");
+    throw new Error(
+      "Could not reach the server. Please check your connection and try again.",
+    );
   }
   if (response.status === 204) {
     return null;
@@ -101,7 +111,11 @@ async function requestJson(url, options) {
     data = null;
   }
   if (!response.ok) {
-    throw new Error(data && typeof data.error === "string" ? data.error : "Something went wrong (status " + response.status + ").");
+    throw new Error(
+      data && typeof data.error === "string"
+        ? data.error
+        : "Something went wrong (status " + response.status + ").",
+    );
   }
   if (data === null) {
     throw new Error("The server sent an unexpected answer.");
@@ -110,7 +124,11 @@ async function requestJson(url, options) {
 }
 
 function jsonRequest(method, payload) {
-  return { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) };
+  return {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  };
 }
 
 function setFormStatus(message, isError) {
@@ -153,7 +171,10 @@ form.addEventListener("submit", async function (event) {
   try {
     const comment = await requestJson(
       "/api/public/articles/" + articleId + "/comments",
-      jsonRequest("POST", { displayName: nameInput.value, body: bodyInput.value })
+      jsonRequest("POST", {
+        displayName: nameInput.value,
+        body: bodyInput.value,
+      }),
     );
     renderedIds.add(comment.id);
     listElement.prepend(createCommentItem(comment));
@@ -180,7 +201,12 @@ moreButton.addEventListener("click", async function () {
   listStatus.classList.remove("pub-status-error");
 
   try {
-    const data = await requestJson("/api/public/articles/" + articleId + "/comments?before=" + encodeURIComponent(nextBefore));
+    const data = await requestJson(
+      "/api/public/articles/" +
+        articleId +
+        "/comments?before=" +
+        encodeURIComponent(nextBefore),
+    );
     appendComments(data.items);
     hasMore = data.hasMore;
     if (data.nextBefore) {
@@ -210,7 +236,11 @@ function startEdit(item) {
   textarea.setAttribute("aria-label", "Edit your comment");
 
   const editor = createElement("div", "pub-comment-editor");
-  editor.append(textarea, createButton("Save", "save"), createButton("Cancel", "cancel"));
+  editor.append(
+    textarea,
+    createButton("Save", "save"),
+    createButton("Cancel", "cancel"),
+  );
 
   bodyElement.hidden = true;
   actions.hidden = true;
@@ -235,9 +265,13 @@ async function saveEdit(item) {
   showItemError(item, "");
 
   try {
-    const updated = await requestJson("/api/public/comments/" + item.dataset.commentId, jsonRequest("PATCH", { body: textarea.value }));
+    const updated = await requestJson(
+      "/api/public/comments/" + item.dataset.commentId,
+      jsonRequest("PATCH", { body: textarea.value }),
+    );
     item.querySelector(".pub-comment-body").textContent = updated.body;
-    item.querySelector(".pub-comment-edited").hidden = updated.updatedAt === updated.createdAt;
+    item.querySelector(".pub-comment-edited").hidden =
+      updated.updatedAt === updated.createdAt;
     closeEditor(item);
   } catch (error) {
     // The editor stays open with the typed text.
@@ -257,7 +291,9 @@ async function deleteComment(item) {
   showItemError(item, "");
 
   try {
-    await requestJson("/api/public/comments/" + item.dataset.commentId, { method: "DELETE" });
+    await requestJson("/api/public/comments/" + item.dataset.commentId, {
+      method: "DELETE",
+    });
     item.remove();
     updateEmptyMessage();
   } catch (error) {

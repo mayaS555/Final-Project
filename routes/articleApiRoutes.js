@@ -3,7 +3,11 @@
 
 const express = require("express");
 const articleApiController = require("../controllers/articleApiController");
-const { requireStaffLogin, loadArticle, requireArticleOwnerOrEditor } = require("../middleware/articleAccess");
+const {
+  requireStaffLogin,
+  loadArticle,
+  requireArticleOwnerOrEditor,
+} = require("../middleware/articleAccess");
 const { createHttpError } = require("../services/articleStatus");
 
 const router = express.Router();
@@ -38,12 +42,49 @@ const readJsonBody = express.json({ limit: "200kb" });
 const writeJson = [requireJsonContentType, readJsonBody];
 const ownArticle = [loadArticle, requireArticleOwnerOrEditor];
 
-router.post("/api/articles", requireStaffLogin, writeJson, articleApiController.createArticle);
-router.get("/api/articles", requireStaffLogin, articleApiController.listArticles);
-router.get("/api/articles/:id", requireStaffLogin, ownArticle, articleApiController.getArticle);
-router.patch("/api/articles/:id", requireStaffLogin, writeJson, ownArticle, articleApiController.saveArticle);
-router.delete("/api/articles/:id", requireStaffLogin, ownArticle, articleApiController.deleteArticle);
-router.post("/api/articles/:id/submit", requireStaffLogin, writeJson, ownArticle, articleApiController.submitArticle);
-router.post("/api/articles/:id/revise", requireStaffLogin, writeJson, ownArticle, articleApiController.reviseArticle);
+router.post(
+  "/api/articles",
+  requireStaffLogin,
+  writeJson,
+  articleApiController.createArticle,
+);
+router.get(
+  "/api/articles",
+  requireStaffLogin,
+  articleApiController.listArticles,
+);
+router.get(
+  "/api/articles/:id",
+  requireStaffLogin,
+  ownArticle,
+  articleApiController.getArticle,
+);
+router.patch(
+  "/api/articles/:id",
+  requireStaffLogin,
+  writeJson,
+  ownArticle,
+  articleApiController.saveArticle,
+);
+router.delete(
+  "/api/articles/:id",
+  requireStaffLogin,
+  ownArticle,
+  articleApiController.deleteArticle,
+);
+router.post(
+  "/api/articles/:id/submit",
+  requireStaffLogin,
+  writeJson,
+  ownArticle,
+  articleApiController.submitArticle,
+);
+router.post(
+  "/api/articles/:id/revise",
+  requireStaffLogin,
+  writeJson,
+  ownArticle,
+  articleApiController.reviseArticle,
+);
 
 module.exports = router;

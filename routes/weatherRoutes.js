@@ -32,10 +32,9 @@ router.get("/api/weather", async (req, res) => {
     process.env.WEATHER_DEFAULT_CITY ||
     "Tel Aviv";
 
-  const units =
-    ["metric", "imperial", "standard"].includes(req.query.units)
-      ? req.query.units
-      : "metric";
+  const units = ["metric", "imperial", "standard"].includes(req.query.units)
+    ? req.query.units
+    : "metric";
 
   const result = await weatherService.getWeather(city, apiKey, units);
 

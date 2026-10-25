@@ -46,7 +46,8 @@ function markMissingFields() {
  * @example fieldLabel("content")
  */
 function fieldLabel(name) {
-  return form.querySelector(`label[for="${form.elements[name].id}"]`).textContent;
+  return form.querySelector(`label[for="${form.elements[name].id}"]`)
+    .textContent;
 }
 
 /**
@@ -74,7 +75,10 @@ async function submitArticle() {
 
   // The editor must get exactly what is on the screen.
   if (!(await saveAllNow())) {
-    showFormMessage("Your latest changes are not saved, so the article was not sent. See the message next to the title.", true);
+    showFormMessage(
+      "Your latest changes are not saved, so the article was not sent. See the message next to the title.",
+      true,
+    );
     unlockForm();
     return;
   }
@@ -88,7 +92,10 @@ async function submitArticle() {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    showFormMessage("Could not reach the server. Check your connection and try again.", true);
+    showFormMessage(
+      "Could not reach the server. Check your connection and try again.",
+      true,
+    );
     unlockForm();
     return;
   }
@@ -103,7 +110,10 @@ async function submitArticle() {
     unlockForm();
     const missing = markMissingFields();
     if (missing.length > 0) {
-      showFormMessage(`Please fill in: ${missing.map(fieldLabel).join(", ")}.`, true);
+      showFormMessage(
+        `Please fill in: ${missing.map(fieldLabel).join(", ")}.`,
+        true,
+      );
       form.elements[missing[0]].focus();
     } else {
       showFormMessage(body.error || "The article could not be sent.", true);
@@ -112,7 +122,10 @@ async function submitArticle() {
   }
   // 403 / 409: the article changed on the server (for example, it was already submitted). Sending again would
   // not help, so the form stays locked.
-  showFormMessage(`${body.error || "The article could not be sent."} Reload the page to see its current state.`, true);
+  showFormMessage(
+    `${body.error || "The article could not be sent."} Reload the page to see its current state.`,
+    true,
+  );
 }
 
 // A field marked as missing is unmarked as soon as the reporter types in it.

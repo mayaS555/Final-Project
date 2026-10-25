@@ -17,7 +17,9 @@ describe("loadWeather", () => {
     let nextCalled = false;
 
     try {
-      await loadWeather({}, res, () => { nextCalled = true; });
+      await loadWeather({}, res, () => {
+        nextCalled = true;
+      });
     } finally {
       mock.restoreAll();
     }

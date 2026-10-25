@@ -23,7 +23,11 @@ const FIELDS = [
  * @example loadEditPage([saved]);
  */
 function saved(savedAt = "2026-10-18T09:30:00.000Z") {
-  return Promise.resolve({ ok: true, status: 200, json: async () => ({ savedAt }) });
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    json: async () => ({ savedAt }),
+  });
 }
 
 /**
@@ -107,7 +111,10 @@ function fakeElement(properties = {}) {
  *   type, fire, focused }.
  * @example const page = loadEditPage([saved], { withSubmit: true });
  */
-function loadEditPage(fetchAnswers = [], { withSubmit = false, status = "draft" } = {}) {
+function loadEditPage(
+  fetchAnswers = [],
+  { withSubmit = false, status = "draft" } = {},
+) {
   const listeners = { form: {}, document: {}, window: {}, submit: {} };
   /**
    * Gives a fake element addEventListener, recording handlers under its owner name.
@@ -138,7 +145,11 @@ function loadEditPage(fetchAnswers = [], { withSubmit = false, status = "draft" 
   const fieldset = { disabled: false };
   const form = {
     ...eventTarget("form"),
-    dataset: { articleId: "a1", status, requiredFields: "title,content,category" },
+    dataset: {
+      articleId: "a1",
+      status,
+      requiredFields: "title,content,category",
+    },
     elements: fields,
     querySelector(selector) {
       if (selector === ".rep-fields") {
@@ -157,8 +168,15 @@ function loadEditPage(fetchAnswers = [], { withSubmit = false, status = "draft" 
     "rep-edit-status": formMessage,
     "rep-submit": submitButton,
   };
-  const document = { ...eventTarget("document"), visibilityState: "visible", getElementById: (id) => elements[id] };
-  const window = { ...eventTarget("window"), location: { href: "/reporter/articles/a1/edit" } };
+  const document = {
+    ...eventTarget("document"),
+    visibilityState: "visible",
+    getElementById: (id) => elements[id],
+  };
+  const window = {
+    ...eventTarget("window"),
+    location: { href: "/reporter/articles/a1/edit" },
+  };
   const requests = [];
 
   /**
@@ -183,10 +201,24 @@ function loadEditPage(fetchAnswers = [], { withSubmit = false, status = "draft" 
     return typeof answer === "function" ? answer() : answer;
   };
 
-  const context = vm.createContext({ document, window, fetch: fakeFetch, setTimeout, clearTimeout, Blob, Date });
-  vm.runInContext(fs.readFileSync(path.join(SCRIPT_FOLDER, "reporter-autosave.js"), "utf8"), context);
+  const context = vm.createContext({
+    document,
+    window,
+    fetch: fakeFetch,
+    setTimeout,
+    clearTimeout,
+    Blob,
+    Date,
+  });
+  vm.runInContext(
+    fs.readFileSync(path.join(SCRIPT_FOLDER, "reporter-autosave.js"), "utf8"),
+    context,
+  );
   if (withSubmit) {
-    vm.runInContext(fs.readFileSync(path.join(SCRIPT_FOLDER, "reporter-edit.js"), "utf8"), context);
+    vm.runInContext(
+      fs.readFileSync(path.join(SCRIPT_FOLDER, "reporter-edit.js"), "utf8"),
+      context,
+    );
   }
 
   /**
@@ -235,4 +267,11 @@ function loadEditPage(fetchAnswers = [], { withSubmit = false, status = "draft" 
   });
 }
 
-module.exports = { loadEditPage, saved, failed, offline, settle, beforeUnloadEvent };
+module.exports = {
+  loadEditPage,
+  saved,
+  failed,
+  offline,
+  settle,
+  beforeUnloadEvent,
+};

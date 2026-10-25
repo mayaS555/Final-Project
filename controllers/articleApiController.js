@@ -78,7 +78,9 @@ function toListItem(article) {
     status: article.status,
     editorNote: article.editorNote,
     updatedAt: toIsoString(article.updatedAt),
-    publishedAt: article.approved ? toIsoString(article.approved.publishedAt) : null,
+    publishedAt: article.approved
+      ? toIsoString(article.approved.publishedAt)
+      : null,
   };
 }
 
@@ -94,7 +96,10 @@ function parseStatusFilter(rawStatus) {
     return "";
   }
   if (typeof rawStatus !== "string" || !ARTICLE_STATUSES.includes(rawStatus)) {
-    throw createHttpError(400, `status must be one of: ${ARTICLE_STATUSES.join(", ")}.`);
+    throw createHttpError(
+      400,
+      `status must be one of: ${ARTICLE_STATUSES.join(", ")}.`,
+    );
   }
   return rawStatus;
 }
@@ -120,7 +125,10 @@ async function createArticle(req, res) {
  */
 async function listArticles(req, res) {
   const status = parseStatusFilter(req.query.status);
-  const articles = await articleService.listArticles(getSessionUser(req), status);
+  const articles = await articleService.listArticles(
+    getSessionUser(req),
+    status,
+  );
   res.json({ items: articles.map(toListItem) });
 }
 
@@ -143,7 +151,11 @@ function getArticle(req, res) {
  * @example router.patch("/api/articles/:id", ..., saveArticle);
  */
 async function saveArticle(req, res) {
-  const article = await articleService.saveWorkingCopy(req.article, getSessionUser(req), req.body);
+  const article = await articleService.saveWorkingCopy(
+    req.article,
+    getSessionUser(req),
+    req.body,
+  );
   res.json({ savedAt: toIsoString(article.updatedAt) });
 }
 
@@ -179,7 +191,10 @@ async function submitArticle(req, res) {
  * @example router.post("/api/articles/:id/revise", ..., reviseArticle);
  */
 async function reviseArticle(req, res) {
-  const article = await articleService.startRevision(req.article, getSessionUser(req));
+  const article = await articleService.startRevision(
+    req.article,
+    getSessionUser(req),
+  );
   res.json(toArticleResponse(article));
 }
 

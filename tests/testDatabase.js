@@ -8,7 +8,9 @@ const Article = require("../models/Article");
 
 const TEST_DATABASE_URI = process.env.MONGODB_TEST_URI;
 // Passed to describe({ skip }): false runs the tests, a string skips them with this reason.
-const skipWithoutDatabase = TEST_DATABASE_URI ? false : "MONGODB_TEST_URI is not set";
+const skipWithoutDatabase = TEST_DATABASE_URI
+  ? false
+  : "MONGODB_TEST_URI is not set";
 
 /**
  * Connects to this process's own test database and builds the Article indexes.
@@ -21,14 +23,21 @@ async function connectTestDatabase() {
   const url = new URL(TEST_DATABASE_URI);
   const baseName = url.pathname.slice(1);
   if (!baseName.includes("test")) {
-    throw new Error(`Refusing to run: database "${baseName}" in MONGODB_TEST_URI does not contain "test".`);
+    throw new Error(
+      `Refusing to run: database "${baseName}" in MONGODB_TEST_URI does not contain "test".`,
+    );
   }
   try {
     // Fail after 3 seconds instead of waiting for the test timeout when no server is running.
-    await mongoose.connect(TEST_DATABASE_URI, { dbName: `${baseName}-${process.pid}`, serverSelectionTimeoutMS: 3000 });
+    await mongoose.connect(TEST_DATABASE_URI, {
+      dbName: `${baseName}-${process.pid}`,
+      serverSelectionTimeoutMS: 3000,
+    });
   } catch (error) {
     // url.host never contains the user name or password.
-    throw new Error(`Cannot reach MongoDB at ${url.host}. Start mongod, or unset MONGODB_TEST_URI to skip these tests.`);
+    throw new Error(
+      `Cannot reach MongoDB at ${url.host}. Start mongod, or unset MONGODB_TEST_URI to skip these tests.`,
+    );
   }
   await Article.init();
 }
@@ -46,4 +55,8 @@ async function disconnectTestDatabase() {
   await mongoose.disconnect();
 }
 
-module.exports = { skipWithoutDatabase, connectTestDatabase, disconnectTestDatabase };
+module.exports = {
+  skipWithoutDatabase,
+  connectTestDatabase,
+  disconnectTestDatabase,
+};

@@ -29,7 +29,10 @@ function showStatus(text, isError) {
  */
 async function callApi(method, url) {
   // The API accepts writes only as application/json (a cross-site form cannot send that).
-  const response = await fetch(url, { method, headers: { "Content-Type": "application/json" } });
+  const response = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+  });
   if (response.status === 204) {
     return null;
   }
@@ -97,7 +100,9 @@ async function deleteArticle(row) {
   showStatus("Article deleted.", false);
 }
 
-newArticleButton.addEventListener("click", () => runAction(newArticleButton, createArticle));
+newArticleButton.addEventListener("click", () =>
+  runAction(newArticleButton, createArticle),
+);
 
 listElement.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");

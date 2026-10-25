@@ -1,6 +1,7 @@
 // Development seed (owned by B): replaces all articles with 500 generated ones in every workflow state.
-// Run with `npm run seed`. Reads MONGODB_URI from .env, refuses to run when NODE_ENV=production, and replaces
-// the demo collections that depend on those articles: comments, read history, article views and publish events.
+// Run with `npm run seed`. Reads MONGODB_URI from .env, refuses to run when NODE_ENV=production, and clears the
+// read history (article_reads), which points at the old articles. Each article embeds its own demo comments,
+// daily view buckets and publish events, so those are replaced together with the articles.
 // It also creates/updates five reporter accounts and one editor through A's User model, so the seeded articles
 // belong to real users. Other accounts and other users' data are not touched.
 // The documents have exactly the shape articleService gives real articles: working copy (draft) + public version.
@@ -9,9 +10,6 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const Article = require("../models/Article");
 const ArticleRead = require("../models/ArticleRead");
-const ArticleView = require("../models/ArticleView");
-const Comment = require("../models/Comment");
-const PublishEvent = require("../models/PublishEvent");
 const User = require("../models/User");
 const { ARTICLE_CATEGORIES } = require("../models/articleCategories");
 
@@ -22,6 +20,8 @@ const DAY_MS = 24 * HOUR_MS;
 const PUBLISHED_DAYS = 60;
 // How many published articles get 2-5 approvals, for D's before/after analytics.
 const MULTI_UPDATE_COUNT = 15;
+// Generic news images in public/images/seed (news-1.jpg ... news-10.jpg); each article gets one at random.
+const SEED_IMAGE_COUNT = 10;
 // Default demo passwords. `npm run seed` uses SEED_REPORTER_PASSWORD / SEED_EDITOR_PASSWORD when they are set.
 const DEFAULT_REPORTER_PASSWORD = "reporter123";
 const DEFAULT_EDITOR_PASSWORD = "editor123";
@@ -30,16 +30,45 @@ const DEFAULT_EDITOR_PASSWORD = "editor123";
 // The reporters keep the stable ids the seed used before real users existed, so any external check or bookmark that
 // knows those ids still finds a real User document. The editor gets a normal generated id.
 const REPORTERS = [
-  { id: "665000000000000000000001", name: "Noa Levi", email: "noa.levi@dailyweb.test" },
-  { id: "665000000000000000000002", name: "Daniel Cohen", email: "daniel.cohen@dailyweb.test" },
-  { id: "665000000000000000000003", name: "Yael Mizrahi", email: "yael.mizrahi@dailyweb.test" },
-  { id: "665000000000000000000004", name: "Omer Friedman", email: "omer.friedman@dailyweb.test" },
-  { id: "665000000000000000000005", name: "Maya Shapiro", email: "maya.shapiro@dailyweb.test" },
+  {
+    id: "665000000000000000000001",
+    name: "Noa Levi",
+    email: "noa.levi@dailyweb.test",
+  },
+  {
+    id: "665000000000000000000002",
+    name: "Daniel Cohen",
+    email: "daniel.cohen@dailyweb.test",
+  },
+  {
+    id: "665000000000000000000003",
+    name: "Yael Mizrahi",
+    email: "yael.mizrahi@dailyweb.test",
+  },
+  {
+    id: "665000000000000000000004",
+    name: "Omer Friedman",
+    email: "omer.friedman@dailyweb.test",
+  },
+  {
+    id: "665000000000000000000005",
+    name: "Maya Shapiro",
+    email: "maya.shapiro@dailyweb.test",
+  },
 ];
 const EDITOR = { name: "Ruth Adler", email: "editor@dailyweb.test" };
 
 // Reader comments. The seed uses them on public articles so the demo has a populated comments section.
-const COMMENTERS = ["Michal", "Avi", "Sara", "Yossi", "Tamar", "Eli", "Nina", "Omar"];
+const COMMENTERS = [
+  "Michal",
+  "Avi",
+  "Sara",
+  "Yossi",
+  "Tamar",
+  "Eli",
+  "Nina",
+  "Omar",
+];
 const COMMENT_BODIES = [
   "Thanks for the clear reporting.",
   "Does anyone know when this will reach the city center?",
@@ -65,47 +94,202 @@ const STATE_PLAN = [
 // The text is English because the title search uses MongoDB's English text index.
 const TITLE_WORDS = {
   General: {
-    subjects: ["Residents", "Volunteers", "Commuters", "Students", "Parents", "Shop owners"],
-    actions: ["welcome", "complain about", "organize", "prepare for", "vote on", "clean up"],
-    objects: ["the new bike lanes", "a neighbourhood festival", "longer library hours", "the beach before summer", "changes to school hours", "a community garden"],
+    subjects: [
+      "Residents",
+      "Volunteers",
+      "Commuters",
+      "Students",
+      "Parents",
+      "Shop owners",
+    ],
+    actions: [
+      "welcome",
+      "complain about",
+      "organize",
+      "prepare for",
+      "vote on",
+      "clean up",
+    ],
+    objects: [
+      "the new bike lanes",
+      "a neighbourhood festival",
+      "longer library hours",
+      "the beach before summer",
+      "changes to school hours",
+      "a community garden",
+    ],
   },
   Politics: {
-    subjects: ["City council", "A parliament committee", "The mayor", "Opposition leaders", "Election officials", "The finance minister"],
-    actions: ["approves", "debates", "rejects", "delays", "announces", "reviews"],
-    objects: ["a new housing plan", "the public transport budget", "a reform of local taxes", "changes to the voting system", "a plan for night buses", "new rules for street parking"],
+    subjects: [
+      "City council",
+      "A parliament committee",
+      "The mayor",
+      "Opposition leaders",
+      "Election officials",
+      "The finance minister",
+    ],
+    actions: [
+      "approves",
+      "debates",
+      "rejects",
+      "delays",
+      "announces",
+      "reviews",
+    ],
+    objects: [
+      "a new housing plan",
+      "the public transport budget",
+      "a reform of local taxes",
+      "changes to the voting system",
+      "a plan for night buses",
+      "new rules for street parking",
+    ],
   },
   World: {
-    subjects: ["European leaders", "UN envoys", "Neighbouring countries", "Aid groups", "Foreign ministers", "Trade negotiators"],
-    actions: ["agree on", "meet to discuss", "warn about", "sign", "push for", "postpone"],
-    objects: ["a ceasefire plan", "new trade rules", "climate targets", "a refugee aid package", "border talks", "a water-sharing deal"],
+    subjects: [
+      "European leaders",
+      "UN envoys",
+      "Neighbouring countries",
+      "Aid groups",
+      "Foreign ministers",
+      "Trade negotiators",
+    ],
+    actions: [
+      "agree on",
+      "meet to discuss",
+      "warn about",
+      "sign",
+      "push for",
+      "postpone",
+    ],
+    objects: [
+      "a ceasefire plan",
+      "new trade rules",
+      "climate targets",
+      "a refugee aid package",
+      "border talks",
+      "a water-sharing deal",
+    ],
   },
   Economy: {
-    subjects: ["Local businesses", "The central bank", "Tech startups", "Farmers", "Retail chains", "Port operators"],
-    actions: ["report", "expect", "prepare for", "struggle with", "benefit from", "invest in"],
-    objects: ["higher interest rates", "a record harvest", "rising fuel prices", "the harbor expansion", "new export markets", "lower consumer spending"],
+    subjects: [
+      "Local businesses",
+      "The central bank",
+      "Tech startups",
+      "Farmers",
+      "Retail chains",
+      "Port operators",
+    ],
+    actions: [
+      "report",
+      "expect",
+      "prepare for",
+      "struggle with",
+      "benefit from",
+      "invest in",
+    ],
+    objects: [
+      "higher interest rates",
+      "a record harvest",
+      "rising fuel prices",
+      "the harbor expansion",
+      "new export markets",
+      "lower consumer spending",
+    ],
   },
   Technology: {
-    subjects: ["University researchers", "A local startup", "The city", "Hospitals", "Schools", "Engineers"],
+    subjects: [
+      "University researchers",
+      "A local startup",
+      "The city",
+      "Hospitals",
+      "Schools",
+      "Engineers",
+    ],
     actions: ["test", "launch", "adopt", "build", "warn about", "upgrade"],
-    objects: ["a solar-powered bus", "AI homework tutors", "a public Wi-Fi network", "faster fibre internet", "smart traffic lights", "an app for reporting potholes"],
+    objects: [
+      "a solar-powered bus",
+      "AI homework tutors",
+      "a public Wi-Fi network",
+      "faster fibre internet",
+      "smart traffic lights",
+      "an app for reporting potholes",
+    ],
   },
   Sports: {
-    subjects: ["The national team", "The local football club", "Young swimmers", "The basketball league", "Marathon runners", "The women's volleyball team"],
+    subjects: [
+      "The national team",
+      "The local football club",
+      "Young swimmers",
+      "The basketball league",
+      "Marathon runners",
+      "The women's volleyball team",
+    ],
     actions: ["win", "lose", "prepare for", "celebrate", "qualify for", "sign"],
-    objects: ["the regional cup", "the season opener", "a new coach", "the national finals", "a record crowd", "the European championship"],
+    objects: [
+      "the regional cup",
+      "the season opener",
+      "a new coach",
+      "the national finals",
+      "a record crowd",
+      "the European championship",
+    ],
   },
   Culture: {
-    subjects: ["The film festival", "The city museum", "Local artists", "The national theatre", "Street musicians", "The public library"],
-    actions: ["opens", "celebrates", "announces", "hosts", "restores", "brings back"],
-    objects: ["a new exhibition", "its 50th season", "a free summer concert series", "a reading week for children", "the old train station", "a street food festival"],
+    subjects: [
+      "The film festival",
+      "The city museum",
+      "Local artists",
+      "The national theatre",
+      "Street musicians",
+      "The public library",
+    ],
+    actions: [
+      "opens",
+      "celebrates",
+      "announces",
+      "hosts",
+      "restores",
+      "brings back",
+    ],
+    objects: [
+      "a new exhibition",
+      "its 50th season",
+      "a free summer concert series",
+      "a reading week for children",
+      "the old train station",
+      "a street food festival",
+    ],
   },
   Health: {
-    subjects: ["Doctors", "The health ministry", "The city hospital", "Nurses", "Researchers", "Pharmacies"],
+    subjects: [
+      "Doctors",
+      "The health ministry",
+      "The city hospital",
+      "Nurses",
+      "Researchers",
+      "Pharmacies",
+    ],
     actions: ["warn about", "launch", "recommend", "open", "study", "expand"],
-    objects: ["the flu vaccine campaign", "a new emergency wing", "more walking after work", "free check-ups for seniors", "the effects of screen time", "night-time services"],
+    objects: [
+      "the flu vaccine campaign",
+      "a new emergency wing",
+      "more walking after work",
+      "free check-ups for seniors",
+      "the effects of screen time",
+      "night-time services",
+    ],
   },
 };
-const PLACES = ["Haifa", "Tel Aviv", "Jerusalem", "Beersheba", "the north", "the city center", "the old port"];
+const PLACES = [
+  "Haifa",
+  "Tel Aviv",
+  "Jerusalem",
+  "Beersheba",
+  "the north",
+  "the city center",
+  "the old port",
+];
 const SUMMARY_ENDINGS = [
   "Here is what it means for residents.",
   "Officials expect a decision within weeks.",
@@ -198,8 +382,8 @@ function shuffle(random, list) {
  * Builds the content fields of one article.
  * @param {Function} random The random generator.
  * @param {string} category One of ARTICLE_CATEGORIES.
- * @returns {Object} { title, summary, content, imageUrl, category }. imageUrl is empty: C's feed then shows its
- *   own placeholder block, and the article page shows no image.
+ * @returns {Object} { title, summary, content, imageUrl, category }. imageUrl is one of the generic images in
+ *   public/images/seed.
  * @example buildContentFields(random, "Sports")
  */
 function buildContentFields(random, category) {
@@ -208,12 +392,17 @@ function buildContentFields(random, category) {
   if (random() < 0.5) {
     title += ` in ${pick(random, PLACES)}`;
   }
-  const paragraphs = shuffle(random, [...PARAGRAPHS]).slice(0, between(random, 2, 4));
+  const paragraphs = shuffle(random, [...PARAGRAPHS]).slice(
+    0,
+    between(random, 2, 4),
+  );
   return {
     title,
     summary: `${title}. ${pick(random, SUMMARY_ENDINGS)}`,
-    content: [`${title}, The Daily Web has learned.`, ...paragraphs].join("\n\n"),
-    imageUrl: "",
+    content: [`${title}, The Daily Web has learned.`, ...paragraphs].join(
+      "\n\n",
+    ),
+    imageUrl: `/images/seed/news-${between(random, 1, SEED_IMAGE_COUNT)}.jpg`,
     category,
   };
 }
@@ -244,7 +433,16 @@ function revisedContent(random, content) {
  */
 function approvedVersion(content, authorName, publishedAt, updatedAt) {
   const { title, summary, content: text, imageUrl, category } = content;
-  return { title, summary, content: text, imageUrl, category, authorName, publishedAt, updatedAt };
+  return {
+    title,
+    summary,
+    content: text,
+    imageUrl,
+    category,
+    authorName,
+    publishedAt,
+    updatedAt,
+  };
 }
 
 /**
@@ -272,19 +470,49 @@ function buildArticle({ state, category, reporter, approvals, random, now }) {
 
   if (state === "published" || state === "revision") {
     // Articles with several approvals are older, so their updates fit before today.
-    const firstDay = approvals > 1 ? between(random, 30, PUBLISHED_DAYS) : between(random, 1, PUBLISHED_DAYS);
-    const publishedAt = new Date(now - firstDay * DAY_MS - between(random, 0, 23) * HOUR_MS);
-    const daysBetweenUpdates = Math.max(1, Math.floor((firstDay - 1) / approvals));
-    const lastApprovalAt = new Date(publishedAt.getTime() + (approvals - 1) * daysBetweenUpdates * DAY_MS);
-    const approved = approvedVersion(content, reporter.name, publishedAt, lastApprovalAt);
-    const createdAt = new Date(publishedAt.getTime() - between(random, 2, 48) * HOUR_MS);
+    const firstDay =
+      approvals > 1
+        ? between(random, 30, PUBLISHED_DAYS)
+        : between(random, 1, PUBLISHED_DAYS);
+    const publishedAt = new Date(
+      now - firstDay * DAY_MS - between(random, 0, 23) * HOUR_MS,
+    );
+    const daysBetweenUpdates = Math.max(
+      1,
+      Math.floor((firstDay - 1) / approvals),
+    );
+    const lastApprovalAt = new Date(
+      publishedAt.getTime() + (approvals - 1) * daysBetweenUpdates * DAY_MS,
+    );
+    const approved = approvedVersion(
+      content,
+      reporter.name,
+      publishedAt,
+      lastApprovalAt,
+    );
+    const createdAt = new Date(
+      publishedAt.getTime() - between(random, 2, 48) * HOUR_MS,
+    );
 
     if (state === "published") {
       // After approval the working copy equals the public version (as approve() leaves it).
-      return { ...base, status: "published", draft: content, approved, publishCount: approvals, createdAt, updatedAt: lastApprovalAt };
+      return {
+        ...base,
+        status: "published",
+        draft: content,
+        approved,
+        publishCount: approvals,
+        createdAt,
+        updatedAt: lastApprovalAt,
+      };
     }
     // A newer version was submitted after the last approval and waits for an editor.
-    const submittedAt = new Date(Math.max(lastApprovalAt.getTime() + HOUR_MS, now - between(random, 1, 72) * HOUR_MS));
+    const submittedAt = new Date(
+      Math.max(
+        lastApprovalAt.getTime() + HOUR_MS,
+        now - between(random, 1, 72) * HOUR_MS,
+      ),
+    );
     return {
       ...base,
       status: "pending",
@@ -297,16 +525,32 @@ function buildArticle({ state, category, reporter, approvals, random, now }) {
   }
 
   const createdAt = new Date(now - between(random, 1, 20) * DAY_MS);
-  const updatedAt = new Date(Math.min(now, createdAt.getTime() + between(random, 1, 72) * HOUR_MS));
+  const updatedAt = new Date(
+    Math.min(now, createdAt.getTime() + between(random, 1, 72) * HOUR_MS),
+  );
   if (state === "pending") {
     return { ...base, status: "pending", draft: content, createdAt, updatedAt };
   }
   if (state === "returned") {
-    return { ...base, status: "returned", draft: content, editorNote: pick(random, EDITOR_NOTES), createdAt, updatedAt };
+    return {
+      ...base,
+      status: "returned",
+      draft: content,
+      editorNote: pick(random, EDITOR_NOTES),
+      createdAt,
+      updatedAt,
+    };
   }
   // Drafts: half are complete, half are half written (only a title and an opening, as autosave leaves them).
   const draft =
-    random() < 0.5 ? content : { ...content, summary: "", content: content.content.split("\n\n")[0], category: random() < 0.5 ? category : "" };
+    random() < 0.5
+      ? content
+      : {
+          ...content,
+          summary: "",
+          content: content.content.split("\n\n")[0],
+          category: random() < 0.5 ? category : "",
+        };
   return { ...base, status: "draft", draft, createdAt, updatedAt };
 }
 
@@ -329,9 +573,16 @@ function defaultReporters() {
  * @returns {Object[]} ARTICLE_COUNT plain article documents.
  * @example const articles = buildSeedArticles();
  */
-function buildSeedArticles({ now = new Date(), seed = 42, reporters = defaultReporters() } = {}) {
+function buildSeedArticles({
+  now = new Date(),
+  seed = 42,
+  reporters = defaultReporters(),
+} = {}) {
   const random = createRandom(seed);
-  const states = shuffle(random, STATE_PLAN.flatMap(([state, count]) => Array(count).fill(state)));
+  const states = shuffle(
+    random,
+    STATE_PLAN.flatMap(([state, count]) => Array(count).fill(state)),
+  );
   let multiUpdatesLeft = MULTI_UPDATE_COUNT;
 
   return states.map((state, index) => {
@@ -343,7 +594,10 @@ function buildSeedArticles({ now = new Date(), seed = 42, reporters = defaultRep
     return buildArticle({
       state,
       category: ARTICLE_CATEGORIES[index % ARTICLE_CATEGORIES.length],
-      reporter: reporters[Math.floor(index / ARTICLE_CATEGORIES.length) % reporters.length],
+      reporter:
+        reporters[
+          Math.floor(index / ARTICLE_CATEGORIES.length) % reporters.length
+        ],
       approvals,
       random,
       now: now.getTime(),
@@ -355,7 +609,8 @@ function buildSeedArticles({ now = new Date(), seed = 42, reporters = defaultRep
  * Builds reader comments for the public articles.
  * @param {{ articles: Object[], now?: Date, seed?: number }} options The generated articles, the current time and
  *   the random seed.
- * @returns {Object[]} Plain Comment documents, with dates after publication and before `now`.
+ * @returns {Object[]} Plain comments with their articleId, dated after publication and before `now`.
+ *   attachSeedData() moves them into their article.
  * @example const comments = buildSeedComments({ articles });
  */
 function buildSeedComments({ articles, now = new Date(), seed = 77 } = {}) {
@@ -371,7 +626,9 @@ function buildSeedComments({ articles, now = new Date(), seed = 77 } = {}) {
     const availableMs = Math.max(HOUR_MS, now.getTime() - publishedAt);
     const count = between(random, 1, 4);
     for (let index = 0; index < count; index += 1) {
-      const createdAt = new Date(publishedAt + Math.floor(random() * availableMs));
+      const createdAt = new Date(
+        publishedAt + Math.floor(random() * availableMs),
+      );
       comments.push({
         articleId: article._id,
         deviceId: `seed-device-${between(random, 1, 40)}`,
@@ -392,7 +649,9 @@ function buildSeedComments({ articles, now = new Date(), seed = 77 } = {}) {
  * @example startOfUtcDay(new Date("2026-10-19T15:30:00Z")) // 2026-10-19T00:00:00Z
  */
 function startOfUtcDay(date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
 }
 
 /**
@@ -400,8 +659,8 @@ function startOfUtcDay(date) {
  * Views start on the publication day, decay over time, and spike on days when a new version was published.
  * @param {{ articles: Object[], now?: Date, seed?: number }} options The generated articles, the current time and
  *   the random seed.
- * @returns {{ views: Object[], publishEvents: Object[], totalViews: Map<string, number> }} Plain documents for
- *   the ArticleView and PublishEvent models, and the matching total per article id.
+ * @returns {{ views: Object[], publishEvents: Object[], totalViews: Map<string, number> }} View buckets and publish
+ *   events with their articleId (attachSeedData() moves them into their article), and the total per article id.
  * @example const { views, publishEvents, totalViews } = buildSeedAnalytics({ articles });
  */
 function buildSeedAnalytics({ articles, now = new Date(), seed = 2026 } = {}) {
@@ -421,7 +680,12 @@ function buildSeedAnalytics({ articles, now = new Date(), seed = 2026 } = {}) {
     const eventTimes = [];
     for (let index = 0; index < approvals; index += 1) {
       const ratio = approvals === 1 ? 0 : index / (approvals - 1);
-      eventTimes.push(new Date(firstPublish.getTime() + (lastPublish.getTime() - firstPublish.getTime()) * ratio));
+      eventTimes.push(
+        new Date(
+          firstPublish.getTime() +
+            (lastPublish.getTime() - firstPublish.getTime()) * ratio,
+        ),
+      );
     }
     eventTimes.forEach((publishedAt, index) => {
       publishEvents.push({
@@ -435,13 +699,22 @@ function buildSeedAnalytics({ articles, now = new Date(), seed = 2026 } = {}) {
     // One bucket per day from publication until today. Most articles have a small steady readership; an update
     // brings a spike, which is what the Impact Analytics graph is meant to show.
     const firstDay = startOfUtcDay(firstPublish);
-    const eventDays = new Set(eventTimes.map((date) => startOfUtcDay(date).getTime()));
+    const eventDays = new Set(
+      eventTimes.map((date) => startOfUtcDay(date).getTime()),
+    );
     const popularity = between(random, 40, 260);
     let total = 0;
-    for (let day = firstDay; day.getTime() <= now.getTime(); day = new Date(day.getTime() + DAY_MS)) {
+    for (
+      let day = firstDay;
+      day.getTime() <= now.getTime();
+      day = new Date(day.getTime() + DAY_MS)
+    ) {
       const ageDays = (day.getTime() - firstDay.getTime()) / DAY_MS;
       const decay = Math.exp(-ageDays / 16);
-      let count = Math.max(1, Math.round(popularity * decay * (0.6 + random() * 0.8)));
+      let count = Math.max(
+        1,
+        Math.round(popularity * decay * (0.6 + random() * 0.8)),
+      );
       if (eventDays.has(day.getTime())) {
         count += between(random, popularity, popularity * 3);
       }
@@ -458,6 +731,33 @@ function buildSeedAnalytics({ articles, now = new Date(), seed = 2026 } = {}) {
 }
 
 /**
+ * Embeds the generated comments, view buckets and publish events in their articles (Article.comments, .views,
+ * .publishEvents) and sets totalViews to the sum of the buckets. Changes the articles in place.
+ * @param {{ articles: Object[], comments: Object[], analytics: Object }} data The output of the build functions.
+ * @returns {Object[]} The same articles.
+ * @example attachSeedData({ articles, comments, analytics });
+ */
+function attachSeedData({ articles, comments, analytics }) {
+  const byArticle = new Map(
+    articles.map((article) => [String(article._id), article]),
+  );
+  for (const article of articles) {
+    Object.assign(article, { comments: [], views: [], publishEvents: [] });
+    article.totalViews = analytics.totalViews.get(String(article._id)) || 0;
+  }
+  for (const [field, items] of [
+    ["comments", comments],
+    ["views", analytics.views],
+    ["publishEvents", analytics.publishEvents],
+  ]) {
+    for (const { articleId, ...item } of items) {
+      byArticle.get(String(articleId))[field].push(item);
+    }
+  }
+  return articles;
+}
+
+/**
  * Creates a demo account or updates its name, role and password. The User pre-save hook hashes the password.
  * @param {{ id?: string, name: string, email: string, role: string, password: string }} account The account fields.
  * @returns {Promise<Object>} The saved User document.
@@ -465,7 +765,9 @@ function buildSeedAnalytics({ articles, now = new Date(), seed = 2026 } = {}) {
  */
 async function upsertSeedUser({ id, name, email, role, password }) {
   const normalizedEmail = email.toLowerCase();
-  const existing = (await User.findOne({ email: normalizedEmail })) || (id ? await User.findById(id) : null);
+  const existing =
+    (await User.findOne({ email: normalizedEmail })) ||
+    (id ? await User.findById(id) : null);
   if (existing) {
     existing.name = name;
     existing.email = normalizedEmail;
@@ -486,13 +788,25 @@ async function upsertSeedUser({ id, name, email, role, password }) {
  * @example const { reporters, editor } = await createSeedUsers();
  */
 async function createSeedUsers() {
-  const reporterPassword = process.env.SEED_REPORTER_PASSWORD || DEFAULT_REPORTER_PASSWORD;
-  const editorPassword = process.env.SEED_EDITOR_PASSWORD || DEFAULT_EDITOR_PASSWORD;
+  const reporterPassword =
+    process.env.SEED_REPORTER_PASSWORD || DEFAULT_REPORTER_PASSWORD;
+  const editorPassword =
+    process.env.SEED_EDITOR_PASSWORD || DEFAULT_EDITOR_PASSWORD;
   const reporters = [];
   for (const reporter of REPORTERS) {
-    reporters.push(await upsertSeedUser({ ...reporter, role: "reporter", password: reporterPassword }));
+    reporters.push(
+      await upsertSeedUser({
+        ...reporter,
+        role: "reporter",
+        password: reporterPassword,
+      }),
+    );
   }
-  const editor = await upsertSeedUser({ ...EDITOR, role: "editor", password: editorPassword });
+  const editor = await upsertSeedUser({
+    ...EDITOR,
+    role: "editor",
+    password: editorPassword,
+  });
   return { reporters, editor };
 }
 
@@ -503,26 +817,60 @@ async function createSeedUsers() {
  * @example await printSummary({ reporters, editor });
  */
 async function printSummary({ reporters, editor }) {
-  const [byStatus, byCategory, revisions, multiUpdates, comments, viewBuckets, publishEvents, viewedArticles] = await Promise.all([
-    Article.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
-    Article.aggregate([{ $group: { _id: "$draft.category", count: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
-    Article.countDocuments({ status: "pending", ...Article.publicFilter() }),
-    Article.countDocuments({ publishCount: { $gte: 2 } }),
-    Comment.countDocuments(),
-    ArticleView.countDocuments(),
-    PublishEvent.countDocuments(),
-    ArticleView.aggregate([{ $group: { _id: null, count: { $sum: "$count" } } }]),
-  ]);
+  const [byStatus, byCategory, revisions, multiUpdates, [embedded = {}]] =
+    await Promise.all([
+      Article.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      Article.aggregate([
+        { $group: { _id: "$draft.category", count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      Article.countDocuments({ status: "pending", ...Article.publicFilter() }),
+      Article.countDocuments({ publishCount: { $gte: 2 } }),
+      Article.aggregate([
+        {
+          $group: {
+            _id: null,
+            comments: { $sum: { $size: "$comments" } },
+            viewBuckets: { $sum: { $size: "$views" } },
+            publishEvents: { $sum: { $size: "$publishEvents" } },
+            totalViews: { $sum: "$totalViews" },
+          },
+        },
+      ]),
+    ]);
+  const {
+    comments = 0,
+    viewBuckets = 0,
+    publishEvents = 0,
+    totalViews = 0,
+  } = embedded;
   console.log(`\nSeeded ${await Article.countDocuments()} articles.`);
-  console.log("By status:", byStatus.map((row) => `${row._id} ${row.count}`).join(", "));
-  console.log(`  of the pending ones, ${revisions} are new versions of published articles`);
-  console.log("By category:", byCategory.map((row) => `${row._id || "(none yet)"} ${row.count}`).join(", "));
-  console.log(`Public (have an approved version): ${await Article.countDocuments(Article.publicFilter())}`);
+  console.log(
+    "By status:",
+    byStatus.map((row) => `${row._id} ${row.count}`).join(", "),
+  );
+  console.log(
+    `  of the pending ones, ${revisions} are new versions of published articles`,
+  );
+  console.log(
+    "By category:",
+    byCategory
+      .map((row) => `${row._id || "(none yet)"} ${row.count}`)
+      .join(", "),
+  );
+  console.log(
+    `Public (have an approved version): ${await Article.countDocuments(Article.publicFilter())}`,
+  );
   console.log(`Approved 2-5 times (publishCount >= 2): ${multiUpdates}`);
   console.log(`Comments: ${comments}`);
-  console.log(`View buckets: ${viewBuckets} (${viewedArticles[0] ? viewedArticles[0].count : 0} total views)`);
+  console.log(`View buckets: ${viewBuckets} (${totalViews} total views)`);
   console.log(`Publish events: ${publishEvents}`);
-  console.log("Demo staff accounts (password from SEED_REPORTER_PASSWORD / SEED_EDITOR_PASSWORD):");
+  console.log(
+    "Demo staff accounts (password from SEED_REPORTER_PASSWORD / SEED_EDITOR_PASSWORD):",
+  );
   for (const reporter of reporters) {
     console.log(`  reporter  ${reporter.email}  ${reporter.name}`);
   }
@@ -541,56 +889,43 @@ async function seed() {
     throw new Error("Refusing to seed: NODE_ENV is production.");
   }
   if (!process.env.MONGODB_URI) {
-    throw new Error("MONGODB_URI is not set. Add it to .env (see .env.example).");
+    throw new Error(
+      "MONGODB_URI is not set. Add it to .env (see .env.example).",
+    );
   }
-  const connectOptions = process.env.DB_NAME ? { dbName: process.env.DB_NAME } : {};
+  const connectOptions = process.env.DB_NAME
+    ? { dbName: process.env.DB_NAME }
+    : {};
   await mongoose.connect(process.env.MONGODB_URI, connectOptions);
   console.warn(
-    `WARNING: deleting ALL articles, comments, read history, article views and publish events in database ` +
-      `"${mongoose.connection.name}", then creating ${ARTICLE_COUNT} new articles.`
+    `WARNING: deleting ALL articles (with their comments and analytics) and read history in database ` +
+      `"${mongoose.connection.name}", then creating ${ARTICLE_COUNT} new articles.`,
   );
-  console.warn("Demo reporter and editor accounts are created or updated; other users are not touched.");
+  console.warn(
+    "Demo reporter and editor accounts are created or updated; other users are not touched.",
+  );
 
-  await Promise.all([
-    Article.init(),
-    ArticleRead.init(),
-    ArticleView.init(),
-    Comment.init(),
-    PublishEvent.init(),
-    User.init(),
-  ]);
+  await Promise.all([Article.init(), ArticleRead.init(), User.init()]);
 
   // Real accounts first, so every article has a valid author in the User collection.
   const { reporters, editor } = await createSeedUsers();
-  const seedReporters = reporters.map((user) => ({ id: String(user._id), name: user.name }));
+  const seedReporters = reporters.map((user) => ({
+    id: String(user._id),
+    name: user.name,
+  }));
 
   // Built before deleting, so a bug in the generator never leaves the collections empty.
   const articles = buildSeedArticles({ reporters: seedReporters });
-  const analytics = buildSeedAnalytics({ articles });
-  for (const article of articles) {
-    article.totalViews = analytics.totalViews.get(String(article._id)) || 0;
-  }
-  const comments = buildSeedComments({ articles });
+  attachSeedData({
+    articles,
+    comments: buildSeedComments({ articles }),
+    analytics: buildSeedAnalytics({ articles }),
+  });
 
-  await Promise.all([
-    Article.deleteMany({}),
-    ArticleRead.deleteMany({}),
-    ArticleView.deleteMany({}),
-    Comment.deleteMany({}),
-    PublishEvent.deleteMany({}),
-  ]);
+  await Promise.all([Article.deleteMany({}), ArticleRead.deleteMany({})]);
 
   // insertMany validates every document against the model. The dates are set by the seed, not "now".
   await Article.insertMany(articles, { timestamps: false });
-  if (comments.length > 0) {
-    await Comment.insertMany(comments, { timestamps: false });
-  }
-  if (analytics.views.length > 0) {
-    await ArticleView.insertMany(analytics.views);
-  }
-  if (analytics.publishEvents.length > 0) {
-    await PublishEvent.insertMany(analytics.publishEvents);
-  }
   await printSummary({ reporters, editor });
 }
 
@@ -607,6 +942,7 @@ module.exports = {
   buildSeedArticles,
   buildSeedAnalytics,
   buildSeedComments,
+  attachSeedData,
   createSeedUsers,
   REPORTERS,
   EDITOR,

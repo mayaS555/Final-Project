@@ -7,7 +7,11 @@ const { describe, test, before, after } = require("node:test");
 const assert = require("assert");
 const mongoose = require("mongoose");
 const User = require("../models/User");
-const { skipWithoutDatabase, connectTestDatabase, disconnectTestDatabase } = require("./testDatabase");
+const {
+  skipWithoutDatabase,
+  connectTestDatabase,
+  disconnectTestDatabase,
+} = require("./testDatabase");
 
 const USER = {
   name: "Session Reporter",
@@ -75,7 +79,9 @@ describe("session persistence", { skip: skipWithoutDatabase }, () => {
 
     const secondApp = await startFreshApp();
     try {
-      const me = await fetch(`${secondApp.baseUrl}/api/auth/me`, { headers: { Cookie: cookie } });
+      const me = await fetch(`${secondApp.baseUrl}/api/auth/me`, {
+        headers: { Cookie: cookie },
+      });
       assert.equal(me.status, 200);
       const body = await me.json();
       assert.equal(body.user.email, USER.email);

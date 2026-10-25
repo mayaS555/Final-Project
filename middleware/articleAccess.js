@@ -4,7 +4,11 @@
 // Errors go to next(err) with error.status, for A's error middleware.
 
 const Article = require("../models/Article");
-const { createHttpError, hasEditorRole, hasReporterRole } = require("../services/articleStatus");
+const {
+  createHttpError,
+  hasEditorRole,
+  hasReporterRole,
+} = require("../services/articleStatus");
 
 const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
 
@@ -34,7 +38,12 @@ function requireLoginWithRole(roles) {
       return;
     }
     if (!roles.includes(user.role)) {
-      next(createHttpError(403, `Only ${roles.map((role) => `${role}s`).join(" and ")} can use this page.`));
+      next(
+        createHttpError(
+          403,
+          `Only ${roles.map((role) => `${role}s`).join(" and ")} can use this page.`,
+        ),
+      );
       return;
     }
     next();
@@ -46,7 +55,7 @@ const requireStaffLogin = requireLoginWithRole(["reporter", "editor", "admin"]);
 const requireReporterLogin = requireLoginWithRole(["reporter", "admin"]);
 
 /**
- * Loads the article named by :id and stores it in req.article.
+ * Loads the article named by :id (without its comments and analytics) and stores it in req.article.
  * @param {Object} req The Express request; reads req.params.id.
  * @param {Object} res The Express response (not used).
  * @param {Function} next Called with no argument on success, with an error otherwise.
@@ -61,7 +70,8 @@ async function loadArticle(req, res, next) {
     return;
   }
   try {
-    const article = await Article.findById(id);
+    // The embedded comments and analytics are left out: staff pages and the article API never need them.
+    const article = await Article.findById(id, Article.EMBEDDED_ARRAYS);
     if (!article) {
       next(createHttpError(404, "Article not found."));
       return;
@@ -89,7 +99,9 @@ function requireArticleOwnerOrEditor(req, res, next) {
     return;
   }
   const isEditor = hasEditorRole(user.role);
-  const isAuthor = hasReporterRole(user.role) && String(req.article.author) === String(user._id);
+  const isAuthor =
+    hasReporterRole(user.role) &&
+    String(req.article.author) === String(user._id);
   if (!isEditor && !isAuthor) {
     next(createHttpError(403, "You can only open your own articles."));
     return;
@@ -97,4 +109,10 @@ function requireArticleOwnerOrEditor(req, res, next) {
   next();
 }
 
-module.exports = { requireStaffLogin, requireReporterLogin, loadArticle, requireArticleOwnerOrEditor, getSessionUser };
+module.exports = {
+  requireStaffLogin,
+  requireReporterLogin,
+  loadArticle,
+  requireArticleOwnerOrEditor,
+  getSessionUser,
+};

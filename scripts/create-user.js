@@ -15,7 +15,9 @@ async function createUser({ name, email, password, role = "reporter" }) {
     throw new Error("name, email, and password are required.");
   }
 
-  const connectOptions = process.env.DB_NAME ? { dbName: process.env.DB_NAME } : {};
+  const connectOptions = process.env.DB_NAME
+    ? { dbName: process.env.DB_NAME }
+    : {};
   await mongoose.connect(process.env.MONGODB_URI, connectOptions);
 
   try {
@@ -56,8 +58,12 @@ if (require.main === module) {
   const [name, email, password, role] = args;
 
   if (!name || !email || !password) {
-    console.log("Usage: node scripts/create-user.js <name> <email> <password> [role]");
-    console.log('Example: node scripts/create-user.js "Itay Z" "itayz@mail.com" "qwe123" "reporter"');
+    console.log(
+      "Usage: node scripts/create-user.js <name> <email> <password> [role]",
+    );
+    console.log(
+      'Example: node scripts/create-user.js "Itay Z" "itayz@mail.com" "qwe123" "reporter"',
+    );
     process.exit(1);
   }
 

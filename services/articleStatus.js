@@ -45,7 +45,10 @@ const REPORTER_DELETABLE_STATUSES = ["draft", "returned"];
  * @example findTransition("pending", "returned") // { from: "pending", to: "returned", by: "editor", action: "return" }
  */
 function findTransition(fromStatus, toStatus) {
-  return ARTICLE_TRANSITIONS.find((transition) => transition.from === fromStatus && transition.to === toStatus);
+  return ARTICLE_TRANSITIONS.find(
+    (transition) =>
+      transition.from === fromStatus && transition.to === toStatus,
+  );
 }
 
 /**
@@ -88,10 +91,16 @@ function createHttpError(status, message) {
 function assertTransition(fromStatus, toStatus, role) {
   const transition = findTransition(fromStatus, toStatus);
   if (!transition) {
-    throw createHttpError(409, `An article cannot go from ${fromStatus} to ${toStatus}.`);
+    throw createHttpError(
+      409,
+      `An article cannot go from ${fromStatus} to ${toStatus}.`,
+    );
   }
   if (role !== "admin" && transition.by !== role) {
-    throw createHttpError(403, `Only ${transition.by === "editor" ? "an editor" : "a reporter"} can ${transition.action} an article.`);
+    throw createHttpError(
+      403,
+      `Only ${transition.by === "editor" ? "an editor" : "a reporter"} can ${transition.action} an article.`,
+    );
   }
 }
 
@@ -108,7 +117,11 @@ function canEditWorkingCopy(status, role, isOwner) {
   if (hasEditorRole(role) && status === "pending") {
     return true;
   }
-  return hasReporterRole(role) && isOwner && REPORTER_EDITABLE_STATUSES.includes(status);
+  return (
+    hasReporterRole(role) &&
+    isOwner &&
+    REPORTER_EDITABLE_STATUSES.includes(status)
+  );
 }
 
 /**
@@ -124,7 +137,12 @@ function canDelete(article, role, isOwner) {
     return true;
   }
   const neverPublished = !(article.approved && article.approved.publishedAt);
-  return role === "reporter" && isOwner && neverPublished && REPORTER_DELETABLE_STATUSES.includes(article.status);
+  return (
+    role === "reporter" &&
+    isOwner &&
+    neverPublished &&
+    REPORTER_DELETABLE_STATUSES.includes(article.status)
+  );
 }
 
 module.exports = {

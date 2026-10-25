@@ -9,9 +9,6 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const mongoose = require("mongoose");
 const Article = require("../models/Article");
-const ArticleView = require("../models/ArticleView");
-const Comment = require("../models/Comment");
-const PublishEvent = require("../models/PublishEvent");
 const User = require("../models/User");
 const { ARTICLE_CATEGORIES } = require("../models/articleCategories");
 const articleService = require("../services/articleService");
@@ -20,12 +17,17 @@ const {
   buildSeedArticles,
   buildSeedAnalytics,
   buildSeedComments,
+  attachSeedData,
   createSeedUsers,
   REPORTERS,
   ARTICLE_COUNT,
   MULTI_UPDATE_COUNT,
 } = require("../scripts/seed");
-const { skipWithoutDatabase, connectTestDatabase, disconnectTestDatabase } = require("./testDatabase");
+const {
+  skipWithoutDatabase,
+  connectTestDatabase,
+  disconnectTestDatabase,
+} = require("./testDatabase");
 
 const NOW = new Date("2026-10-19T12:00:00Z");
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -40,7 +42,9 @@ const comments = buildSeedComments({ articles, now: NOW });
  * @example kindOf(article)
  */
 function kindOf(article) {
-  return article.status === "pending" && article.approved ? "revision" : article.status;
+  return article.status === "pending" && article.approved
+    ? "revision"
+    : article.status;
 }
 
 /**
@@ -61,7 +65,13 @@ function countBy(items, keyOf) {
 describe("seed documents (no MongoDB needed)", () => {
   test(`builds ${ARTICLE_COUNT} articles with the planned mix of states`, () => {
     assert.equal(articles.length, 500);
-    assert.deepEqual(countBy(articles, kindOf), { published: 275, pending: 75, revision: 50, draft: 50, returned: 50 });
+    assert.deepEqual(countBy(articles, kindOf), {
+      published: 275,
+      pending: 75,
+      revision: 50,
+      draft: 50,
+      returned: 50,
+    });
   });
 
   test("every document passes the model's validation", async () => {
@@ -73,17 +83,37 @@ describe("seed documents (no MongoDB needed)", () => {
   test("every category has articles of every reporter and of every state", () => {
     for (const category of ARTICLE_CATEGORIES) {
       const inCategory = articles.filter(
-        (article) => article.draft.category === category || (article.approved && article.approved.category === category)
+        (article) =>
+          article.draft.category === category ||
+          (article.approved && article.approved.category === category),
       );
-      assert.deepEqual(new Set(inCategory.map((article) => article.authorName)).size, REPORTERS.length, category);
-      assert.ok(inCategory.some((article) => article.status === "published"), `${category} published`);
+      assert.deepEqual(
+        new Set(inCategory.map((article) => article.authorName)).size,
+        REPORTERS.length,
+        category,
+      );
+      assert.ok(
+        inCategory.some((article) => article.status === "published"),
+        `${category} published`,
+      );
     }
-    assert.deepEqual(Object.keys(countBy(articles, (article) => article.authorName)).sort(), REPORTERS.map((r) => r.name).sort());
+    assert.deepEqual(
+      Object.keys(countBy(articles, (article) => article.authorName)).sort(),
+      REPORTERS.map((r) => r.name).sort(),
+    );
   });
 
   test("a published article looks like approve() leaves it: working copy equals the public version", () => {
-    for (const article of articles.filter((item) => item.status === "published")) {
-      for (const field of ["title", "summary", "content", "imageUrl", "category"]) {
+    for (const article of articles.filter(
+      (item) => item.status === "published",
+    )) {
+      for (const field of [
+        "title",
+        "summary",
+        "content",
+        "imageUrl",
+        "category",
+      ]) {
         assert.equal(article.draft[field], article.approved[field], field);
       }
       assert.equal(article.approved.authorName, article.authorName);
@@ -92,14 +122,20 @@ describe("seed documents (no MongoDB needed)", () => {
   });
 
   test("a pending revision keeps the old public version and has a newer working copy", () => {
-    for (const article of articles.filter((item) => kindOf(item) === "revision")) {
+    for (const article of articles.filter(
+      (item) => kindOf(item) === "revision",
+    )) {
       assert.notEqual(article.draft.title, article.approved.title);
       assert.ok(article.updatedAt > article.approved.updatedAt);
     }
   });
 
   test("never-published articles have no public version; returned ones have an editor note", () => {
-    for (const article of articles.filter((item) => ["draft", "returned"].includes(item.status) || kindOf(item) === "pending")) {
+    for (const article of articles.filter(
+      (item) =>
+        ["draft", "returned"].includes(item.status) ||
+        kindOf(item) === "pending",
+    )) {
       assert.equal(article.approved, undefined);
       assert.equal(article.publishCount, 0);
       assert.equal(Boolean(article.editorNote), article.status === "returned");
@@ -108,11 +144,19 @@ describe("seed documents (no MongoDB needed)", () => {
 
   test("published dates are spread over the last 60 days, and nothing is in the future", () => {
     const published = articles.filter((article) => article.approved);
-    const days = published.map((article) => (NOW - article.approved.publishedAt) / DAY_MS);
+    const days = published.map(
+      (article) => (NOW - article.approved.publishedAt) / DAY_MS,
+    );
     assert.ok(Math.min(...days) >= 1 && Math.max(...days) <= 61);
-    assert.ok(Math.max(...days) - Math.min(...days) > 50, "spread over most of the 60 days");
+    assert.ok(
+      Math.max(...days) - Math.min(...days) > 50,
+      "spread over most of the 60 days",
+    );
     for (const article of articles) {
-      assert.ok(article.createdAt <= article.updatedAt && article.updatedAt <= NOW, String(article._id));
+      assert.ok(
+        article.createdAt <= article.updatedAt && article.updatedAt <= NOW,
+        String(article._id),
+      );
     }
   });
 
@@ -124,14 +168,29 @@ describe("seed documents (no MongoDB needed)", () => {
       assert.ok(article.publishCount <= 5);
       assert.equal(article.status, "published");
       assert.ok(article.approved.updatedAt > article.approved.publishedAt);
-      assert.equal(article.updatedAt.getTime(), article.approved.updatedAt.getTime());
+      assert.equal(
+        article.updatedAt.getTime(),
+        article.approved.updatedAt.getTime(),
+      );
     }
   });
 
-  test("no image addresses (C's placeholder), and the same seed gives the same articles", () => {
-    assert.ok(articles.every((article) => article.totalViews === 0 && article.draft.imageUrl === ""));
+  test("every article has one of the seed images, and the same seed gives the same articles", () => {
+    assert.ok(
+      articles.every(
+        (article) =>
+          article.totalViews === 0 &&
+          /^\/images\/seed\/news-([1-9]|10)\.jpg$/.test(article.draft.imageUrl),
+      ),
+    );
+    assert.ok(
+      new Set(articles.map((article) => article.draft.imageUrl)).size === 10,
+    );
     const again = buildSeedArticles({ now: NOW });
-    assert.deepEqual(again.map((article) => article.draft.title), articles.map((article) => article.draft.title));
+    assert.deepEqual(
+      again.map((article) => article.draft.title),
+      articles.map((article) => article.draft.title),
+    );
   });
 
   test("articles can be assigned to the real ids of the users the seed creates", () => {
@@ -140,16 +199,28 @@ describe("seed documents (no MongoDB needed)", () => {
       { id: "665000000000000000000102", name: "Second Reporter" },
     ];
     const generated = buildSeedArticles({ now: NOW, reporters });
-    assert.ok(generated.every((article) => reporters.some((reporter) => reporter.id === String(article.author))));
-    assert.deepEqual(new Set(generated.map((article) => article.authorName)).size, reporters.length);
+    assert.ok(
+      generated.every((article) =>
+        reporters.some((reporter) => reporter.id === String(article.author)),
+      ),
+    );
+    assert.deepEqual(
+      new Set(generated.map((article) => article.authorName)).size,
+      reporters.length,
+    );
   });
 
   test("comments are seeded on public articles, after publication and before now", () => {
-    const articlesById = new Map(articles.map((article) => [String(article._id), article]));
+    const articlesById = new Map(
+      articles.map((article) => [String(article._id), article]),
+    );
     assert.ok(comments.length > 0);
     for (const comment of comments) {
       const article = articlesById.get(String(comment.articleId));
-      assert.ok(article && article.approved, "comment belongs to a public article");
+      assert.ok(
+        article && article.approved,
+        "comment belongs to a public article",
+      );
       assert.ok(comment.displayName && comment.body && comment.deviceId);
       assert.ok(comment.createdAt >= article.approved.publishedAt);
       assert.ok(comment.createdAt <= NOW);
@@ -157,7 +228,11 @@ describe("seed documents (no MongoDB needed)", () => {
   });
 
   test("view data covers every public article and totalViews is the sum of its buckets", () => {
-    const publicIds = new Set(articles.filter((article) => article.approved).map((article) => String(article._id)));
+    const publicIds = new Set(
+      articles
+        .filter((article) => article.approved)
+        .map((article) => String(article._id)),
+    );
     const viewsByArticle = new Map();
     for (const view of analytics.views) {
       const id = String(view.articleId);
@@ -171,7 +246,11 @@ describe("seed documents (no MongoDB needed)", () => {
       assert.equal(analytics.totalViews.get(id), viewsByArticle.get(id));
       assert.ok(analytics.totalViews.get(id) > 0);
     }
-    assert.ok(!analytics.totalViews.has(String(articles.find((article) => !article.approved)._id)));
+    assert.ok(
+      !analytics.totalViews.has(
+        String(articles.find((article) => !article.approved)._id),
+      ),
+    );
   });
 
   test("every approval has a publish marker between the first and last approval", () => {
@@ -187,19 +266,44 @@ describe("seed documents (no MongoDB needed)", () => {
       const events = eventsByArticle.get(String(article._id));
       assert.equal(events.length, article.publishCount);
       assert.equal(events[0].isFirstPublish, true);
-      assert.equal(events[0].publishedAt.getTime(), article.approved.publishedAt.getTime());
-      assert.equal(events.at(-1).publishedAt.getTime(), article.approved.updatedAt.getTime());
-      assert.deepEqual(events.map((event) => event.publishCount), article.publishCount === 1 ? [1] : [1, 2, 3, 4, 5].slice(0, article.publishCount));
-      assert.ok(events.every((event) => event.publishedAt >= article.approved.publishedAt && event.publishedAt <= article.approved.updatedAt));
+      assert.equal(
+        events[0].publishedAt.getTime(),
+        article.approved.publishedAt.getTime(),
+      );
+      assert.equal(
+        events.at(-1).publishedAt.getTime(),
+        article.approved.updatedAt.getTime(),
+      );
+      assert.deepEqual(
+        events.map((event) => event.publishCount),
+        article.publishCount === 1
+          ? [1]
+          : [1, 2, 3, 4, 5].slice(0, article.publishCount),
+      );
+      assert.ok(
+        events.every(
+          (event) =>
+            event.publishedAt >= article.approved.publishedAt &&
+            event.publishedAt <= article.approved.updatedAt,
+        ),
+      );
     }
   });
 
   test("refuses to run with NODE_ENV=production, before connecting", () => {
-    const result = spawnSync(process.execPath, [path.join(__dirname, "..", "scripts", "seed.js")], {
-      env: { ...process.env, NODE_ENV: "production", MONGODB_URI: "mongodb://127.0.0.1:1/never-used" },
-      encoding: "utf8",
-      timeout: 20000,
-    });
+    const result = spawnSync(
+      process.execPath,
+      [path.join(__dirname, "..", "scripts", "seed.js")],
+      {
+        env: {
+          ...process.env,
+          NODE_ENV: "production",
+          MONGODB_URI: "mongodb://127.0.0.1:1/never-used",
+        },
+        encoding: "utf8",
+        timeout: 20000,
+      },
+    );
     assert.equal(result.status, 1);
     assert.match(result.stderr, /Refusing to seed: NODE_ENV is production/);
   });
@@ -216,17 +320,19 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
     publicArticleService.useArticleModel(Article);
     await User.init();
     seededUsers = await createSeedUsers();
-    const reporters = seededUsers.reporters.map((user) => ({ id: String(user._id), name: user.name }));
+    const reporters = seededUsers.reporters.map((user) => ({
+      id: String(user._id),
+      name: user.name,
+    }));
     seededArticles = buildSeedArticles({ reporters });
     seededAnalytics = buildSeedAnalytics({ articles: seededArticles });
-    for (const article of seededArticles) {
-      article.totalViews = seededAnalytics.totalViews.get(String(article._id)) || 0;
-    }
     seededComments = buildSeedComments({ articles: seededArticles });
+    attachSeedData({
+      articles: seededArticles,
+      comments: seededComments,
+      analytics: seededAnalytics,
+    });
     await Article.insertMany(seededArticles, { timestamps: false });
-    await Comment.insertMany(seededComments, { timestamps: false });
-    await ArticleView.insertMany(seededAnalytics.views);
-    await PublishEvent.insertMany(seededAnalytics.publishEvents);
   });
 
   after(disconnectTestDatabase);
@@ -241,17 +347,29 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
   test("demo users are real accounts with hashed passwords and own the seeded articles", async () => {
     assert.equal(seededUsers.reporters.length, 5);
     assert.equal(seededUsers.editor.role, "editor");
-    assert.deepEqual(seededUsers.reporters.map((user) => String(user._id)).sort(), REPORTERS.map((reporter) => reporter.id).sort());
-    const reporterPassword = process.env.SEED_REPORTER_PASSWORD || "reporter123";
+    assert.deepEqual(
+      seededUsers.reporters.map((user) => String(user._id)).sort(),
+      REPORTERS.map((reporter) => reporter.id).sort(),
+    );
+    const reporterPassword =
+      process.env.SEED_REPORTER_PASSWORD || "reporter123";
     const editorPassword = process.env.SEED_EDITOR_PASSWORD || "editor123";
     for (const user of seededUsers.reporters) {
       assert.match(user.password, /^\$2[aby]\$10\$/);
       assert.equal(await user.comparePassword(reporterPassword), true);
     }
     assert.match(seededUsers.editor.password, /^\$2[aby]\$10\$/);
-    assert.equal(await seededUsers.editor.comparePassword(editorPassword), true);
+    assert.equal(
+      await seededUsers.editor.comparePassword(editorPassword),
+      true,
+    );
 
-    const usersById = new Map([...seededUsers.reporters, seededUsers.editor].map((user) => [String(user._id), user]));
+    const usersById = new Map(
+      [...seededUsers.reporters, seededUsers.editor].map((user) => [
+        String(user._id),
+        user,
+      ]),
+    );
     for (const article of seededArticles) {
       const author = usersById.get(String(article.author));
       assert.ok(author, "the article author is a real user");
@@ -259,23 +377,34 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
     }
   });
 
-  test("comments, views and publish events are stored and point at public articles", async () => {
-    const publicIds = new Set(seededArticles.filter((article) => article.approved).map((article) => String(article._id)));
-    const [comments, views, events] = await Promise.all([Comment.find().lean(), ArticleView.find().lean(), PublishEvent.find().lean()]);
-    assert.equal(comments.length, seededComments.length);
-    assert.equal(views.length, seededAnalytics.views.length);
-    assert.equal(events.length, seededAnalytics.publishEvents.length);
-    assert.ok(comments.every((comment) => publicIds.has(String(comment.articleId))));
-    assert.ok(views.every((view) => publicIds.has(String(view.articleId)) && view.count >= 1));
-    assert.ok(events.every((event) => publicIds.has(String(event.articleId))));
-
-    const totals = new Map();
-    for (const view of views) {
-      const id = String(view.articleId);
-      totals.set(id, (totals.get(id) || 0) + view.count);
-    }
-    for (const article of seededArticles.filter((item) => item.approved)) {
-      assert.equal(totals.get(String(article._id)), article.totalViews);
+  test("comments, views and publish events are stored inside public articles", async () => {
+    const stored = await Article.find().select("+comments.deviceId").lean();
+    const count = (field) =>
+      stored.reduce((sum, article) => sum + article[field].length, 0);
+    assert.equal(count("comments"), seededComments.length);
+    assert.equal(count("views"), seededAnalytics.views.length);
+    assert.equal(count("publishEvents"), seededAnalytics.publishEvents.length);
+    for (const article of stored) {
+      if (!article.approved) {
+        assert.equal(
+          article.comments.length +
+            article.views.length +
+            article.publishEvents.length,
+          0,
+        );
+        continue;
+      }
+      assert.ok(
+        article.comments.every(
+          (comment) => comment._id && comment.deviceId && comment.createdAt,
+        ),
+      );
+      assert.ok(article.views.every((view) => view.count >= 1));
+      assert.equal(
+        article.views.reduce((sum, view) => sum + view.count, 0),
+        article.totalViews,
+      );
+      assert.equal(article.publishEvents.length, article.publishCount);
     }
     const storedUsers = await User.countDocuments();
     assert.equal(storedUsers, 6);
@@ -283,15 +412,38 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
 
   test("a seeded published article has the same fields as one published by the real service", async () => {
     mock.method(console, "log", () => {});
-    const reporter = { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Real" };
-    const editor = { _id: new mongoose.Types.ObjectId(), role: "editor", name: "Ed" };
+    const reporter = {
+      _id: new mongoose.Types.ObjectId(),
+      role: "reporter",
+      name: "Real",
+    };
+    const editor = {
+      _id: new mongoose.Types.ObjectId(),
+      role: "editor",
+      name: "Ed",
+    };
     let real = await articleService.createDraft(reporter);
-    real = await articleService.saveWorkingCopy(real, reporter, { title: "T", summary: "S", content: "C", category: "Sports", imageUrl: "" });
-    real = (await articleService.approve(await articleService.submit(real, reporter), editor)).article;
+    real = await articleService.saveWorkingCopy(real, reporter, {
+      title: "T",
+      summary: "S",
+      content: "C",
+      category: "Sports",
+      imageUrl: "",
+    });
+    real = (
+      await articleService.approve(
+        await articleService.submit(real, reporter),
+        editor,
+      )
+    ).article;
     mock.restoreAll();
 
     const realDocument = await Article.findById(real._id).lean();
-    const seeded = await Article.findOne({ status: "published", publishCount: 1, _id: { $ne: real._id } }).lean();
+    const seeded = await Article.findOne({
+      status: "published",
+      publishCount: 1,
+      _id: { $ne: real._id },
+    }).lean();
     /**
      * The field names of an article, at the top level and inside draft and approved.
      * @param {Object} document A lean article.
@@ -313,18 +465,29 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
     const feed = await publicArticleService.getPublishedArticles({ page: 1 });
     assert.equal(feed.items.length, 20);
     assert.equal(feed.hasMore, true);
-    assert.deepEqual((await publicArticleService.getPublishedCategories()).sort(), [...ARTICLE_CATEGORIES].sort());
+    assert.deepEqual(
+      (await publicArticleService.getPublishedCategories()).sort(),
+      [...ARTICLE_CATEGORIES].sort(),
+    );
   });
 
   test("title search works on the seeded titles", async () => {
-    const results = await publicArticleService.getPublishedArticles({ page: 1, q: "harbor" });
+    const results = await publicArticleService.getPublishedArticles({
+      page: 1,
+      q: "harbor",
+    });
     assert.ok(results.items.length > 0);
     assert.ok(results.items.every((item) => /harbor/i.test(item.title)));
   });
 
   test("a pending revision is public with its old title only", async () => {
-    const revision = await Article.findOne({ status: "pending", ...Article.publicFilter() }).lean();
-    const page = await publicArticleService.getPublishedArticleById(String(revision._id));
+    const revision = await Article.findOne({
+      status: "pending",
+      ...Article.publicFilter(),
+    }).lean();
+    const page = await publicArticleService.getPublishedArticleById(
+      String(revision._id),
+    );
     assert.equal(page.title, revision.approved.title);
     assert.notEqual(page.title, revision.draft.title);
   });

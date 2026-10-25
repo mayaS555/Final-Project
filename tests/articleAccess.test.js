@@ -5,13 +5,29 @@ const { describe, test, afterEach, mock } = require("node:test");
 const assert = require("assert");
 const mongoose = require("mongoose");
 const Article = require("../models/Article");
-const { loadArticle, requireArticleOwnerOrEditor, getSessionUser } = require("../middleware/articleAccess");
+const {
+  loadArticle,
+  requireArticleOwnerOrEditor,
+  getSessionUser,
+} = require("../middleware/articleAccess");
 
 const authorId = new mongoose.Types.ObjectId();
 const reporter = { _id: authorId, role: "reporter", name: "Noa" };
-const otherReporter = { _id: new mongoose.Types.ObjectId(), role: "reporter", name: "Dan" };
-const editor = { _id: new mongoose.Types.ObjectId(), role: "editor", name: "Ed" };
-const admin = { _id: new mongoose.Types.ObjectId(), role: "admin", name: "Ada" };
+const otherReporter = {
+  _id: new mongoose.Types.ObjectId(),
+  role: "reporter",
+  name: "Dan",
+};
+const editor = {
+  _id: new mongoose.Types.ObjectId(),
+  role: "editor",
+  name: "Ed",
+};
+const admin = {
+  _id: new mongoose.Types.ObjectId(),
+  role: "admin",
+  name: "Ada",
+};
 
 /**
  * Runs one middleware and returns what it passed to next.
@@ -33,7 +49,13 @@ describe("loadArticle", () => {
 
   test("rejects ids that are not 24 hex characters with 400, without a query", async () => {
     const findById = mock.method(Article, "findById", async () => null);
-    for (const id of ["abc", "12345678901", "zzzzzzzzzzzzzzzzzzzzzzzz", "a".repeat(25), undefined]) {
+    for (const id of [
+      "abc",
+      "12345678901",
+      "zzzzzzzzzzzzzzzzzzzzzzzz",
+      "a".repeat(25),
+      undefined,
+    ]) {
       const error = await runMiddleware(loadArticle, { params: { id } });
       assert.equal(error.status, 400, String(id));
     }
@@ -42,7 +64,9 @@ describe("loadArticle", () => {
 
   test("answers 404 for a missing article", async () => {
     mock.method(Article, "findById", async () => null);
-    const error = await runMiddleware(loadArticle, { params: { id: String(new mongoose.Types.ObjectId()) } });
+    const error = await runMiddleware(loadArticle, {
+      params: { id: String(new mongoose.Types.ObjectId()) },
+    });
     assert.equal(error.status, 404);
   });
 
@@ -59,7 +83,9 @@ describe("loadArticle", () => {
     mock.method(Article, "findById", async () => {
       throw databaseError;
     });
-    const error = await runMiddleware(loadArticle, { params: { id: String(new mongoose.Types.ObjectId()) } });
+    const error = await runMiddleware(loadArticle, {
+      params: { id: String(new mongoose.Types.ObjectId()) },
+    });
     assert.equal(error, databaseError);
   });
 });
@@ -68,13 +94,34 @@ describe("requireArticleOwnerOrEditor", () => {
   const article = new Article({ author: authorId, authorName: "Noa" });
 
   test("lets the author, any editor and any admin continue", async () => {
-    assert.equal(await runMiddleware(requireArticleOwnerOrEditor, { article, session: { user: reporter } }), undefined);
-    assert.equal(await runMiddleware(requireArticleOwnerOrEditor, { article, session: { user: editor } }), undefined);
-    assert.equal(await runMiddleware(requireArticleOwnerOrEditor, { article, session: { user: admin } }), undefined);
+    assert.equal(
+      await runMiddleware(requireArticleOwnerOrEditor, {
+        article,
+        session: { user: reporter },
+      }),
+      undefined,
+    );
+    assert.equal(
+      await runMiddleware(requireArticleOwnerOrEditor, {
+        article,
+        session: { user: editor },
+      }),
+      undefined,
+    );
+    assert.equal(
+      await runMiddleware(requireArticleOwnerOrEditor, {
+        article,
+        session: { user: admin },
+      }),
+      undefined,
+    );
   });
 
   test("refuses another reporter with 403", async () => {
-    const error = await runMiddleware(requireArticleOwnerOrEditor, { article, session: { user: otherReporter } });
+    const error = await runMiddleware(requireArticleOwnerOrEditor, {
+      article,
+      session: { user: otherReporter },
+    });
     assert.equal(error.status, 403);
   });
 
@@ -87,8 +134,19 @@ describe("requireArticleOwnerOrEditor", () => {
   });
 
   test("answers 401 when nobody is logged in", async () => {
-    assert.equal((await runMiddleware(requireArticleOwnerOrEditor, { article })).status, 401);
-    assert.equal((await runMiddleware(requireArticleOwnerOrEditor, { article, session: {} })).status, 401);
+    assert.equal(
+      (await runMiddleware(requireArticleOwnerOrEditor, { article })).status,
+      401,
+    );
+    assert.equal(
+      (
+        await runMiddleware(requireArticleOwnerOrEditor, {
+          article,
+          session: {},
+        })
+      ).status,
+      401,
+    );
   });
 
   test("ignores user data sent by the browser", async () => {
@@ -99,7 +157,10 @@ describe("requireArticleOwnerOrEditor", () => {
       query: { userId: String(authorId) },
       headers: { "x-user-id": String(authorId) },
     };
-    assert.equal((await runMiddleware(requireArticleOwnerOrEditor, req)).status, 403);
+    assert.equal(
+      (await runMiddleware(requireArticleOwnerOrEditor, req)).status,
+      403,
+    );
   });
 });
 

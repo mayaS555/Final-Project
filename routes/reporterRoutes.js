@@ -14,7 +14,12 @@ const { loadWeather } = require("../middleware/weatherWidget");
 const router = express.Router();
 
 // The dashboard is the reporter's own list; an admin sees every article.
-router.get("/reporter", requireReporterLogin, loadWeather, reporterController.renderDashboard);
+router.get(
+  "/reporter",
+  requireReporterLogin,
+  loadWeather,
+  reporterController.renderDashboard,
+);
 // The edit page is for the article's author, an editor (while it is pending) or an admin.
 router.get(
   "/reporter/articles/:id/edit",
@@ -22,7 +27,7 @@ router.get(
   loadArticle,
   requireArticleOwnerOrEditor,
   loadWeather,
-  reporterController.renderEditPage
+  reporterController.renderEditPage,
 );
 
 module.exports = router;

@@ -10,23 +10,34 @@ async function login(req, res) {
   try {
     const { email, password, returnTo } = req.body;
 
-    const isHtmlForm = req.headers["content-type"]?.includes("application/x-www-form-urlencoded");
+    const isHtmlForm = req.headers["content-type"]?.includes(
+      "application/x-www-form-urlencoded",
+    );
 
     if (!email || !password) {
       logger.logAuthEvent("login_failed_missing_credentials", { ip: req.ip });
       if (isHtmlForm) {
-        const query = returnTo ? `?error=missing&returnTo=${encodeURIComponent(returnTo)}` : "?error=missing";
+        const query = returnTo
+          ? `?error=missing&returnTo=${encodeURIComponent(returnTo)}`
+          : "?error=missing";
         return res.redirect(`/login.html${query}`);
       }
-      return res.status(400).json({ error: "Email and password are required." });
+      return res
+        .status(400)
+        .json({ error: "Email and password are required." });
     }
 
     const cleanEmail = email.toLowerCase().trim();
     const user = await User.findOne({ email: cleanEmail });
     if (!user) {
-      logger.logAuthEvent("login_failed_user_not_found", { email: cleanEmail, ip: req.ip });
+      logger.logAuthEvent("login_failed_user_not_found", {
+        email: cleanEmail,
+        ip: req.ip,
+      });
       if (isHtmlForm) {
-        const query = returnTo ? `?error=invalid&returnTo=${encodeURIComponent(returnTo)}` : "?error=invalid";
+        const query = returnTo
+          ? `?error=invalid&returnTo=${encodeURIComponent(returnTo)}`
+          : "?error=invalid";
         return res.redirect(`/login.html${query}`);
       }
       return res.status(401).json({ error: "Invalid email or password." });
@@ -34,9 +45,14 @@ async function login(req, res) {
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      logger.logAuthEvent("login_failed_bad_password", { email: cleanEmail, ip: req.ip });
+      logger.logAuthEvent("login_failed_bad_password", {
+        email: cleanEmail,
+        ip: req.ip,
+      });
       if (isHtmlForm) {
-        const query = returnTo ? `?error=invalid&returnTo=${encodeURIComponent(returnTo)}` : "?error=invalid";
+        const query = returnTo
+          ? `?error=invalid&returnTo=${encodeURIComponent(returnTo)}`
+          : "?error=invalid";
         return res.redirect(`/login.html${query}`);
       }
       return res.status(401).json({ error: "Invalid email or password." });
@@ -70,10 +86,14 @@ async function login(req, res) {
     });
   } catch (error) {
     logger.error("Login error:", error);
-    if (req.headers["content-type"]?.includes("application/x-www-form-urlencoded")) {
+    if (
+      req.headers["content-type"]?.includes("application/x-www-form-urlencoded")
+    ) {
       return res.redirect("/login.html?error=server");
     }
-    return res.status(500).json({ error: "An unexpected error occurred during login." });
+    return res
+      .status(500)
+      .json({ error: "An unexpected error occurred during login." });
   }
 }
 

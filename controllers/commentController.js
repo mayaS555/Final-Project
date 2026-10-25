@@ -11,7 +11,8 @@ const MAX_NAME_LENGTH = 40;
 const MAX_BODY_LENGTH = 1000;
 const NAME_CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
 // Tab, newline and carriage return are allowed in a comment body.
-const BODY_CONTROL_CHARACTERS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
+const BODY_CONTROL_CHARACTERS =
+  /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
 
 function sendError(res, status, message) {
   res.status(status).json({ error: message });
@@ -52,7 +53,9 @@ function parseCommentBody(value) {
     return { error: "Please write a comment." };
   }
   if (body.length > MAX_BODY_LENGTH) {
-    return { error: `The comment must be at most ${MAX_BODY_LENGTH} characters.` };
+    return {
+      error: `The comment must be at most ${MAX_BODY_LENGTH} characters.`,
+    };
   }
   if (BODY_CONTROL_CHARACTERS.test(body)) {
     return { error: "The comment contains invalid characters." };
@@ -73,7 +76,9 @@ function readJsonObject(req) {
 // The cursor is optional. A repeated or structured "before" is rejected like in the feed.
 function parseBeforeParameter(query) {
   if (Object.keys(query).some((key) => key.startsWith("before["))) {
-    return { error: "before must be a single value, not a structured parameter." };
+    return {
+      error: "before must be a single value, not a structured parameter.",
+    };
   }
   if (query.before === undefined || query.before === "") {
     return { cursor: null };
@@ -197,7 +202,11 @@ async function updateComment(req, res) {
       return;
     }
     // The ownership check is repeated inside the update query.
-    const updated = await commentService.updateCommentBody(req.params.id, req.deviceId, body.value);
+    const updated = await commentService.updateCommentBody(
+      req.params.id,
+      req.deviceId,
+      body.value,
+    );
     if (!updated) {
       sendNotFound(res);
       return;
@@ -214,7 +223,10 @@ async function deleteComment(req, res) {
     if (!comment) {
       return;
     }
-    const deleted = await commentService.deleteComment(req.params.id, req.deviceId);
+    const deleted = await commentService.deleteComment(
+      req.params.id,
+      req.deviceId,
+    );
     if (!deleted) {
       sendNotFound(res);
       return;
