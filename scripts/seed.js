@@ -1,7 +1,6 @@
 // Development seed (owned by B): replaces all articles with 500 generated ones in every workflow state.
-// Run with `npm run seed`. Reads MONGODB_URI from .env, refuses to run when NODE_ENV=production, and clears the
-// read history (article_reads), which points at the old articles. Each article embeds its own demo comments,
-// daily view buckets and publish events, so those are replaced together with the articles.
+// Run with `npm run seed`. Reads MONGODB_URI from .env, refuses to run when NODE_ENV=production, and replaces
+// the demo collections that depend on those articles: comments, read history, article views and publish events.
 // It also creates/updates five reporter accounts and one editor through A's User model, so the seeded articles
 // belong to real users. Other accounts and other users' data are not touched.
 // The documents have exactly the shape articleService gives real articles: working copy (draft) + public version.
@@ -10,6 +9,9 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const Article = require("../models/Article");
 const ArticleRead = require("../models/ArticleRead");
+const ArticleView = require("../models/ArticleView");
+const Comment = require("../models/Comment");
+const PublishEvent = require("../models/PublishEvent");
 const User = require("../models/User");
 const { ARTICLE_CATEGORIES } = require("../models/articleCategories");
 
@@ -609,8 +611,7 @@ function buildSeedArticles({
  * Builds reader comments for the public articles.
  * @param {{ articles: Object[], now?: Date, seed?: number }} options The generated articles, the current time and
  *   the random seed.
- * @returns {Object[]} Plain comments with their articleId, dated after publication and before `now`.
- *   attachSeedData() moves them into their article.
+ * @returns {Object[]} Plain Comment documents, with dates after publication and before `now`.
  * @example const comments = buildSeedComments({ articles });
  */
 function buildSeedComments({ articles, now = new Date(), seed = 77 } = {}) {
@@ -659,8 +660,8 @@ function startOfUtcDay(date) {
  * Views start on the publication day, decay over time, and spike on days when a new version was published.
  * @param {{ articles: Object[], now?: Date, seed?: number }} options The generated articles, the current time and
  *   the random seed.
- * @returns {{ views: Object[], publishEvents: Object[], totalViews: Map<string, number> }} View buckets and publish
- *   events with their articleId (attachSeedData() moves them into their article), and the total per article id.
+ * @returns {{ views: Object[], publishEvents: Object[], totalViews: Map<string, number> }} Plain documents for
+ *   the ArticleView and PublishEvent models, and the matching total per article id.
  * @example const { views, publishEvents, totalViews } = buildSeedAnalytics({ articles });
  */
 function buildSeedAnalytics({ articles, now = new Date(), seed = 2026 } = {}) {
@@ -731,33 +732,6 @@ function buildSeedAnalytics({ articles, now = new Date(), seed = 2026 } = {}) {
 }
 
 /**
- * Embeds the generated comments, view buckets and publish events in their articles (Article.comments, .views,
- * .publishEvents) and sets totalViews to the sum of the buckets. Changes the articles in place.
- * @param {{ articles: Object[], comments: Object[], analytics: Object }} data The output of the build functions.
- * @returns {Object[]} The same articles.
- * @example attachSeedData({ articles, comments, analytics });
- */
-function attachSeedData({ articles, comments, analytics }) {
-  const byArticle = new Map(
-    articles.map((article) => [String(article._id), article]),
-  );
-  for (const article of articles) {
-    Object.assign(article, { comments: [], views: [], publishEvents: [] });
-    article.totalViews = analytics.totalViews.get(String(article._id)) || 0;
-  }
-  for (const [field, items] of [
-    ["comments", comments],
-    ["views", analytics.views],
-    ["publishEvents", analytics.publishEvents],
-  ]) {
-    for (const { articleId, ...item } of items) {
-      byArticle.get(String(articleId))[field].push(item);
-    }
-  }
-  return articles;
-}
-
-/**
  * Creates a demo account or updates its name, role and password. The User pre-save hook hashes the password.
  * @param {{ id?: string, name: string, email: string, role: string, password: string }} account The account fields.
  * @returns {Promise<Object>} The saved User document.
@@ -817,36 +791,33 @@ async function createSeedUsers() {
  * @example await printSummary({ reporters, editor });
  */
 async function printSummary({ reporters, editor }) {
-  const [byStatus, byCategory, revisions, multiUpdates, [embedded = {}]] =
-    await Promise.all([
-      Article.aggregate([
-        { $group: { _id: "$status", count: { $sum: 1 } } },
-        { $sort: { _id: 1 } },
-      ]),
-      Article.aggregate([
-        { $group: { _id: "$draft.category", count: { $sum: 1 } } },
-        { $sort: { _id: 1 } },
-      ]),
-      Article.countDocuments({ status: "pending", ...Article.publicFilter() }),
-      Article.countDocuments({ publishCount: { $gte: 2 } }),
-      Article.aggregate([
-        {
-          $group: {
-            _id: null,
-            comments: { $sum: { $size: "$comments" } },
-            viewBuckets: { $sum: { $size: "$views" } },
-            publishEvents: { $sum: { $size: "$publishEvents" } },
-            totalViews: { $sum: "$totalViews" },
-          },
-        },
-      ]),
-    ]);
-  const {
-    comments = 0,
-    viewBuckets = 0,
-    publishEvents = 0,
-    totalViews = 0,
-  } = embedded;
+  const [
+    byStatus,
+    byCategory,
+    revisions,
+    multiUpdates,
+    comments,
+    viewBuckets,
+    publishEvents,
+    viewedArticles,
+  ] = await Promise.all([
+    Article.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]),
+    Article.aggregate([
+      { $group: { _id: "$draft.category", count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]),
+    Article.countDocuments({ status: "pending", ...Article.publicFilter() }),
+    Article.countDocuments({ publishCount: { $gte: 2 } }),
+    Comment.countDocuments(),
+    ArticleView.countDocuments(),
+    PublishEvent.countDocuments(),
+    ArticleView.aggregate([
+      { $group: { _id: null, count: { $sum: "$count" } } },
+    ]),
+  ]);
   console.log(`\nSeeded ${await Article.countDocuments()} articles.`);
   console.log(
     "By status:",
@@ -866,7 +837,9 @@ async function printSummary({ reporters, editor }) {
   );
   console.log(`Approved 2-5 times (publishCount >= 2): ${multiUpdates}`);
   console.log(`Comments: ${comments}`);
-  console.log(`View buckets: ${viewBuckets} (${totalViews} total views)`);
+  console.log(
+    `View buckets: ${viewBuckets} (${viewedArticles[0] ? viewedArticles[0].count : 0} total views)`,
+  );
   console.log(`Publish events: ${publishEvents}`);
   console.log(
     "Demo staff accounts (password from SEED_REPORTER_PASSWORD / SEED_EDITOR_PASSWORD):",
@@ -898,14 +871,21 @@ async function seed() {
     : {};
   await mongoose.connect(process.env.MONGODB_URI, connectOptions);
   console.warn(
-    `WARNING: deleting ALL articles (with their comments and analytics) and read history in database ` +
+    `WARNING: deleting ALL articles, comments, read history, article views and publish events in database ` +
       `"${mongoose.connection.name}", then creating ${ARTICLE_COUNT} new articles.`,
   );
   console.warn(
     "Demo reporter and editor accounts are created or updated; other users are not touched.",
   );
 
-  await Promise.all([Article.init(), ArticleRead.init(), User.init()]);
+  await Promise.all([
+    Article.init(),
+    ArticleRead.init(),
+    ArticleView.init(),
+    Comment.init(),
+    PublishEvent.init(),
+    User.init(),
+  ]);
 
   // Real accounts first, so every article has a valid author in the User collection.
   const { reporters, editor } = await createSeedUsers();
@@ -916,16 +896,31 @@ async function seed() {
 
   // Built before deleting, so a bug in the generator never leaves the collections empty.
   const articles = buildSeedArticles({ reporters: seedReporters });
-  attachSeedData({
-    articles,
-    comments: buildSeedComments({ articles }),
-    analytics: buildSeedAnalytics({ articles }),
-  });
+  const analytics = buildSeedAnalytics({ articles });
+  for (const article of articles) {
+    article.totalViews = analytics.totalViews.get(String(article._id)) || 0;
+  }
+  const comments = buildSeedComments({ articles });
 
-  await Promise.all([Article.deleteMany({}), ArticleRead.deleteMany({})]);
+  await Promise.all([
+    Article.deleteMany({}),
+    ArticleRead.deleteMany({}),
+    ArticleView.deleteMany({}),
+    Comment.deleteMany({}),
+    PublishEvent.deleteMany({}),
+  ]);
 
   // insertMany validates every document against the model. The dates are set by the seed, not "now".
   await Article.insertMany(articles, { timestamps: false });
+  if (comments.length > 0) {
+    await Comment.insertMany(comments, { timestamps: false });
+  }
+  if (analytics.views.length > 0) {
+    await ArticleView.insertMany(analytics.views);
+  }
+  if (analytics.publishEvents.length > 0) {
+    await PublishEvent.insertMany(analytics.publishEvents);
+  }
   await printSummary({ reporters, editor });
 }
 
@@ -942,7 +937,6 @@ module.exports = {
   buildSeedArticles,
   buildSeedAnalytics,
   buildSeedComments,
-  attachSeedData,
   createSeedUsers,
   REPORTERS,
   EDITOR,

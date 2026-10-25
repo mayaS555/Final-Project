@@ -9,6 +9,9 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const mongoose = require("mongoose");
 const Article = require("../models/Article");
+const ArticleView = require("../models/ArticleView");
+const Comment = require("../models/Comment");
+const PublishEvent = require("../models/PublishEvent");
 const User = require("../models/User");
 const { ARTICLE_CATEGORIES } = require("../models/articleCategories");
 const articleService = require("../services/articleService");
@@ -17,7 +20,6 @@ const {
   buildSeedArticles,
   buildSeedAnalytics,
   buildSeedComments,
-  attachSeedData,
   createSeedUsers,
   REPORTERS,
   ARTICLE_COUNT,
@@ -326,13 +328,15 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
     }));
     seededArticles = buildSeedArticles({ reporters });
     seededAnalytics = buildSeedAnalytics({ articles: seededArticles });
+    for (const article of seededArticles) {
+      article.totalViews =
+        seededAnalytics.totalViews.get(String(article._id)) || 0;
+    }
     seededComments = buildSeedComments({ articles: seededArticles });
-    attachSeedData({
-      articles: seededArticles,
-      comments: seededComments,
-      analytics: seededAnalytics,
-    });
     await Article.insertMany(seededArticles, { timestamps: false });
+    await Comment.insertMany(seededComments, { timestamps: false });
+    await ArticleView.insertMany(seededAnalytics.views);
+    await PublishEvent.insertMany(seededAnalytics.publishEvents);
   });
 
   after(disconnectTestDatabase);
@@ -377,34 +381,37 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
     }
   });
 
-  test("comments, views and publish events are stored inside public articles", async () => {
-    const stored = await Article.find().select("+comments.deviceId").lean();
-    const count = (field) =>
-      stored.reduce((sum, article) => sum + article[field].length, 0);
-    assert.equal(count("comments"), seededComments.length);
-    assert.equal(count("views"), seededAnalytics.views.length);
-    assert.equal(count("publishEvents"), seededAnalytics.publishEvents.length);
-    for (const article of stored) {
-      if (!article.approved) {
-        assert.equal(
-          article.comments.length +
-            article.views.length +
-            article.publishEvents.length,
-          0,
-        );
-        continue;
-      }
-      assert.ok(
-        article.comments.every(
-          (comment) => comment._id && comment.deviceId && comment.createdAt,
-        ),
-      );
-      assert.ok(article.views.every((view) => view.count >= 1));
-      assert.equal(
-        article.views.reduce((sum, view) => sum + view.count, 0),
-        article.totalViews,
-      );
-      assert.equal(article.publishEvents.length, article.publishCount);
+  test("comments, views and publish events are stored and point at public articles", async () => {
+    const publicIds = new Set(
+      seededArticles
+        .filter((article) => article.approved)
+        .map((article) => String(article._id)),
+    );
+    const [comments, views, events] = await Promise.all([
+      Comment.find().lean(),
+      ArticleView.find().lean(),
+      PublishEvent.find().lean(),
+    ]);
+    assert.equal(comments.length, seededComments.length);
+    assert.equal(views.length, seededAnalytics.views.length);
+    assert.equal(events.length, seededAnalytics.publishEvents.length);
+    assert.ok(
+      comments.every((comment) => publicIds.has(String(comment.articleId))),
+    );
+    assert.ok(
+      views.every(
+        (view) => publicIds.has(String(view.articleId)) && view.count >= 1,
+      ),
+    );
+    assert.ok(events.every((event) => publicIds.has(String(event.articleId))));
+
+    const totals = new Map();
+    for (const view of views) {
+      const id = String(view.articleId);
+      totals.set(id, (totals.get(id) || 0) + view.count);
+    }
+    for (const article of seededArticles.filter((item) => item.approved)) {
+      assert.equal(totals.get(String(article._id)), article.totalViews);
     }
     const storedUsers = await User.countDocuments();
     assert.equal(storedUsers, 6);

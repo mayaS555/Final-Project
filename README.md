@@ -9,7 +9,7 @@ the public reads whatever has been published. There's also a comments section an
 - **MongoDB** – data storage
 - **EJS** – server-side templating
 - **bcryptjs** – password hashing
-- **express-session + connect-mongo** – session management, stored in MongoDB so logins survive a restart
+- **express-session** – session management; sessions are stored inside the user documents in MongoDB, so logins survive a restart
 - No frontend framework – plain HTML/CSS/JS on the client
 
 ## Getting started
@@ -35,8 +35,8 @@ the public reads whatever has been published. There's also a comments section an
    npm run seed
    ```
 
-   This replaces the articles (including the comments, view buckets and publish events embedded in them) and the
-   read history, and creates or updates the five demo reporters and one demo editor listed below. Other user
+   This replaces the articles and the demo data attached to them (comments, read history, article views and
+   publish events), and creates or updates the five demo reporters and one demo editor listed below. Other user
    accounts are not touched.
 
 4. Start the server:
@@ -95,22 +95,16 @@ The seed also adds comments, per-day view data and publish-event markers for the
 
 ## Database
 
-MongoDB holds four collections:
+MongoDB holds six collections, one per model:
 
-| Collection      | Model                   | Contents                                                                                                                                                                                                                                                    |
-| --------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `articles`      | `models/Article.js`     | Each article with its working copy (`draft`), public version (`approved`), and embedded arrays: `comments` (guest comments), `views` (daily view buckets with per-minute counts) and `publishEvents` (one entry per approval, the Impact Analytics markers) |
-| `users`         | `models/User.js`        | Staff accounts (reporter / editor / admin)                                                                                                                                                                                                                  |
-| `article_reads` | `models/ArticleRead.js` | Which articles a browser has opened, for the viewed/unviewed feed filter                                                                                                                                                                                    |
-| `sessions`      | connect-mongo           | Login sessions                                                                                                                                                                                                                                              |
-
-Comments and analytics used to live in their own `comments`, `article_views` and `publish_events` collections. A
-database that still has them must be migrated once, before the new code runs on it:
-
-```bash
-node scripts/migrate-embed-article-data.js --dry-run   # prints what would move
-node scripts/migrate-embed-article-data.js             # backs up to backups/, embeds, verifies, drops the old collections
-```
+| Collection       | Model                    | Contents                                                                     |
+| ---------------- | ------------------------ | ---------------------------------------------------------------------------- |
+| `users`          | `models/User.js`         | Staff accounts (reporter / editor / admin), each with its login `sessions`   |
+| `articles`       | `models/Article.js`      | Each article with its working copy (`draft`) and public version (`approved`) |
+| `comments`       | `models/Comment.js`      | Guest comments on public articles                                            |
+| `article_reads`  | `models/ArticleRead.js`  | Which articles a browser has opened, for the viewed/unviewed feed filter     |
+| `article_views`  | `models/ArticleView.js`  | Daily view buckets with per-minute counts, for Impact Analytics              |
+| `publish_events` | `models/PublishEvent.js` | One entry per approval, the Impact Analytics markers                         |
 
 ## Article workflow
 
@@ -163,13 +157,13 @@ Comment routes live under `/api/public/`, while article management routes live u
 ```
 controllers/   – request handlers (public site, reporter dashboard, article API, auth)
 middleware/    – session auth checks, device identity cookie, error handler
-models/        – Mongoose schemas (Article with its embedded comments and analytics, User, ArticleRead)
+models/        – Mongoose schemas (Article, User, Comment, ArticleRead, ArticleView, PublishEvent)
 routes/        – Express routers
-services/      – business logic and shared utilities (article state machine, caching, logging, weather)
+services/      – business logic and shared utilities (article state machine, session store, caching, logging, weather)
 views/         – EJS templates
   public/      – reader-facing pages and partials
   reporter/    – dashboard and article editor
 public/        – static assets (CSS, client-side JS, login page)
-scripts/       – one-off utilities (seed, create-user, migrate-embed-article-data)
+scripts/       – one-off utilities (seed, create-user)
 tests/         – test files and test helpers
 ```

@@ -7,10 +7,14 @@ dotenv.config();
 
 const Article = require("./models/Article");
 const ArticleRead = require("./models/ArticleRead");
+const ArticleView = require("./models/ArticleView");
+const PublishEvent = require("./models/PublishEvent");
+const Comment = require("./models/Comment");
 const { useArticleModel } = require("./services/publicArticleService");
 
 const session = require("express-session");
-const { MongoStore } = require("connect-mongo");
+const UserSessionStore = require("./services/userSessionStore");
+const User = require("./models/User");
 
 const publicRoutes = require("./routes/publicRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -27,7 +31,7 @@ const app = express();
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-// Session configuration. Sessions are stored in MongoDB so they survive a server restart.
+// Session configuration. Sessions are stored in MongoDB (inside each user) so they survive a server restart.
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 1 day
 const SESSION_SECRET = process.env.SESSION_SECRET;
 
@@ -38,17 +42,9 @@ if (!SESSION_SECRET) {
   );
 }
 
-// Reuse Mongoose's MongoDB connection. The store waits for the connection before its first operation,
-// so the session middleware can be registered before startServer() connects.
-const sessionStore = MongoStore.create({
-  clientPromise: mongoose.connection
-    .asPromise()
-    .then(() => mongoose.connection.getClient()),
-  dbName: process.env.DB_NAME || undefined,
-  collectionName: "sessions",
-  ttl: SESSION_MAX_AGE_MS / 1000,
-  autoRemove: "native",
-});
+// Sessions live inside their user documents (User.sessions). Mongoose buffers the store's queries until
+// startServer() connects, so the session middleware can be registered first.
+const sessionStore = new UserSessionStore({ ttlMs: SESSION_MAX_AGE_MS });
 
 app.use(
   session({
@@ -136,7 +132,14 @@ async function startServer() {
     logger.logServerEvent("db_connected", { db: mongoose.connection.name });
 
     // Ensure database indexes exist
-    await Promise.all([Article.init(), ArticleRead.init()]);
+    await Promise.all([
+      Article.init(),
+      ArticleRead.init(),
+      ArticleView.init(),
+      PublishEvent.init(),
+      Comment.init(),
+      User.init(),
+    ]);
     logger.logServerEvent("indexes_ready");
 
     app.listen(PORT, () => {
