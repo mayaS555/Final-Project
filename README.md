@@ -91,7 +91,7 @@ node scripts/create-user.js
 | editor   | `editor@dailyweb.test`        | `editor123`      |
 
 The 500 seeded articles are owned by these reporters, so logging in as one of them shows a populated dashboard.
-The seed also adds comments, per-day view data and publish-event markers for the Impact Analytics demo.
+The seed also adds comments, per-day view data for every article and publish-event markers for the Impact Analytics demo.
 
 ## Database
 

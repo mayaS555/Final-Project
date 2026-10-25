@@ -657,7 +657,10 @@ function startOfUtcDay(date) {
 
 /**
  * Builds the analytics demo data: daily view buckets and one publish event per approval.
- * Views start on the publication day, decay over time, and spike on days when a new version was published.
+ * Every article gets random view counts so the editor dashboard and Impact Analytics are never empty.
+ * Public articles collect views from their publication day; unpublished articles collect views from
+ * their creation day. For public articles, views decay over time and spike on days when a new version
+ * was published.
  * @param {{ articles: Object[], now?: Date, seed?: number }} options The generated articles, the current time and
  *   the random seed.
  * @returns {{ views: Object[], publishEvents: Object[], totalViews: Map<string, number> }} Plain documents for
@@ -670,11 +673,14 @@ function buildSeedAnalytics({ articles, now = new Date(), seed = 2026 } = {}) {
   const publishEvents = [];
   const totalViews = new Map();
 
-  for (const article of articles.filter((item) => item.approved)) {
+  for (const article of articles) {
     const articleId = article._id;
-    const firstPublish = article.approved.publishedAt;
-    const lastPublish = article.approved.updatedAt;
-    const approvals = Math.max(1, article.publishCount || 1);
+    const isPublic = Boolean(article.approved);
+    // Public articles are read from publication; unfinished articles get random "preview" reads
+    // from the day they were created, so every seeded article has a usable analytics graph.
+    const startAt = isPublic ? article.approved.publishedAt : article.createdAt;
+    const lastPublish = isPublic ? article.approved.updatedAt : startAt;
+    const approvals = isPublic ? Math.max(1, article.publishCount || 1) : 0;
 
     // Publish events, evenly spread between the first and the latest approval. The first and last dates match
     // approved.publishedAt and approved.updatedAt, so the markers line up with the article history.
@@ -683,8 +689,7 @@ function buildSeedAnalytics({ articles, now = new Date(), seed = 2026 } = {}) {
       const ratio = approvals === 1 ? 0 : index / (approvals - 1);
       eventTimes.push(
         new Date(
-          firstPublish.getTime() +
-            (lastPublish.getTime() - firstPublish.getTime()) * ratio,
+          startAt.getTime() + (lastPublish.getTime() - startAt.getTime()) * ratio,
         ),
       );
     }
@@ -697,13 +702,15 @@ function buildSeedAnalytics({ articles, now = new Date(), seed = 2026 } = {}) {
       });
     });
 
-    // One bucket per day from publication until today. Most articles have a small steady readership; an update
-    // brings a spike, which is what the Impact Analytics graph is meant to show.
-    const firstDay = startOfUtcDay(firstPublish);
+    // One bucket per day from the start date until today. Most articles have a small steady readership;
+    // an update brings a spike, which is what the Impact Analytics graph is meant to show.
+    const firstDay = startOfUtcDay(startAt);
     const eventDays = new Set(
       eventTimes.map((date) => startOfUtcDay(date).getTime()),
     );
-    const popularity = between(random, 40, 260);
+    const popularity = isPublic
+      ? between(random, 40, 260)
+      : between(random, 10, 90);
     let total = 0;
     for (
       let day = firstDay;
@@ -800,6 +807,7 @@ async function printSummary({ reporters, editor }) {
     viewBuckets,
     publishEvents,
     viewedArticles,
+    articlesWithViews,
   ] = await Promise.all([
     Article.aggregate([
       { $group: { _id: "$status", count: { $sum: 1 } } },
@@ -817,6 +825,7 @@ async function printSummary({ reporters, editor }) {
     ArticleView.aggregate([
       { $group: { _id: null, count: { $sum: "$count" } } },
     ]),
+    Article.countDocuments({ totalViews: { $gt: 0 } }),
   ]);
   console.log(`\nSeeded ${await Article.countDocuments()} articles.`);
   console.log(
@@ -840,6 +849,7 @@ async function printSummary({ reporters, editor }) {
   console.log(
     `View buckets: ${viewBuckets} (${viewedArticles[0] ? viewedArticles[0].count : 0} total views)`,
   );
+  console.log(`Articles with views: ${articlesWithViews}`);
   console.log(`Publish events: ${publishEvents}`);
   console.log(
     "Demo staff accounts (password from SEED_REPORTER_PASSWORD / SEED_EDITOR_PASSWORD):",

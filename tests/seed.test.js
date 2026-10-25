@@ -229,30 +229,21 @@ describe("seed documents (no MongoDB needed)", () => {
     }
   });
 
-  test("view data covers every public article and totalViews is the sum of its buckets", () => {
-    const publicIds = new Set(
-      articles
-        .filter((article) => article.approved)
-        .map((article) => String(article._id)),
-    );
+  test("view data covers every article and totalViews is the sum of its buckets", () => {
+    const articleIds = new Set(articles.map((article) => String(article._id)));
     const viewsByArticle = new Map();
     for (const view of analytics.views) {
       const id = String(view.articleId);
-      assert.ok(publicIds.has(id), "only public articles have views");
+      assert.ok(articleIds.has(id));
       assert.ok(view.count >= 1);
       assert.ok(view.bucketStart <= NOW);
       viewsByArticle.set(id, (viewsByArticle.get(id) || 0) + view.count);
     }
-    assert.equal(viewsByArticle.size, publicIds.size);
-    for (const id of publicIds) {
+    assert.equal(viewsByArticle.size, articleIds.size);
+    for (const id of articleIds) {
       assert.equal(analytics.totalViews.get(id), viewsByArticle.get(id));
       assert.ok(analytics.totalViews.get(id) > 0);
     }
-    assert.ok(
-      !analytics.totalViews.has(
-        String(articles.find((article) => !article.approved)._id),
-      ),
-    );
   });
 
   test("every approval has a publish marker between the first and last approval", () => {
@@ -381,7 +372,10 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
     }
   });
 
-  test("comments, views and publish events are stored and point at public articles", async () => {
+  test("comments, views and publish events are stored and point at seeded articles", async () => {
+    const articleIds = new Set(
+      seededArticles.map((article) => String(article._id)),
+    );
     const publicIds = new Set(
       seededArticles
         .filter((article) => article.approved)
@@ -400,7 +394,7 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
     );
     assert.ok(
       views.every(
-        (view) => publicIds.has(String(view.articleId)) && view.count >= 1,
+        (view) => articleIds.has(String(view.articleId)) && view.count >= 1,
       ),
     );
     assert.ok(events.every((event) => publicIds.has(String(event.articleId))));
@@ -410,7 +404,7 @@ describe("seed documents with MongoDB", { skip: skipWithoutDatabase }, () => {
       const id = String(view.articleId);
       totals.set(id, (totals.get(id) || 0) + view.count);
     }
-    for (const article of seededArticles.filter((item) => item.approved)) {
+    for (const article of seededArticles) {
       assert.equal(totals.get(String(article._id)), article.totalViews);
     }
     const storedUsers = await User.countDocuments();
